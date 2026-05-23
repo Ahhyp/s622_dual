@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /home/yep/S622_robotarm/src/fairino_msgs -type f | sort | head -30)",
+      "Read(//home/yep/S622_robotarm/src/fairino_msgs/**)",
+      "Bash(find /home/yep/S622_robotarm/src/fairino_planning_core -type f | sort | head -60)",
+      "Read(//home/yep/S622_robotarm/src/fairino_planning_core/**)",
+      "Bash(find /home/yep/S622_robotarm/src/fairino_planning_ros -type f | sort | head -40)",
+      "Read(//home/yep/S622_robotarm/src/fairino_planning_ros/**)",
+      "Bash(find /home/yep/S622_robotarm/src/fairino3_v6_moveit2_config -type f | sort | head -40)",
+      "Read(//home/yep/S622_robotarm/src/fairino3_v6_moveit2_config/**)",
+      "Bash(find /home/yep/S622_robotarm/src/s622_moveit_config -type f | sort | head -40)",
+      "Read(//home/yep/S622_robotarm/src/s622_moveit_config/**)",
+      "Bash(find /home/yep/S622_robotarm/src/pymoveit2 -type f -not -path \"*/.git/*\" | sort | head -30)",
+      "Read(//home/yep/S622_robotarm/src/pymoveit2/**)"
+    ]
+  },
+  "skills": {
+    "stage-init": ".claude/skills/stage-init.md",
+    "record-issue": ".claude/skills/record-issue.md"
+  }
+}
