@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<robot name="delirobo" xmlns:xacro="http://ros.org/wiki/xacro">
+  <!-- =========================1) RealSense D435 的 URDF 结构========================= -->
+  <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
+
+  <!-- =========================2) 分离 RGB + Depth sensor (规避 rgbd_camera 的 hfov/lens bug) ========================= -->
+  <xacro:include filename="$(find s622_moveit_descriptions)/urdf/camera/rgbd_split.gazebo.xacro" />
+
+  <!-- ============================宏 1：相机本体 (URDF frames + mesh) ============================ -->
+  <xacro:macro name="camera_v0" params="parent *joint_origin">
+    <xacro:sensor_d435
+      parent="${parent}"
+      name="camera"
+      use_nominal_extrinsics="true"
+      add_plug="false"
+      use_mesh="true">
+      <xacro:insert_block name="joint_origin" />
+    </xacro:sensor_d435>
+  </xacro:macro>
+
+  <!-- ============================宏 2：Gazebo 传感器 (分离 RGB + Depth) ============================ -->
+  <xacro:macro name="camera_gazebo_v0">
+    <xacro:gazebo_rgbd_split
+      name="camera"
+      fps="60"
+      gz_topic_name="camera"
+      image_width="960"
+      image_height="540"
+      h_fov="${82.4 * pi/180}"
+      v_fov="${52.5 * pi/180}"
+      min_depth="0.05"
+      max_depth="10.0"/>
+
+    <!-- camera_link 材质 -->
+    <gazebo reference="camera_link">
+      <material>Gazebo/Grey</material>
+    </gazebo>
+  </xacro:macro>
+</robot>

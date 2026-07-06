@@ -1,0 +1,52 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="AlignXYTestTree">
+        <Sequence>
+            <MoveToPose named_pose="home"
+                velocity_scale="0.3" acceleration_scale="0.2"
+                ensure_servo_stopped="true"
+                timeout_sec="30.0" />
+            <DetectObject
+                object_name="cube"
+                min_confidence="0.10"
+                max_age_sec="1.0"
+                output_u="{u}"
+                output_v="{v}"
+                output_yaw="{obj_yaw}"
+                output_confidence="{conf}" />
+            <GenerateGraspCandidate
+                u="{u}"
+                v="{v}"
+                object_yaw="{obj_yaw}"
+                tcp_grasp_pose="{grasp_pose}"
+                tcp_pregrasp_pose="{pregrasp_pose}"
+                grasp_yaw="{grasp_yaw}"
+                grasp_pose_x="{grasp_pose_x}"
+                grasp_pose_y="{grasp_pose_y}"/>
+
+            <MoveToPose
+                target_pose="{pregrasp_pose}"
+                velocity_scale="0.2"
+                acceleration_scale="0.2"
+                ensure_servo_stopped="true"
+                timeout_sec="20.0" />
+            <DetectObject
+                object_name="cube"
+                min_confidence="0.10"
+                output_u="{u2}"
+                output_v="{v2}" />
+            <LockTargetPixel
+                input_u="{u2}"
+                input_v="{v2}"
+                locked_u="{lu}"
+                locked_v="{lv}" />
+
+            <VisualAlign mode="xy"
+                target_x_base="{grasp_pose_x}"
+                target_y_base="{grasp_pose_y}"
+                tolerance_m="0.005"
+                ensure_servo_started="true"
+                timeout_sec="25.0" />
+
+        </Sequence>
+    </BehaviorTree>
+</root>

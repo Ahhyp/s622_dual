@@ -1,0 +1,24 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="DetectAndGraspTree">
+        <Sequence>
+            <CheckSystemReady />
+            <Wait sec="1.0" />
+            <RetryUntilSuccessful num_attempts="20">
+                <DetectObject object_name="cube"
+                    min_confidence="0.05"
+                    max_age_sec="1.0"
+                    output_u="{u}"
+                    output_v="{v}"
+                    output_yaw="{obj_yaw}"
+                    output_confidence="{conf}" />
+            </RetryUntilSuccessful>
+            <GenerateGraspCandidate u="{u}"
+                v="{v}"
+                object_yaw="{obj_yaw}"
+                tcp_grasp_pose="{grasp_pose}"
+                tcp_pregrasp_pose="{pregrasp_pose}"
+                grasp_yaw="{grasp_yaw}" />
+            <PrintMessage msg="Grasp candidate generated" />
+        </Sequence>
+    </BehaviorTree>
+</root>

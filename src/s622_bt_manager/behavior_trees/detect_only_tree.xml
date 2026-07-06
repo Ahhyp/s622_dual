@@ -1,0 +1,19 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="DetectOnlyTree">
+        <Sequence>
+            <CheckSystemReady />
+            <!-- 给订阅一点 warmup 时间，避免触发瞬间 cache 还是空 -->
+            <Wait sec="0.5" />
+            <RetryUntilSuccessful num_attempts="10">
+                <DetectObject object_name="cube"
+                    min_confidence="0.05"
+                    max_age_sec="1.0"
+                    output_u="{u}"
+                    output_v="{v}"
+                    output_yaw="{yaw}"
+                    output_confidence="{conf}" />
+            </RetryUntilSuccessful>
+            <PrintMessage msg="Detection success" />
+        </Sequence>
+    </BehaviorTree>
+</root>

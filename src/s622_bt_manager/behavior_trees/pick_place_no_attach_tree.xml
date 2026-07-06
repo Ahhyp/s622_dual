@@ -1,0 +1,110 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="PickPlaceNoAttach">
+        <Sequence>
+            <CheckSystemReady />
+
+            <!-- ===== Pick (复用 M1.5 流程) ===== -->
+            <SetGripper command="open" timeout_sec="5.0" />
+
+            <MoveToPose named_pose="home"
+                velocity_scale="0.3" acceleration_scale="0.2"
+                ensure_servo_stopped="true"
+                timeout_sec="30.0" />
+
+            <!--检测 + 生成抓取候选 -->
+            <RetryUntilSuccessful num_attempts="5">
+                <Sequence>
+                    <DetectObject object_name="cube" min_confidence="0.10" max_age_sec="1.0"
+                        output_u="{u}" output_v="{v}"
+                        output_yaw="{obj_yaw}" output_confidence="{conf}" />
+                    <GenerateGraspCandidate u="{u}" v="{v}" object_yaw="{obj_yaw}"
+                        tcp_grasp_pose="{grasp_pose}"
+                        tcp_pregrasp_pose="{pregrasp_pose}"
+                        grasp_yaw="{grasp_yaw}"
+                        grasp_pose_x="{grasp_x}"
+                        grasp_pose_y="{grasp_y}" />
+                </Sequence>
+            </RetryUntilSuccessful>
+            
+            <LockTargetPixel input_u="{u}" input_v="{v}"
+                locked_u="{lu}" locked_v="{lv}" />
+
+            <!-- 粗定位到pregrasp -->
+            <MoveToPose target_pose="{pregrasp_pose}"
+                velocity_scale="0.2" acceleration_scale="0.2"
+                ensure_servo_stopped="true"
+                timeout_sec="25.0" />
+
+
+            <!-- IBVS 精对齐 -->
+            <VisualAlign mode="xy"
+                target_x_base="{grasp_x}" target_y_base="{grasp_y}"
+                tolerance_m="0.005"
+                ensure_servo_started="true"
+                timeout_sec="25.0" />
+
+            <VisualAlign mode="yaw"
+                target_yaw="{grasp_yaw}"
+                tolerance_rad="0.10"
+                ensure_servo_started="true"
+                timeout_sec="5.0" />
+
+            <!-- 对齐后检查 cube 是否漂移 -->
+            <AlignLockCheck locked_u="{lu}" locked_v="{lv}"
+                object_name="cube"
+                min_confidence="0.05"
+                tolerance_px="25.0" />
+
+            <!-- 盲降 +抓取 -->
+            <VisualAlign mode="descend"
+                distance="0.13"
+                speed="0.04"
+                ensure_servo_started="true"
+                timeout_sec="30.0" />
+
+            <SetGripper command="close" timeout_sec="5.0" finger_position="{finger_pos}" />
+
+            <VerifyGrasp finger_min_position="0.005" timeout_sec="2.0"
+                finger_position="{finger_pos}" />
+
+            <!-- 抬起 -->
+            <VisualAlign mode="lift"
+                distance="0.10"
+                speed="0.05"
+                ensure_servo_started="false"
+                timeout_sec="20.0" />
+
+
+            <!-- ===== 关键：lift 后插 safe 中转 ===== -->
+            <MoveToPose named_pose="safe"
+                velocity_scale="0.30" acceleration_scale="0.30"
+                timeout_sec="20.0"
+                ensure_servo_stopped="true" />
+
+            <!-- ===== Place ===== -->
+            <GeneratePlaceCandidate place_pose="{place_pose}"
+                pre_place_pose="{pre_place_pose}" />
+
+            <MoveToPose target_pose="{pre_place_pose}"
+                velocity_scale="0.20" acceleration_scale="0.20"
+                timeout_sec="20.0"
+                ensure_servo_stopped="true" />
+
+            <MoveToPose target_pose="{place_pose}"
+                velocity_scale="0.10" acceleration_scale="0.10"
+                timeout_sec="15.0"
+                ensure_servo_stopped="true" />
+
+            <SetGripper command="open" timeout_sec="5.0" />
+
+            <VisualAlign mode="lift"
+                distance="0.10" speed="0.1"
+                timeout_sec="20.0" />
+
+            <MoveToPose named_pose="home"
+                velocity_scale="0.30" acceleration_scale="0.30"
+                timeout_sec="20.0"
+                ensure_servo_stopped="true" />
+        </Sequence>
+    </BehaviorTree>
+</root>

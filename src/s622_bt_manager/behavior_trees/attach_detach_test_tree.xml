@@ -1,0 +1,22 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="AttachDetachTest">
+        <Sequence>
+            <PrintMessage msg="=== attach cube ===" />
+            <AttachObject object_name="cube"
+                link_name="grasp_frame"
+                size_x="0.04" size_y="0.04" size_z="0.04"
+                offset_z="0.02" />
+            <Wait sec="120.0" />
+
+            <PrintMessage msg="=== generate place to know drop_pose ===" />
+            <GeneratePlaceCandidate place_pose="{place_pose}"
+                pre_place_pose="{pre_place_pose}" />
+
+            <PrintMessage msg="=== detach cube ===" />
+            <DetachObject object_name="cube"
+                put_back_in_world="true"
+                drop_pose="{place_pose}" />
+            <Wait sec="60.0" />
+        </Sequence>
+    </BehaviorTree>
+</root>

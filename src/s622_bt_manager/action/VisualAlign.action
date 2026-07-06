@@ -1,0 +1,25 @@
+# Goal
+string mode
+float32 timeout_sec
+bool ensure_servo_started
+
+# mode=xy
+float32 target_x_base
+float32 target_y_base
+float32 tolerance_m
+
+# mode=yaw
+float32 target_yaw
+float32 tolerance_rad
+
+# mode=descend/lift/retreat
+float32 distance
+float32 speed
+---
+bool success
+float32 final_error
+float32 actual_distance
+string error_msg
+---
+float32 current_error
+float32 elapsed_sec

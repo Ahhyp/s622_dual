@@ -1,0 +1,10 @@
+fairino_ik_service:
+  ros__parameters:
+    joint_names: ["j1", "j2", "j3", "j4", "j5", "j6"]
+    
+    # DH parameters (Modified DH 或 Standard DH,按你 fairino_ik.cpp 的约定)
+    dh_a:     [ 0.0,   -0.280, -0.240,  0.0,     0.0,     0.0  ]
+    dh_alpha: [ 1.570796, 0.0,   0.0,   1.570796, -1.570796, 0.0 ]
+    dh_d:     [ 0.140,  0.0,   0.0,   0.102,   0.102,   0.2168]
+    # dh_d:     [ 0.140,  0.0,   0.0,   0.102,   0.102,   0.100]
+    # j6 改成了 0.2168 是因为有了夹爪， 这并非长远决策。 具体看 docs (TODO_夹爪偏移问题.md)

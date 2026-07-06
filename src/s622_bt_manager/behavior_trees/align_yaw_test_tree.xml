@@ -1,0 +1,44 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="AlignYawTestTree">
+        <Sequence>
+            <MoveToPose named_pose="home"
+                velocity_scale="0.3" acceleration_scale="0.2"
+                ensure_servo_stopped="true"
+                timeout_sec="30.0" />
+
+            <DetectObject object_name="cube"
+                min_confidence="0.10" max_age_sec="1.0"
+                output_u="{u}" output_v="{v}"
+                output_yaw="{obj_yaw}" output_confidence="{conf}" />
+
+            <GenerateGraspCandidate u="{u}" v="{v}" object_yaw="{obj_yaw}"
+                tcp_grasp_pose="{grasp_pose}"
+                tcp_pregrasp_pose="{pregrasp_pose}"
+                grasp_yaw="{grasp_yaw}"
+                grasp_pose_x="{grasp_x}"
+                grasp_pose_y="{grasp_y}" />
+
+            <MoveToPose target_pose="{pregrasp_pose}"
+                velocity_scale="0.2" acceleration_scale="0.2"
+                ensure_servo_stopped="true"
+                timeout_sec="20.0" />
+
+            <!--先xy
+            对齐 -->
+            <VisualAlign mode="xy"
+                target_x_base="{grasp_x}" target_y_base="{grasp_y}"
+                tolerance_m="0.005"
+                ensure_servo_started="true"
+                timeout_sec="25.0" />
+
+            <!-- 再 yaw 对齐 -->
+            <VisualAlign mode="yaw"
+                target_yaw="{grasp_yaw}"
+                tolerance_rad="0.05"
+                ensure_servo_started="false"
+                timeout_sec="10.0" />
+
+            <PrintMessage msg="XY + Yaw align SUCCESS" />
+        </Sequence>
+    </BehaviorTree>
+</root>

@@ -1,0 +1,19 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="LiftOnlyFromHomeTree">
+        <Sequence>
+            <MoveToPose named_pose="home"
+                velocity_scale="0.2" acceleration_scale="0.2"
+                ensure_servo_stopped="true"
+                timeout_sec="20.0" />
+
+            <!-- 从 home 直接 lift 5cm 测试 servo 是否能工作 -->
+            <VisualAlign mode="lift"
+                distance="0.05"
+                speed="0.03"
+                ensure_servo_started="true"
+                timeout_sec="15.0" />
+
+            <PrintMessage msg="Lift from home SUCCESS" />
+        </Sequence>
+    </BehaviorTree>
+</root>

@@ -1,0 +1,46 @@
+move_to_pose_server:
+  ros__parameters:
+    joint_names: ['j1', 'j2', 'j3', 'j4', 'j5', 'j6']
+    base_link: 'base_link'
+    end_effector: 'grasp_frame'
+    group_name: 'robot_arm'
+    default_velocity_scale: 0.2
+    default_acceleration_scale: 0.2
+
+    named_pose_names: ['home', 'safe', 'grasp_cube']
+
+    home_joint_positions:
+      - 0.5
+      - -1.05
+      - 1.05
+      - -1.05
+      - -0.8
+      - 0.0
+
+    safe_joint_positions:
+      - 0.0
+      - -1.2
+      - 1.5
+      - 0.0
+      - 1.2
+      - 0.0
+
+    grasp_cube_joint_positions:
+      - 2.847
+      - -0.723
+      - 1.058
+      - 1.236
+      - 1.570
+      - 1.277
+
+# move_to_pose_server:
+#   ros__parameters:
+#     joint_names: ['j1', 'j2', 'j3', 'j4', 'j5', 'j6']
+#     base_link: 'base_link'
+#     end_effector: 'grasp_frame'
+#     group_name: 'robot_arm'   # ⚠️ 改成你的 SRDF 里的实际 group_name
+#     default_velocity_scale: 0.2
+#     default_acceleration_scale: 0.2
+#     named_poses:
+#       home: [0.5, -1.05, 1.05, -1.05, -0.8, 0]   # ⚠️ 改成你机器人的实际 home
+#       safe: [0.0, -1.2, 1.5, 0.0, 1.2, 0.0]

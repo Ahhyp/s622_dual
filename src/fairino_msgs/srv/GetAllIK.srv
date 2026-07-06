@@ -1,0 +1,15 @@
+# Request
+geometry_msgs/PoseStamped pose
+string group_name
+float64[] seed_state          # 可选，用于"靠近 seed"评分
+bool check_collision          # 是否过滤掉碰撞解
+bool filter_joint_limits         # ← 新增:过滤超出 safety 限位的解
+float64[] joint_limits_lower     # ← 可选:覆盖默认限位
+float64[] joint_limits_upper
+---
+# Response
+sensor_msgs/JointState[] solutions   # 全部有效解
+float64[] fk_position_errors         # 每个解 FK 验证误差
+float64[] fk_rotation_errors
+int32 error_code                      # 0 = OK
+string error_message

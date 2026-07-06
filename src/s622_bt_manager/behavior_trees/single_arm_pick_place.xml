@@ -1,0 +1,150 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="PickPlaceWithRecovery">
+        <Fallback name="PickPlaceWithRecovery">
+
+            <!-- ============ 主任务 ============ -->
+            <Sequence name="MainTask">
+
+                <CheckSystemReady joint_states_max_age="1.0"
+                    tf_check_frame="grasp_frame"
+                    yolo_max_age="2.0" />
+                <SetGripper command="open" />
+                <GoHome velocity_scale="0.30" />
+
+                <!-- 检测 + 抓取候选生成（带重试） -->
+                <RetryUntilSuccessful num_attempts="5">
+                    <Sequence>
+                        <DetectObject object_name="cube"
+                            min_confidence="0.05"
+                            max_age_sec="1.0"
+                            output_pose="{object_pose}"
+                            output_uv="{target_uv}"
+                            output_yaw="{object_yaw}"
+                            output_confidence="{confidence}" />
+                        <GenerateGraspCandidate object_pose="{object_pose}"
+                            target_uv="{target_uv}"
+                            object_yaw="{object_yaw}"
+                            output_grasp="{grasp}" />
+                    </Sequence>
+                </RetryUntilSuccessful>
+
+                <!-- 粗定位：MoveIt 到 pregrasp -->
+                <MoveToPose target_pose="{grasp.tcp_pregrasp_pose}"
+                    velocity_scale="0.20"
+                    acceleration_scale="0.20"
+                    ensure_servo_stopped="true"
+                    timeout_sec="15.0" />
+
+                <Sequence name="ServoGrasp">
+                    <LockTargetPixel input_uv="{target_uv}"
+                        output_uv="{locked_uv}" />
+
+                    <VisualAlign mode="xy"
+                        target_u="{locked_uv.u}"
+                        target_v="{locked_uv.v}"
+                        tolerance_px="12.0"
+                        ensure_servo_started="true"
+                        timeout_sec="25.0" />
+
+                    <VisualAlign mode="yaw"
+                        target_yaw="{grasp.tcp_grasp_pose.yaw}"
+                        tolerance_rad="0.05"
+                        timeout_sec="10.0" />
+
+                    <AlignLockCheck target_uv="{locked_uv}"
+                        tolerance_px="12.0" />
+
+                    <VisualAlign mode="descend"
+                        distance="0.13"
+                        speed="0.04"
+                        timeout_sec="30.0" />
+
+                    <SetGripper command="close" />
+
+                    <VerifyGrasp finger_min_position="0.005"
+                        output_grasped="{is_grasped}" />
+
+                    <VisualAlign mode="lift"
+                        distance="0.10"
+                        speed="0.05"
+                        timeout_sec="30.0" />
+
+                    <AttachObject object_name="cube"
+                        grasp="{grasp}" />
+                </Sequence>
+
+                <Sequence name="Place">
+                    <GeneratePlaceCandidate output_place_pose="{place_pose}"
+                        output_pre_place_pose="{pre_place_pose}" />
+                    <MoveToPose target_pose="{pre_place_pose}"
+                        velocity_scale="0.20"
+                        acceleration_scale="0.20"
+                        ensure_servo_stopped="true"
+                        timeout_sec="15.0" />
+
+                    <MoveToPose target_pose="{place_pose}"
+                        velocity_scale="0.10"
+                        acceleration_scale="0.10"
+                        timeout_sec="10.0" />
+
+                    <SetGripper command="open" />
+                    <DetachObject object_name="cube" />
+
+                    <!-- 放置后撤离 -->
+                    <VisualAlign mode="retreat"
+                        distance="0.10"
+                        speed="0.05"
+                        ensure_servo_started="true"
+                        timeout_sec="15.0" />
+
+                    <GoHome velocity_scale="0.30"
+                        ensure_servo_stopped="true" />
+                </Sequence>
+
+            </Sequence>
+
+            <!-- ============ Recovery ============ -->
+            <Sequence name="Recovery">
+                <PrintMessage msg="=== RECOVERY ==="/>
+
+                <!-- 停止 servo（强制，安全第一） -->
+                <ForceSuccess>
+                    <StopServo />
+                </ForceSuccess>
+
+                <!-- 松开夹爪 -->
+                <ForceSuccess>
+                    <SetGripper command="open" timeout_sec="3.0" />
+                </ForceSuccess>
+
+                <!-- 如果有 attach 就 detach -->
+                <ForceSuccess>
+                    <DetachObject object_name="cube"
+                        put_back_in_world="false"
+                        timeout_sec="3.0" />
+                </ForceSuccess>
+
+                <!-- 回 safe pose -->
+                <ForceSuccess>
+                    <MoveToPose named_pose="safe"
+                        velocity_scale="0.20" acceleration_scale="0.20"
+                        timeout_sec="15.0"
+                        ensure_servo_stopped="true" />
+                </ForceSuccess>
+
+                <!-- 回 home -->
+                <ForceSuccess>
+                    <MoveToPose named_pose="home"
+                        velocity_scale="0.20" acceleration_scale="0.20"
+                        timeout_sec="15.0" />
+                </ForceSuccess>
+
+                <PrintMessage msg="=== RECOVERY DONE ==="/>
+
+                <!-- 让 Fallback 返回 FAILURE，外层知道任务失败了 -->
+                <AlwaysFailure />
+            </Sequence>
+
+        </Fallback>
+    </BehaviorTree>
+</root>

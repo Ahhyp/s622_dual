@@ -1,0 +1,19 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="SafePoseTest">
+        <Sequence>
+            <PrintMessage msg="go to safe" />
+            <MoveToPose named_pose="safe"
+                velocity_scale="0.20"
+                acceleration_scale="0.20"
+                timeout_sec="20.0"
+                ensure_servo_stopped="true" />
+            <Wait sec="1.0" />
+            <PrintMessage msg="go to home" />
+            <MoveToPose named_pose="home"
+                velocity_scale="0.20"
+                acceleration_scale="0.20"
+                timeout_sec="20.0"
+                ensure_servo_stopped="false" />
+        </Sequence>
+    </BehaviorTree>
+</root>

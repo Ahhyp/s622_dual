@@ -1,0 +1,25 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="GripperTestTree">
+        <!-- <Sequence>
+            <SetGripper command="open" />
+            <Wait sec="1.0" />
+            <SetGripper command="close" />
+            <Wait sec="5.0" />
+            <VerifyGrasp finger_min_position="0.005" />
+        </Sequence> -->
+        <Sequence>
+            <DetectObject object_name="cube"
+                min_confidence="0.10"
+                max_age_sec="1.0"
+                output_u="{u}"
+                output_v="{v}"
+                output_yaw="{obj_yaw}"
+                output_confidence="{conf}" />
+            <LockTargetPixel input_u="{u}" input_v="{v}"
+                locked_u="{lu}" locked_v="{lv}" />
+            <AlignLockCheck locked_u="{lu}" locked_v="{lv}"
+                tolerance_px="50.0" />
+        </Sequence>
+
+    </BehaviorTree>
+</root>

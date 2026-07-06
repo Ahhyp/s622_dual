@@ -1,0 +1,27 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="LockCheckTestTree">
+        <Sequence>
+            <DetectObject object_name="cube"
+                min_confidence="0.05"
+                max_age_sec="1.0"
+                output_u="{u}"
+                output_v="{v}"
+                output_yaw="{yaw}"
+                output_confidence="{conf}" />
+
+            <LockTargetPixel input_u="{u}" input_v="{v}"
+                locked_u="{lu}" locked_v="{lv}" />
+
+            <!-- 给 20 秒时间在 Gazebo GUI 里拖 cube -->
+            <PrintMessage msg="=== Locked. Drag cube now (20 sec) ===" />
+            <Wait sec="20.0" />
+            <PrintMessage msg="=== Checking drift ===" />
+
+            <AlignLockCheck locked_u="{lu}" locked_v="{lv}"
+                tolerance_px="20.0"
+                min_confidence="0.05" />
+
+            <PrintMessage msg="No drift detected (SUCCESS path)" />
+        </Sequence>
+    </BehaviorTree>
+</root>

@@ -1,0 +1,9 @@
+# 把 object 作为 attached collision object 挂到 link 上
+string object_name             # "cube"
+string link_name               # "grasp_frame"
+geometry_msgs/Vector3 size     # box 三轴尺寸；全 0 用默认值
+geometry_msgs/Pose pose_in_link    # 物体在 link 坐标系下的 pose
+string[] touch_links           # 不视为碰撞的相邻 link；空用默认
+---
+bool success
+string error_msg

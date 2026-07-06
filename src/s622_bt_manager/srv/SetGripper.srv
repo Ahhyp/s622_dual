@@ -1,0 +1,5 @@
+string command       # "open" | "close"
+---
+bool success
+float32 finger_position
+string error_msg

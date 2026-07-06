@@ -1,0 +1,7 @@
+# 从 attached 状态摘下；可选放回 world collision
+string object_name
+bool put_back_in_world         # true: 同时 add 回 world
+geometry_msgs/Pose drop_pose   # 放回的位姿（base_link 系），仅 put_back=true 时用
+---
+bool success
+string error_msg

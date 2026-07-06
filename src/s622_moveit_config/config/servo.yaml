@@ -1,0 +1,44 @@
+# servo.yaml — MoveIt Servo 参数
+###############################################################################
+# 基本设置
+###############################################################################
+use_gazebo: false                                # 仿真用，会调整时间戳处理
+move_group_name: "robot_arm"                    # 跟 SRDF 里 group 名一致
+planning_frame: "base_link"                     # 期望 twist 的参考系
+ee_frame_name: "grasp_frame"                          # 末端执行器 link
+robot_link_command_frame: "base_link"           # twist.header.frame_id 与之匹配
+command_in_type: "speed_units"                  # twist 单位是 m/s, rad/s
+###############################################################################
+# 输入
+###############################################################################
+cartesian_command_in_topic: "~/delta_twist_cmds"
+joint_command_in_topic: "~/delta_joint_cmds"
+joint_topic: "/joint_states"
+status_topic: "~/status"
+###############################################################################
+# 输出（喂给 ros2_control 的轨迹控制器）
+###############################################################################
+command_out_type: "trajectory_msgs/JointTrajectory"
+command_out_topic: "/robot_arm_controller/joint_trajectory"
+publish_period: 0.034                           # ~30Hz
+publish_joint_positions: true
+publish_joint_velocities: false
+publish_joint_accelerations: false
+###############################################################################
+# 限速 / 安全
+###############################################################################
+linear_scale: 1.0                               # twist 整体缩放
+rotational_scale: 1.0
+joint_scale: 1.0
+lower_singularity_threshold: 200.0               # 接近奇异降速（原 60 太严）
+hard_stop_singularity_threshold: 500.0           # 太近直接停（原 120 太严）
+joint_limit_margin: 0.02                         # 关节限位缓冲（原 0.1 太保守）
+check_collisions: false
+self_collision_proximity_threshold: 0.01
+scene_collision_proximity_threshold: 0.02
+###############################################################################
+# 平滑
+###############################################################################
+smoothing_filter_plugin_name: "online_signal_smoothing::ButterworthFilterPlugin"
+butterworth_filter_coeff: 1.5
+incoming_command_timeout: 5.0                   # 5s 没收到 twist 就停

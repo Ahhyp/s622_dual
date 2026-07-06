@@ -1,0 +1,10 @@
+# Default initial positions — 肘部弯曲 ~60°，远离奇异点
+initial_positions:
+  finger1_joint: 0
+  finger2_joint: 0
+  j1: 0.5
+  j2: -1.05     # -60°，肩后弯
+  j3: 1.05      # +60°，肘前弯
+  j4: -1.05     # -60°，腕弯
+  j5: -0.8
+  j6: 0.0

@@ -1,0 +1,17 @@
+# src/yolov8_grasping/config/grasping_params.yaml
+grasping_node:
+  ros__parameters:
+    angle_unit: "rad"
+    base_frame: "base_link"
+    camera_frame: "camera_color_optical_frame"
+
+grasp_executor_node:
+  ros__parameters:
+    joint_names: ["j1", "j2", "j3", "j4", "j5", "j6"]
+    group_name: "robot_arm"
+    base_link: "base_link"
+    end_effector: "grasp_frame"
+    pregrasp_offset_z: 0.10     # 物体上方多高
+    grasp_z_offset: 0.0         # 夹爪闭合位置微调，先 0
+    approach_distance: 0.10     # 预抓取距离
+    auto_execute: false

@@ -151,3 +151,11 @@
 |------|------|------|
 | `libfairino.so`（SDK） | Fairino 厂家 C++ SDK，预编译 .so 文件 | 5 |
 | CAD 模型 / STL 网格 | Fairino S622 机械臂 SolidWorks 模型 | 1 |
+
+
+fairino_description
+s622_moveit_descriptions
+fairino3_v6_moveit2_config
+s622_moveit_config
+fairino_msgs
+fairino_hardware

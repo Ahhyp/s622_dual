@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""MoveToPose Action server。
+
+支持两种 goal：
+  - target_pose: 位姿目标
+  - named_pose:  通过 yaml 配置的命名关节配置（如 "home"）
+"""
+import rclpy
+from rclpy.node import Node
+from rclpy.action import ActionServer, GoalResponse, CancelResponse
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
+
+from s622_bt_manager.action import MoveToPose
+
+from s622_arm_actions.servo_lifecycle import ServoLifecycleManager
+from s622_arm_actions.moveit_planner import MoveItPlanner
+
+
+class MoveToPoseServer(Node):
+    def __init__(self):
+        super().__init__('move_to_pose_server')
+
+        # ---- 参数 ----
+        self.declare_parameter('joint_names',
+            ['j1', 'j2', 'j3', 'j4', 'j5', 'j6'])
+        self.declare_parameter('base_link', 'base_link')
+        self.declare_parameter('end_effector', 'grasp_frame')
+        self.declare_parameter('group_name', 'robot_arm')
+        self.declare_parameter('default_velocity_scale', 0.2)
+        self.declare_parameter('default_acceleration_scale', 0.2)
+
+        # named poses (joint positions)
+        # self.declare_parameter('named_poses.home',
+        #     [0.5, -1.05, 1.05, -1.05, -0.8, 0.0])
+        # self.declare_parameter('named_poses.safe',
+        #     [0.0, -1.2, 1.5, 0.0, 1.2, 0.0])
+
+        self.declare_parameter('named_pose_names', ['home', 'safe'])
+        self.declare_parameter('home_joint_positions',
+            [0.5, -1.05, 1.05, -1.05, -0.8, 0.0])
+        self.declare_parameter('safe_joint_positions',
+            [0.0, -1.2, 1.5, 0.0, 1.2, 0.0])
+        
+
+        joint_names = list(self.get_parameter('joint_names').value)
+        base_link = self.get_parameter('base_link').value
+        end_effector = self.get_parameter('end_effector').value
+        group_name = self.get_parameter('group_name').value
+        self._default_v = self.get_parameter('default_velocity_scale').value
+        self._default_a = self.get_parameter('default_acceleration_scale').value
+
+        # self._named_poses = {
+        #     'home': list(self.get_parameter('named_poses.home').value),
+        #     'safe': list(self.get_parameter('named_poses.safe').value),
+        # }
+        pose_names = list(self.get_parameter('named_pose_names').value)
+        self._named_poses = {}
+        for name in pose_names:
+            param_name = f'{name}_joint_positions'
+            try:
+                self.declare_parameter(param_name, [0.0] * 6)
+            except Exception:
+                pass
+            raw = self.get_parameter(param_name).value
+            self._named_poses[name] = [float(x) for x in raw]   # 强制 float
+        self.get_logger().info(f'loaded named poses: {list(self._named_poses.keys())}')
+
+
+        cb = ReentrantCallbackGroup()
+        self.servo_lc = ServoLifecycleManager(self, callback_group=cb)
+        self.planner = MoveItPlanner(
+            node=self,
+            joint_names=joint_names,
+            base_link=base_link,
+            end_effector=end_effector,
+            group_name=group_name,
+            callback_group=cb,
+            max_vel=self._default_v,
+            max_acc=self._default_a,
+        )
+
+        self._action_server = ActionServer(
+            self,
+            MoveToPose,
+            'move_to_pose',
+            execute_callback=self._execute,
+            goal_callback=lambda goal: GoalResponse.ACCEPT,
+            cancel_callback=lambda gh: CancelResponse.ACCEPT,
+            callback_group=cb,
+        )
+        self.get_logger().info(
+            f'move_to_pose ready: group={group_name}, ee={end_effector}, '
+            f'base={base_link}, joints={joint_names}')
+
+    def _execute(self, goal_handle):
+        goal = goal_handle.request
+        result = MoveToPose.Result()
+
+        # 1) ensure servo stopped
+        if goal.ensure_servo_stopped:
+            if not self.servo_lc.stop_servo():
+                self.get_logger().warning(
+                    'stop_servo failed; continuing (servo may not be running)')
+
+        # 2) set speed
+        v = goal.velocity_scale if goal.velocity_scale > 0 else self._default_v
+        a = goal.acceleration_scale if goal.acceleration_scale > 0 else self._default_a
+        self.planner.set_speed(v, a)
+
+        # 3) plan + execute
+        try:
+            if goal.named_pose:
+                if goal.named_pose not in self._named_poses:
+                    msg = f'unknown named_pose: {goal.named_pose}'
+                    self.get_logger().error(msg)
+                    goal_handle.abort()
+                    result.success = False
+                    result.error_msg = msg
+                    return result
+                self.get_logger().info(f'going to named pose: {goal.named_pose}')
+                ok = self.planner.plan_to_joint_positions(
+                    self._named_poses[goal.named_pose])
+            else:
+                p = goal.target_pose.pose
+                ok = self.planner.plan_to_pose_smart(
+                    position=[p.position.x, p.position.y, p.position.z],
+                    quat_xyzw=[p.orientation.x, p.orientation.y,
+                               p.orientation.z, p.orientation.w],
+                    cartesian=False,
+                )
+        except Exception as e:
+            self.get_logger().error(f'plan/execute exception: {e}')
+            goal_handle.abort()
+            result.success = False
+            result.error_msg = str(e)
+            return result
+
+        if ok:
+            goal_handle.succeed()
+            result.success = True
+            result.error_msg = ''
+        else:
+            goal_handle.abort()
+            result.success = False
+            result.error_msg = 'planning or execution failed'
+        return result
+
+
+def main():
+    rclpy.init()
+    node = MoveToPoseServer()
+    executor = MultiThreadedExecutor(num_threads=4)
+    executor.add_node(node)
+    try:
+        executor.spin()
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

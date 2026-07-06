@@ -1,0 +1,40 @@
+# This config file is used by ros2_control
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    fairino3_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+fairino3_controller:
+  ros__parameters:
+    joints:
+      - j1
+      - j2
+      - j3
+      - j4
+      - j5
+      - j6
+    command_interfaces:
+      - velocity
+    state_interfaces:
+      - position
+      - velocity
+    allow_nonzero_velocity_at_trajectory_end: false
+    gains:
+      j1:
+        ff_velocity_scale: 1.0
+      j2:
+        ff_velocity_scale: 1.0
+      j3:
+        ff_velocity_scale: 1.0
+      j4:
+        ff_velocity_scale: 1.0
+      j5:
+        ff_velocity_scale: 1.0
+      j6:
+        ff_velocity_scale: 1.0

@@ -1,0 +1,46 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="PlaceReachabilityTest">
+        <Sequence>
+            <PrintMessage msg="=== generate place poses ===" />
+            <GeneratePlaceCandidate place_pose="{place_pose}"
+                pre_place_pose="{pre_place_pose}" />
+
+            <PrintMessage msg="=== go home ===" />
+            <MoveToPose named_pose="home"
+                velocity_scale="0.20"
+                acceleration_scale="0.20"
+                timeout_sec="20.0"
+                ensure_servo_stopped="true" />
+
+            <PrintMessage msg="=== go pre_place ===" />
+            <MoveToPose target_pose="{pre_place_pose}"
+                velocity_scale="0.20"
+                acceleration_scale="0.20"
+                timeout_sec="20.0"
+                ensure_servo_stopped="true" />
+
+            <PrintMessage msg="=== go place ===" />
+            <MoveToPose target_pose="{place_pose}"
+                velocity_scale="0.10"
+                acceleration_scale="0.10"
+                timeout_sec="15.0"
+                ensure_servo_stopped="true" />
+
+            <Wait sec="1.0" />
+
+            <PrintMessage msg="=== back to pre_place ===" />
+            <MoveToPose target_pose="{pre_place_pose}"
+                velocity_scale="0.20"
+                acceleration_scale="0.20"
+                timeout_sec="15.0"
+                ensure_servo_stopped="true" />
+
+            <PrintMessage msg="=== back to home ===" />
+            <MoveToPose named_pose="home"
+                velocity_scale="0.20"
+                acceleration_scale="0.20"
+                timeout_sec="20.0"
+                ensure_servo_stopped="true" />
+        </Sequence>
+    </BehaviorTree>
+</root>

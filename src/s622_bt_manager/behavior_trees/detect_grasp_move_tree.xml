@@ -1,0 +1,40 @@
+<root BTCPP_format="4">
+    <BehaviorTree ID="DetectGraspMoveTree">
+        <Sequence>
+            <CheckSystemReady />
+            <Wait sec="1.0" />
+
+            <!-- 先回 home 确保初始姿态可重复 -->
+            <MoveToPose named_pose="home"
+                velocity_scale="0.3"
+                acceleration_scale="0.3"
+                timeout_sec="30.0"
+                ensure_servo_stopped="true" />
+
+            <RetryUntilSuccessful num_attempts="10">
+                <DetectObject object_name="cube"
+                    min_confidence="0.05"
+                    max_age_sec="1.0"
+                    output_u="{u}"
+                    output_v="{v}"
+                    output_yaw="{obj_yaw}"
+                    output_confidence="{conf}" />
+            </RetryUntilSuccessful>
+
+            <GenerateGraspCandidate u="{u}"
+                v="{v}"
+                object_yaw="{obj_yaw}"
+                tcp_grasp_pose="{grasp_pose}"
+                tcp_pregrasp_pose="{pregrasp_pose}"
+                grasp_yaw="{grasp_yaw}" />
+
+            <MoveToPose target_pose="{pregrasp_pose}"
+                velocity_scale="0.2"
+                acceleration_scale="0.2"
+                timeout_sec="30.0"
+                ensure_servo_stopped="true" />
+
+            <PrintMessage msg="Pregrasp reached" />
+        </Sequence>
+    </BehaviorTree>
+</root>

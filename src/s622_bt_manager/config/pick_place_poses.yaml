@@ -1,0 +1,22 @@
+bt_executor:
+  ros__parameters:
+    # 全部扁平 + 全 float，参照 named_poses 的写法
+    place_frame_id: "base_link"
+    place_position:
+      - 0.35
+      - -0.18
+      - 0.030
+    place_rpy:
+      - 3.14159
+      - 0.0
+      - 1.5708
+
+    pre_place_frame_id: "base_link"
+    pre_place_position:
+      - 0.35
+      - -0.18
+      - 0.16
+    pre_place_rpy:
+      - 3.14159
+      - 0.0
+      - 1.5708

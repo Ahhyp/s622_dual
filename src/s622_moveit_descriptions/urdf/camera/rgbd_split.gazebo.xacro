@@ -1,0 +1,104 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="gazebo_rgbd_split"
+    params="
+  name:=camera
+  fps:=30
+  gz_topic_name:=camera
+  image_width:=960
+  image_height:=540
+  h_fov
+  v_fov
+  min_depth:=0.05
+  max_depth:=10.0">
+
+    <xacro:property name="fx" value="${image_width * 0.5 / tan(h_fov * 0.5)}" />
+    <xacro:property name="fy" value="${image_height * 0.5 / tan(v_fov * 0.5)}" />
+    <xacro:property name="cx" value="${image_width * 0.5}" />
+    <xacro:property name="cy" value="${image_height * 0.5}" />
+
+    <!-- ===== RGB Sensor ===== -->
+    <gazebo reference="${name}_color_frame">
+      <sensor name="${name}_rgb" type="camera">
+        <topic>${gz_topic_name}/image</topic>
+        <update_rate>${fps}</update_rate>
+        <gz_frame_id>${name}_color_optical_frame</gz_frame_id>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <camera>
+          <horizontal_fov>${h_fov}</horizontal_fov>
+          <image>
+            <width>${image_width}</width>
+            <height>${image_height}</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>10</far>
+          </clip>
+          <lens>
+            <intrinsics>
+              <fx>${fx}</fx>
+              <fy>${fy}</fy>
+              <cx>${cx}</cx>
+              <cy>${cy}</cy>
+              <s>0</s>
+            </intrinsics>
+            <projection>
+              <p_fx>${fx}</p_fx>
+              <p_fy>${fy}</p_fy>
+              <p_cx>${cx}</p_cx>
+              <p_cy>${cy}</p_cy>
+              <tx>0</tx>
+              <ty>0</ty>
+            </projection>
+          </lens>
+          <optical_frame_id>${name}_color_optical_frame</optical_frame_id>
+        </camera>
+      </sensor>
+    </gazebo>
+
+    <!-- ===== Depth Sensor ===== -->
+    <gazebo reference="${name}_color_frame">
+      <sensor name="${name}_depth" type="depth_camera">
+        <topic>${gz_topic_name}/depth_image</topic>
+        <update_rate>${fps}</update_rate>
+        <gz_frame_id>${name}_color_optical_frame</gz_frame_id>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <camera>
+          <horizontal_fov>${h_fov}</horizontal_fov>
+          <image>
+            <width>${image_width}</width>
+            <height>${image_height}</height>
+            <format>R_FLOAT32</format>
+          </image>
+          <clip>
+            <near>${min_depth}</near>
+            <far>${max_depth}</far>
+          </clip>
+          <lens>
+            <intrinsics>
+              <fx>${fx}</fx>
+              <fy>${fy}</fy>
+              <cx>${cx}</cx>
+              <cy>${cy}</cy>
+              <s>0</s>
+            </intrinsics>
+            <projection>
+              <p_fx>${fx}</p_fx>
+              <p_fy>${fy}</p_fy>
+              <p_cx>${cx}</p_cx>
+              <p_cy>${cy}</p_cy>
+              <tx>0</tx>
+              <ty>0</ty>
+            </projection>
+          </lens>
+          <optical_frame_id>${name}_color_optical_frame</optical_frame_id>
+        </camera>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+</robot>
