@@ -39,6 +39,7 @@ public:
         declare_parameter<std::string>("depth_topic", "/camera/depth/image_raw");
         declare_parameter<std::string>("caminfo_topic", "/camera/color/camera_info");
         declare_parameter<std::string>("grasp_viz_topic", "/grasp_visualization");
+        declare_parameter<std::string>("arm", "");
 
         tick_rate_hz_ = get_parameter("tick_rate_hz").as_int();
 
@@ -74,12 +75,22 @@ public:
         s622_bt::registerGripperNodes(factory_, shared_from_this());
         s622_bt::registerServoNodes(factory_, shared_from_this());
         s622_bt::registerSceneNodes(factory_, shared_from_this());
-        
+
         auto pkg_share = ament_index_cpp::get_package_share_directory("s622_bt_manager");
         auto tree_path = pkg_share + "/behavior_trees/" + get_parameter("tree_file").as_string();
         RCLCPP_INFO(get_logger(), "Loading tree: %s", tree_path.c_str());
         factory_.registerBehaviorTreeFromFile(tree_path);
-        
+
+        const auto arm = get_parameter("arm").as_string();
+        if (arm.empty())
+        {
+            RCLCPP_INFO(get_logger(), "arm parameter: '' (single-arm compat mode)");
+        }
+        else
+        {
+            RCLCPP_INFO(get_logger(), "arm parameter: '%s'", arm.c_str());
+        }
+
         if (get_parameter("auto_start").as_bool())
         {
             startTreeAsync();
@@ -88,7 +99,6 @@ public:
         {
             RCLCPP_INFO(get_logger(), "Waiting for trigger on /bt_trigger ...");
         }
-        
     }
 
 private:
@@ -116,9 +126,13 @@ private:
     {
         auto tree_id = get_parameter("tree_id").as_string();
         auto groot_port = get_parameter("groot2_port").as_int();
+        auto arm = get_parameter("arm").as_string();
 
         RCLCPP_INFO(get_logger(), "=== Starting BT [%s] ===", tree_id.c_str());
         auto tree = factory_.createTree(tree_id);
+
+        tree.rootBlackboard()->set("arm", arm);
+
         BT::Groot2Publisher groot_pub(tree, groot_port);
         BT::StdCoutLogger cout_logger(tree);
         BT::TreeObserver observer(tree);
@@ -132,11 +146,14 @@ private:
             rate.sleep();
         }
 
-        if (status == BT::NodeStatus::FAILURE) {
+        if (status == BT::NodeStatus::FAILURE)
+        {
             std::string failed_node = "unknown";
-            for (const auto& [uid, path] : observer.uidToPath()) {
-                const auto& stats = observer.getStatistics(uid);
-                if (stats.last_result == BT::NodeStatus::FAILURE) {
+            for (const auto &[uid, path] : observer.uidToPath())
+            {
+                const auto &stats = observer.getStatistics(uid);
+                if (stats.last_result == BT::NodeStatus::FAILURE)
+                {
                     failed_node = path;
                 }
             }

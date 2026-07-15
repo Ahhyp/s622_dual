@@ -7,28 +7,49 @@ namespace s622_bt
 
     using namespace std::chrono_literals;
 
+    static std::string service_name_for(const std::string &prefix,
+                                        const std::string &base)
+    {
+        if (prefix.empty())
+            return base;
+        return "/" + prefix + "/" + base;
+    }
+
     SetGripperNode::SetGripperNode(const std::string &name,
                                    const BT::NodeConfig &config,
                                    rclcpp::Node::SharedPtr node)
         : BT::SyncActionNode(name, config), node_(std::move(node))
     {
-        client_ = node_->create_client<s622_bt_manager::srv::SetGripper>("set_gripper");
+        // client_ = node_->create_client<s622_bt_manager::srv::SetGripper>("set_gripper");
     }
 
     BT::NodeStatus SetGripperNode::tick()
     {
-        std::string cmd;
+        std::string cmd, arm_prefix;
         if (!getInput("command", cmd))
         {
             RCLCPP_ERROR(node_->get_logger(), "SetGripper: missing command");
             return BT::NodeStatus::FAILURE;
         }
+        getInput("arm_prefix", arm_prefix);
         float timeout = 5.0f;
         getInput("timeout_sec", timeout);
 
+        // ---- 懒建/重建 client ----
+        if (arm_prefix != client_arm_prefix_)
+        {
+            const auto srv_name = service_name_for(arm_prefix, "set_gripper");
+            client_ = node_->create_client<s622_bt_manager::srv::SetGripper>(srv_name);
+            client_arm_prefix_ = arm_prefix;
+            RCLCPP_INFO(node_->get_logger(),
+                        "SetGripper: bound to service '%s'", srv_name.c_str());
+        }
+
         if (!client_->wait_for_service(2s))
         {
-            RCLCPP_ERROR(node_->get_logger(), "set_gripper service unavailable");
+            RCLCPP_ERROR(node_->get_logger(),
+                         "set_gripper service unavailable (arm=%s)",
+                         arm_prefix.c_str());
             return BT::NodeStatus::FAILURE;
         }
 
@@ -45,7 +66,7 @@ namespace s622_bt
         }
         if (future.wait_for(0ms) != std::future_status::ready)
         {
-            RCLCPP_ERROR(node_->get_logger(), "SetGripper: timeout");
+            RCLCPP_ERROR(node_->get_logger(), "SetGripper: timeout (arm=%s)", arm_prefix.c_str());
             return BT::NodeStatus::FAILURE;
         }
 
@@ -57,8 +78,9 @@ namespace s622_bt
                          res->error_msg.c_str());
             return BT::NodeStatus::FAILURE;
         }
-        RCLCPP_INFO(node_->get_logger(), "SetGripper [%s] -> finger=%.4f",
-                    cmd.c_str(), res->finger_position);
+        RCLCPP_INFO(node_->get_logger(), "SetGripper[arm=%s cmd=%s] -> finger=%.4f",
+                    arm_prefix.c_str(), cmd.c_str(), res->finger_position);
+
         return BT::NodeStatus::SUCCESS;
     }
 
@@ -79,14 +101,23 @@ namespace s622_bt
     BT::NodeStatus VerifyGraspNode::tick()
     {
         float min_pos = 0.005f, timeout = 5.0f;
-        std::string fb_joint = "finger1_joint";
+        std::string fb_joint_raw, arm_prefix;
         getInput("finger_min_position", min_pos);
-        getInput("feedback_joint", fb_joint);
+        getInput("feedback_joint", fb_joint_raw);
+        getInput("arm_prefix", arm_prefix);
         getInput("timeout_sec", timeout);
+
+        std::string fb_joint = fb_joint_raw;
+        if (fb_joint.empty())
+        {
+            fb_joint = arm_prefix.empty()
+                           ? "finger1_joint"
+                           : arm_prefix + "_finger1_joint";
+        }
 
         auto t_start = node_->now();
         auto deadline = t_start + rclcpp::Duration::from_seconds(timeout);
-        const double min_wait = 1.5;  // 最少等 1.5s 让 finger 完成闭合
+        const double min_wait = 1.5; // 最少等 1.5s 让 finger 完成闭合
         float last_pos = -1.0f;
         int stable_count = 0;
 
@@ -111,7 +142,7 @@ namespace s622_bt
                     {
                         last_pos = pos;
                         std::this_thread::sleep_for(50ms);
-                        continue;  // 还在最小等待期内, 不判定
+                        continue; // 还在最小等待期内, 不判定
                     }
 
                     // 等待 finger 停止运动（连续 5 帧变化 < 0.0005）
@@ -125,22 +156,24 @@ namespace s622_bt
                             if (pos < min_pos)
                             {
                                 RCLCPP_WARN(node_->get_logger(),
-                                            "VerifyGrasp: EMPTY (%s=%.4f < %.4f)",
-                                            fb_joint.c_str(), pos, min_pos);
+                                            "VerifyGrasp[arm=%s]: EMPTY (%s=%.4f < %.4f)",
+                                            arm_prefix.c_str(), fb_joint.c_str(),
+                                            pos, min_pos);
                                 return BT::NodeStatus::FAILURE;
                             }
                             else if (pos > max_open)
                             {
                                 RCLCPP_WARN(node_->get_logger(),
-                                            "VerifyGrasp: MISS (%s=%.4f > %.4f)",
-                                            fb_joint.c_str(), pos, max_open);
+                                            "VerifyGrasp[arm=%s]: MISS (%s=%.4f > %.4f)",
+                                            arm_prefix.c_str(), fb_joint.c_str(),
+                                            pos, max_open);
                                 return BT::NodeStatus::FAILURE;
                             }
                             else
                             {
                                 RCLCPP_INFO(node_->get_logger(),
-                                            "VerifyGrasp: GRASPED (%.4f in [%.4f,%.4f])",
-                                            pos, min_pos, max_open);
+                                            "VerifyGrasp[arm=%s]: GRASPED (%.4f in [%.4f,%.4f])",
+                                            arm_prefix.c_str(), pos, min_pos, max_open);
                                 return BT::NodeStatus::SUCCESS;
                             }
                         }
@@ -154,8 +187,9 @@ namespace s622_bt
             }
             std::this_thread::sleep_for(50ms);
         }
-        RCLCPP_ERROR(node_->get_logger(), "VerifyGrasp: timeout reading %s",
-                     fb_joint.c_str());
+        RCLCPP_ERROR(node_->get_logger(),
+                     "VerifyGrasp[arm=%s]: timeout reading %s",
+                     arm_prefix.c_str(), fb_joint.c_str());
         return BT::NodeStatus::FAILURE;
     }
 

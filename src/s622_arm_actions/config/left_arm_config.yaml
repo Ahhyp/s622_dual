@@ -1,0 +1,62 @@
+/left/move_to_pose_server:
+  ros__parameters:
+    use_sim_time: true
+    joint_names: ['left_j1', 'left_j2', 'left_j3', 'left_j4', 'left_j5', 'left_j6']
+    base_link: 'left_base_link'
+    end_effector: 'left_grasp_frame'
+    group_name: 'left_arm'
+    default_velocity_scale: 0.2
+    default_acceleration_scale: 0.2
+    servo_ns: 'left'
+    arm_controller_action: '/left_arm_controller/follow_joint_trajectory'
+    named_pose_names: ['home', 'safe', 'grasp_cube']
+    home_joint_positions:
+      - 0.0
+      - -1.5708
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    safe_joint_positions:
+      - 0.0
+      - -1.2
+      - 1.5
+      - 0.0
+      - 1.2
+      - 0.0
+    grasp_cube_joint_positions:
+      # M2.7 校准前先用 M1.7 原值占位(左臂坐标系变了,实际位姿可能不合适)
+      - 2.847
+      - -0.723
+      - 1.058
+      - 1.236
+      - 1.570
+      - 1.277
+
+/left/visual_align_server:
+  ros__parameters:
+    base_frame: 'left_base_link'
+    ee_frame: 'left_grasp_frame'
+    camera_frame: 'camera_color_optical_frame'
+    twist_topic: '/left/servo_node/delta_twist_cmds'
+    servo_ns: 'left'
+    servo_status_topic: '/left/servo_node/status'
+    # M2.7 前需要重新校准; 现在暂用 M1.7 原值(左臂 xy 反号)
+    j_img_to_base: [0.001939, -0.000069, 0.0, -0.001957]
+    xy_kp: 1.0
+    xy_max_speed: 0.05
+    xy_min_pixel_err_to_move: 2.0
+    yaw_kp: 1.0
+    yaw_max_speed: 0.5
+    descend_max_speed: 0.05
+    lift_max_speed: 0.05
+
+/left/gripper_service:
+  ros__parameters:
+    gripper_topic: '/left_hand_controller/joint_trajectory'
+    finger_joint_names: ['left_finger1_joint', 'left_finger2_joint']
+    open_positions: [0.025, -0.025]
+    close_positions: [0.0, 0.0]
+    command_duration_sec: 1.0
+    settle_sec: 1.2
+    feedback_joint: 'left_finger1_joint'

@@ -42,7 +42,7 @@ def generate_launch_description():
                 'ee_frame': 'grasp_frame',
                 'camera_frame': 'camera_color_optical_frame',
                 'twist_topic': '/servo_node/delta_twist_cmds',
-                'j_img_to_base': [-0.001939, 0.000069, 0.0, 0.001957],
+                # 'j_img_to_base': [-0.001939, 0.000069, 0.0, 0.001957],
                 'xy_kp': 1.0,
                 'xy_max_speed': 0.05,
                 'xy_min_pixel_err_to_move': 2.0,

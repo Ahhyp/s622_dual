@@ -29,7 +29,9 @@ class MoveToPoseServer(Node):
         self.declare_parameter('group_name', 'robot_arm')
         self.declare_parameter('default_velocity_scale', 0.2)
         self.declare_parameter('default_acceleration_scale', 0.2)
-
+        self.declare_parameter('servo_ns', '')    
+        self.declare_parameter('arm_controller_action', '')   
+        
         # named poses (joint positions)
         # self.declare_parameter('named_poses.home',
         #     [0.5, -1.05, 1.05, -1.05, -0.8, 0.0])
@@ -49,7 +51,9 @@ class MoveToPoseServer(Node):
         group_name = self.get_parameter('group_name').value
         self._default_v = self.get_parameter('default_velocity_scale').value
         self._default_a = self.get_parameter('default_acceleration_scale').value
-
+        servo_ns = self.get_parameter('servo_ns').value
+        arm_controller_action = self.get_parameter('arm_controller_action').value     
+        
         # self._named_poses = {
         #     'home': list(self.get_parameter('named_poses.home').value),
         #     'safe': list(self.get_parameter('named_poses.safe').value),
@@ -68,7 +72,7 @@ class MoveToPoseServer(Node):
 
 
         cb = ReentrantCallbackGroup()
-        self.servo_lc = ServoLifecycleManager(self, callback_group=cb)
+        self.servo_lc = ServoLifecycleManager(self, callback_group=cb, servo_ns=servo_ns)
         self.planner = MoveItPlanner(
             node=self,
             joint_names=joint_names,
@@ -78,6 +82,7 @@ class MoveToPoseServer(Node):
             callback_group=cb,
             max_vel=self._default_v,
             max_acc=self._default_a,
+            arm_controller_action=arm_controller_action,
         )
 
         self._action_server = ActionServer(
@@ -99,9 +104,9 @@ class MoveToPoseServer(Node):
 
         # 1) ensure servo stopped
         if goal.ensure_servo_stopped:
-            if not self.servo_lc.stop_servo():
+            if not self.servo_lc.force_stop():
                 self.get_logger().warning(
-                    'stop_servo failed; continuing (servo may not be running)')
+                    'force_stop failed; continuing (servo may not be running)')
 
         # 2) set speed
         v = goal.velocity_scale if goal.velocity_scale > 0 else self._default_v

@@ -1,0 +1,153 @@
+<root BTCPP_format="4">
+  <BehaviorTree ID="PickPlaceDual">
+    <Fallback name="MainWithRecovery">
+
+      <!-- ============ 主任务 ============ -->
+      <Sequence name="MainTask">
+        <CheckSystemReady />
+
+        <!-- ===== Pick ===== -->
+        <SetGripper arm_prefix="{arm}" command="open" timeout_sec="5.0" />
+
+        <MoveToPose arm_prefix="{arm}" named_pose="home"
+            velocity_scale="0.3" acceleration_scale="0.2"
+            ensure_servo_stopped="true"
+            timeout_sec="30.0" />
+
+        <RetryUntilSuccessful num_attempts="5">
+          <Sequence>
+            <DetectObject object_name="cube" min_confidence="0.10" max_age_sec="1.0"
+                output_u="{u}" output_v="{v}"
+                output_yaw="{obj_yaw}" output_confidence="{conf}" />
+            <GenerateGraspCandidate arm_prefix="{arm}"
+                u="{u}" v="{v}" object_yaw="{obj_yaw}"
+                tcp_grasp_pose="{grasp_pose}"
+                tcp_pregrasp_pose="{pregrasp_pose}"
+                grasp_yaw="{grasp_yaw}"
+                grasp_pose_x="{grasp_x}"
+                grasp_pose_y="{grasp_y}" />
+          </Sequence>
+        </RetryUntilSuccessful>
+
+        <LockTargetPixel input_u="{u}" input_v="{v}"
+            locked_u="{lu}" locked_v="{lv}" />
+
+        <MoveToPose arm_prefix="{arm}" target_pose="{pregrasp_pose}"
+            velocity_scale="0.2" acceleration_scale="0.2"
+            ensure_servo_stopped="true"
+            timeout_sec="25.0" />
+
+        <VisualAlign arm_prefix="{arm}" mode="xy"
+            target_x_base="{grasp_x}" target_y_base="{grasp_y}"
+            tolerance_m="0.005"
+            ensure_servo_started="true"
+            timeout_sec="25.0" />
+
+        <VisualAlign arm_prefix="{arm}" mode="yaw"
+            target_yaw="{grasp_yaw}"
+            tolerance_rad="0.10"
+            ensure_servo_started="true"
+            timeout_sec="5.0" />
+
+        <AlignLockCheck locked_u="{lu}" locked_v="{lv}"
+            object_name="cube"
+            min_confidence="0.05"
+            tolerance_px="25.0" />
+
+        <VisualAlign arm_prefix="{arm}" mode="descend"
+            distance="0.13"
+            speed="0.04"
+            ensure_servo_started="true"
+            timeout_sec="30.0" />
+
+        <SetGripper arm_prefix="{arm}" command="close"
+            timeout_sec="5.0" finger_position="{finger_pos}" />
+
+        <VerifyGrasp arm_prefix="{arm}"
+            finger_min_position="0.005" timeout_sec="5.0"
+            finger_position="{finger_pos}" />
+
+        <AttachObject arm_prefix="{arm}" object_name="cube"
+            size_x="0.04" size_y="0.04" size_z="0.04"
+            offset_z="0.02" />
+
+        <VisualAlign arm_prefix="{arm}" mode="lift"
+            distance="0.10"
+            speed="0.05"
+            ensure_servo_started="false"
+            timeout_sec="20.0" />
+
+        <MoveToPose arm_prefix="{arm}" named_pose="safe"
+            velocity_scale="0.30" acceleration_scale="0.30"
+            timeout_sec="20.0"
+            ensure_servo_stopped="true" />
+
+        <!-- ===== Place ===== -->
+        <GeneratePlaceCandidate arm_prefix="{arm}"
+            place_pose="{place_pose}"
+            pre_place_pose="{pre_place_pose}" />
+
+        <MoveToPose arm_prefix="{arm}" target_pose="{pre_place_pose}"
+            velocity_scale="0.20" acceleration_scale="0.20"
+            timeout_sec="20.0"
+            ensure_servo_stopped="true" />
+
+        <MoveToPose arm_prefix="{arm}" target_pose="{place_pose}"
+            velocity_scale="0.10" acceleration_scale="0.10"
+            timeout_sec="15.0"
+            ensure_servo_stopped="true" />
+
+        <SetGripper arm_prefix="{arm}" command="open" timeout_sec="5.0" />
+
+        <DetachObject arm_prefix="{arm}" object_name="cube"
+            put_back_in_world="true"
+            drop_pose="{place_pose}" />
+
+        <VisualAlign arm_prefix="{arm}" mode="lift"
+            distance="0.10" speed="0.05"
+            timeout_sec="20.0" />
+
+        <MoveToPose arm_prefix="{arm}" named_pose="home"
+            velocity_scale="0.30" acceleration_scale="0.30"
+            timeout_sec="20.0"
+            ensure_servo_stopped="true" />
+      </Sequence>
+
+      <!-- ============ Recovery ============ -->
+      <Sequence name="Recovery">
+        <PrintMessage msg="=== ENTERING RECOVERY ==="/>
+
+        <ForceSuccess>
+          <StopServo arm_prefix="{arm}" />
+        </ForceSuccess>
+
+        <ForceSuccess>
+          <SetGripper arm_prefix="{arm}" command="open" timeout_sec="3.0" />
+        </ForceSuccess>
+
+        <ForceSuccess>
+          <DetachObject arm_prefix="{arm}" object_name="cube"
+              put_back_in_world="false"
+              timeout_sec="3.0" />
+        </ForceSuccess>
+
+        <ForceSuccess>
+          <MoveToPose arm_prefix="{arm}" named_pose="safe"
+              velocity_scale="0.20" acceleration_scale="0.20"
+              timeout_sec="15.0"
+              ensure_servo_stopped="true" />
+        </ForceSuccess>
+
+        <ForceSuccess>
+          <MoveToPose arm_prefix="{arm}" named_pose="home"
+              velocity_scale="0.20" acceleration_scale="0.20"
+              timeout_sec="15.0" />
+        </ForceSuccess>
+
+        <PrintMessage msg="=== RECOVERY DONE ==="/>
+        <AlwaysFailure />
+      </Sequence>
+
+    </Fallback>
+  </BehaviorTree>
+</root>

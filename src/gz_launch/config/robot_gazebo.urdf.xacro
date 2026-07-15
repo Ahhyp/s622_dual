@@ -3,18 +3,27 @@
 
     <xacro:property name="M_PI" value="3.1415926535897931" />
 
-    <xacro:arg
-        name="initial_positions_file"
-        default="$(find s622_moveit_config)/config/initial_positions.yaml" />
+    <!-- ============ 参数声明 ============ -->
+    <xacro:arg name="robot_name" default="s622"/>
+    <xacro:arg name="prefix" default=""/>
+    <xacro:arg name="attach_world" default="true"/>
+    <xacro:arg name="include_camera" default="true"/>
+    <xacro:arg name="controllers_yaml" 
+               default="$(find s622_moveit_config)/config/ros2_controllers.yaml"/>
+    <xacro:arg name="initial_positions_file"
+               default="$(find s622_moveit_config)/config/initial_positions.yaml" />
 
+    <xacro:property name="prefix" value="$(arg prefix)"/>
+
+    <!-- ============ 引入本体 URDF (xacro) ============ -->
     <xacro:include
-        filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf" />
+        filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
 
-
+    <!-- ============ Gazebo 全局插件 ============ -->
     <gazebo>
         <plugin filename="gz_ros2_control-system"
             name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-            <parameters>$(find s622_moveit_config)/config/ros2_controllers.yaml</parameters>
+            <parameters>$(arg controllers_yaml)</parameters>
         </plugin>
 
         <plugin filename="gz-sim-joint-state-publisher-system"
@@ -33,64 +42,38 @@
         </plugin>
     </gazebo>
 
-    <!-- <gazebo reference="camera_link">
-        <sensor name="rgbd_camera" type="rgbd_camera">
-            <update_rate>30</update_rate>
-            <topic>camera</topic>         
-            <camera>
-        <horizontal_fov>1.047</horizontal_fov>
-        <image>
-            <width>640</width>
-            <height>480</height>
-        </image>
-        <clip>
-            <near>0.05</near>
-            <far>5.0</far>
-        </clip>
-    </camera>
-            <always_on>1</always_on>
-            <visualize>true</visualize>
-        </sensor>
-    </gazebo>
-    -->
-    
-    <!-- 夹爪摩擦参数（防 Gazebo 抖动） -->
-    <gazebo reference="finger1_joint">
+    <!-- ============ 夹爪摩擦 (前缀化) ============ -->
+    <gazebo reference="${prefix}finger1_joint">
         <mu1>500.0</mu1>
         <mu2>500.0</mu2>
         <kp>30000</kp>
         <kd>15</kd>
     </gazebo>
-    <gazebo reference="finger2_joint">
+    <gazebo reference="${prefix}finger2_joint">
         <mu1>500.0</mu1>
         <mu2>500.0</mu2>
         <kp>30000</kp>
         <kd>15</kd>
     </gazebo>
 
-    <!-- ros2_control 标签实例化 -->
-    <!-- <xacro:include filename="$(find
-    s622_moveit_config)/config/s622_moveit_descriptions.ros2_control.xacro"/>
-    <xacro:s622_moveit_descriptions_ros2_control
-        name="GazeboSimSystem"
-        initial_positions_file="$(arg initial_positions_file)"/> -->
-
+    <!-- ============ ros2_control 实例化 ============ -->
     <xacro:include
         filename="$(find gz_launch)/config/s622_gazebo_ros2_control.xacro" />
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"
-        initial_positions_file="$(arg initial_positions_file)" />
+        initial_positions_file="$(arg initial_positions_file)"
+        prefix="${prefix}" />
 
-    <!-- Camera -->
-    <xacro:include
-        filename="$(find s622_moveit_descriptions)/urdf/camera/camera.xacro" />
+    <!-- ============ Camera (可选) ============ -->
+    <xacro:if value="$(arg include_camera)">
+        <xacro:include
+            filename="$(find s622_moveit_descriptions)/urdf/camera/camera.xacro" />
 
-    <xacro:camera_v0
-        parent="base_link">
-        <!-- A: 右侧俯视工作区中心 (0.35, 0, 0.10) -->
-        <origin xyz="0.35 0.5 0.9" rpy="0 ${58*M_PI/180} ${-M_PI/2}"/>
-    </xacro:camera_v0>
+        <xacro:camera_v0 parent="${prefix}base_link">
+            <origin xyz="0.35 0.5 0.9" rpy="0 ${58*M_PI/180} ${-M_PI/2}"/>
+        </xacro:camera_v0>
 
+        <xacro:camera_gazebo_v0 />
+    </xacro:if>
 
-    <xacro:camera_gazebo_v0 />
 </robot>

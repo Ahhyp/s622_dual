@@ -23,6 +23,7 @@ namespace s622_bt
         static BT::PortsList providedPorts()
         {
             return {
+                BT::InputPort<std::string>("arm_prefix", "", "'' | 'left' | 'right'"),
                 BT::InputPort<std::string>("command", "open|close"),
                 BT::InputPort<float>("timeout_sec", 5.0f, ""),
                 BT::OutputPort<float>("finger_position"),
@@ -33,6 +34,7 @@ namespace s622_bt
     private:
         rclcpp::Node::SharedPtr node_;
         rclcpp::Client<s622_bt_manager::srv::SetGripper>::SharedPtr client_;
+        std::string client_arm_prefix_ = "__UNSET__";   
     };
 
     class VerifyGraspNode : public BT::SyncActionNode
@@ -46,7 +48,9 @@ namespace s622_bt
             return {
                 BT::InputPort<float>("finger_min_position", 0.005f,
                                      "below this -> empty grasp -> FAILURE"),
-                BT::InputPort<std::string>("feedback_joint", "finger1_joint", ""),
+                // BT::InputPort<std::string>("feedback_joint", "finger1_joint", ""),
+                BT::InputPort<std::string>("feedback_joint", "", ""),
+                BT::InputPort<std::string>("arm_prefix", "", "'' | 'left' | 'right'"),  
                 BT::InputPort<float>("timeout_sec", 2.0f, ""),
                 BT::OutputPort<float>("finger_position"),
             };

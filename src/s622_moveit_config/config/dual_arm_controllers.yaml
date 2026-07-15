@@ -1,0 +1,128 @@
+# 双臂 controller 配置(单 controller_manager 实例)
+# 约定:
+#   - 左臂 joint 前缀: left_    (URDF 里 ${prefix}j1 展开为 left_j1)
+#   - 右臂 joint 前缀: right_
+#   - JSB 单例,发布合并后的 /joint_states
+#   - Controller 名带前缀区分左右,MoveIt/action client 定位 /{side}_arm_controller/...
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    left_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    left_hand_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    right_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    right_hand_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+# joint_state_broadcaster:
+#   ros__parameters:
+#     type: joint_state_broadcaster/JointStateBroadcaster
+
+# ============================================================
+# Left Arm
+# ============================================================
+left_arm_controller:
+  ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController
+    joints:
+      - left_j1
+      - left_j2
+      - left_j3
+      - left_j4
+      - left_j5
+      - left_j6
+    command_interfaces: [velocity]
+    state_interfaces: [position, velocity]
+
+    allow_partial_joints_goal: false
+    allow_nonzero_velocity_at_trajectory_end: true
+    interpolation_method: splines
+    cmd_timeout: 0.0
+
+    constraints:
+      goal_time: 0.5
+      stopped_velocity_tolerance: 0.1
+      left_j1: {trajectory: 0.15, goal: 0.08}
+      left_j2: {trajectory: 0.15, goal: 0.08}
+      left_j3: {trajectory: 0.15, goal: 0.08}
+      left_j4: {trajectory: 0.12, goal: 0.06}
+      left_j5: {trajectory: 0.12, goal: 0.06}
+      left_j6: {trajectory: 0.10, goal: 0.05}
+
+    gains:
+      left_j1: {p: 6.0, i: 0.02, d: 0.20, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      left_j2: {p: 6.0, i: 0.02, d: 0.20, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      left_j3: {p: 4.0, i: 0.02, d: 0.20, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      left_j4: {p: 3.0, i: 0.01, d: 0.15, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      left_j5: {p: 3.0, i: 0.01, d: 0.15, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      left_j6: {p: 2.0, i: 0.01, d: 0.12, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+
+left_hand_controller:
+  ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController
+    joints:
+      - left_finger1_joint
+      - left_finger2_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+
+# ============================================================
+# Right Arm
+# ============================================================
+right_arm_controller:
+  ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController
+    joints:
+      - right_j1
+      - right_j2
+      - right_j3
+      - right_j4
+      - right_j5
+      - right_j6
+    command_interfaces: [velocity]
+    state_interfaces: [position, velocity]
+
+    allow_partial_joints_goal: false
+    allow_nonzero_velocity_at_trajectory_end: true
+    interpolation_method: splines
+    cmd_timeout: 0.0
+
+    constraints:
+      goal_time: 0.5
+      stopped_velocity_tolerance: 0.1
+      right_j1: {trajectory: 0.15, goal: 0.08}
+      right_j2: {trajectory: 0.15, goal: 0.08}
+      right_j3: {trajectory: 0.15, goal: 0.08}
+      right_j4: {trajectory: 0.12, goal: 0.06}
+      right_j5: {trajectory: 0.12, goal: 0.06}
+      right_j6: {trajectory: 0.10, goal: 0.05}
+
+    gains:
+      right_j1: {p: 6.0, i: 0.02, d: 0.20, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      right_j2: {p: 6.0, i: 0.02, d: 0.20, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      right_j3: {p: 4.0, i: 0.02, d: 0.20, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      right_j4: {p: 3.0, i: 0.01, d: 0.15, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      right_j5: {p: 3.0, i: 0.01, d: 0.15, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+      right_j6: {p: 2.0, i: 0.01, d: 0.12, ff_velocity_scale: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5, u_clamp_min: -2.0, u_clamp_max: 2.0, antiwindup_strategy: none, error_deadband: 0.001}
+
+right_hand_controller:
+  ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController
+    joints:
+      - right_finger1_joint
+      - right_finger2_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position

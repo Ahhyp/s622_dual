@@ -28,6 +28,7 @@ namespace s622_bt
         {
             return {
                 BT::InputPort<std::string>("mode"),
+                BT::InputPort<std::string>("arm_prefix", "", "'' | 'left' | 'right'"),
                 BT::InputPort<double>("timeout_sec", 25.0, ""),
                 BT::InputPort<bool>("ensure_servo_started", true, ""),
                 // mode=xy
@@ -50,6 +51,7 @@ namespace s622_bt
     private:
         rclcpp::Node::SharedPtr node_;
         rclcpp_action::Client<ActionT>::SharedPtr client_;
+        std::string client_arm_prefix_;
         std::shared_future<GoalHandle::SharedPtr> goal_future_;
         GoalHandle::SharedPtr goal_handle_;
         std::shared_future<GoalHandle::WrappedResult> result_future_;
@@ -62,12 +64,17 @@ namespace s622_bt
     public:
         StopServoNode(const std::string &name, const BT::NodeConfig &config,
                       rclcpp::Node::SharedPtr node);
-        static BT::PortsList providedPorts() { return {}; }
+        static BT::PortsList providedPorts() { 
+            return {
+                BT::InputPort<std::string>("arm_prefix", "", "'' | 'left' | 'right'"),
+            };
+        }
         BT::NodeStatus tick() override;
 
     private:
         rclcpp::Node::SharedPtr node_;
         rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr client_;
+        std::string client_arm_prefix_;
     };
 
     void registerServoNodes(BT::BehaviorTreeFactory &factory,

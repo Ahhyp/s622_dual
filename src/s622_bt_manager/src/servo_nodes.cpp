@@ -1,17 +1,35 @@
 #include "s622_bt_manager/servo_nodes.hpp"
 #include <chrono>
-
 namespace s622_bt
 {
 
     using namespace std::chrono_literals;
+
+    // ---- helper: build action/service name from prefix ----
+    static std::string action_name_for(const std::string &prefix,
+                                       const std::string &base)
+    {
+        if (prefix.empty())
+            return base;
+        return "/" + prefix + "/" + base;
+    }
+    static std::string service_name_for(const std::string &prefix,
+                                        const std::string &base)
+    {
+        if (prefix.empty())
+            return base; // base 已包含开头 "/"
+        // base like "/servo_node/stop_servo" -> "/left/servo_node/stop_servo"
+        return "/" + prefix + base;
+    }
 
     VisualAlignAction::VisualAlignAction(const std::string &name,
                                          const BT::NodeConfig &config,
                                          rclcpp::Node::SharedPtr node)
         : BT::StatefulActionNode(name, config), node_(std::move(node))
     {
-        client_ = rclcpp_action::create_client<ActionT>(node_, "visual_align");
+        // client_ = rclcpp_action::create_client<ActionT>(node_, "visual_align");
+        // 不再在构造时建 client, 因为要按 tick 时的 arm_prefix 决定
+        client_arm_prefix_ = "__UNSET__"; // sentinel
     }
 
     BT::NodeStatus VisualAlignAction::onStart()
@@ -19,6 +37,19 @@ namespace s622_bt
         std::string mode;
         if (!getInput("mode", mode))
             return BT::NodeStatus::FAILURE;
+
+        std::string arm_prefix = "";
+        getInput("arm_prefix", arm_prefix);
+
+        // 若 prefix 变化(或首次), 重建 client
+        if (arm_prefix != client_arm_prefix_)
+        {
+            const auto action_name = action_name_for(arm_prefix, "visual_align");
+            client_ = rclcpp_action::create_client<ActionT>(node_, action_name);
+            client_arm_prefix_ = arm_prefix;
+            RCLCPP_INFO(node_->get_logger(),
+                        "VisualAlign: bound to action '%s'", action_name.c_str());
+        }
 
         double t_x = 0.0, t_y = 0.0;
         double tol_m = 0.005f;
@@ -38,7 +69,9 @@ namespace s622_bt
 
         if (!client_->wait_for_action_server(std::chrono::seconds(3)))
         {
-            RCLCPP_ERROR(node_->get_logger(), "visual_align server unavailable");
+            RCLCPP_ERROR(node_->get_logger(),
+                         "visual_align server unavailable (arm=%s)",
+                         arm_prefix.c_str());
             return BT::NodeStatus::FAILURE;
         }
 
@@ -55,9 +88,10 @@ namespace s622_bt
         g.ensure_servo_started = static_cast<float>(ess);
 
         RCLCPP_INFO(node_->get_logger(),
-                    "VisualAlign[%s]: dist=%.3f speed=%.3f to=%.1f "
+                    "VisualAlign[%s arm=%s]: dist=%.3f speed=%.3f to=%.1f "
                     "target_xy=(%.3f,%.3f) tol_m=%.3f target_yaw=%.3f tol_rad=%.3f",
-                    mode.c_str(), dist, speed, timeout, t_x, t_y, tol_m, t_yaw, tol_rad);
+                    mode.c_str(), arm_prefix.c_str(),
+                    dist, speed, timeout, t_x, t_y, tol_m, t_yaw, tol_rad);
         rclcpp_action::Client<ActionT>::SendGoalOptions opts;
         goal_future_ = client_->async_send_goal(g, opts);
         goal_handle_.reset();
@@ -108,15 +142,28 @@ namespace s622_bt
                                  rclcpp::Node::SharedPtr node)
         : BT::SyncActionNode(name, config), node_(std::move(node))
     {
-        client_ = node_->create_client<std_srvs::srv::Trigger>("/servo_node/stop_servo");
+        // client_ = node_->create_client<std_srvs::srv::Trigger>("/servo_node/stop_servo");
+        client_arm_prefix_ = "__UNSET__";
     }
 
     BT::NodeStatus StopServoNode::tick()
     {
+        std::string arm_prefix = "";
+        getInput("arm_prefix", arm_prefix);
+        if (arm_prefix != client_arm_prefix_)
+        {
+            const auto srv_name = service_name_for(arm_prefix, "/servo_node/stop_servo");
+            client_ = node_->create_client<std_srvs::srv::Trigger>(srv_name);
+            client_arm_prefix_ = arm_prefix;
+            RCLCPP_INFO(node_->get_logger(),
+                        "StopServo: bound to service '%s'", srv_name.c_str());
+        }
         if (!client_->wait_for_service(2s))
         {
-            RCLCPP_WARN(node_->get_logger(), "stop_servo service unavailable");
-            return BT::NodeStatus::SUCCESS; // not running, treat as success
+            RCLCPP_WARN(node_->get_logger(),
+                        "stop_servo service unavailable (arm=%s)",
+                        arm_prefix.c_str());
+            return BT::NodeStatus::SUCCESS;
         }
         auto req = std::make_shared<std_srvs::srv::Trigger::Request>();
         auto future = client_->async_send_request(req);
@@ -127,7 +174,7 @@ namespace s622_bt
                 break;
             std::this_thread::sleep_for(20ms);
         }
-        RCLCPP_INFO(node_->get_logger(), "stop_servo called");
+        RCLCPP_INFO(node_->get_logger(), "stop_servo called (arm=%s)", arm_prefix.c_str());
         return BT::NodeStatus::SUCCESS;
     }
 

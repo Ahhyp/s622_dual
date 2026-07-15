@@ -1,0 +1,60 @@
+/right/move_to_pose_server:
+  ros__parameters:
+    use_sim_time: true
+    joint_names: ['right_j1', 'right_j2', 'right_j3', 'right_j4', 'right_j5', 'right_j6']
+    base_link: 'right_base_link'
+    end_effector: 'right_grasp_frame'
+    group_name: 'right_arm'
+    default_velocity_scale: 0.2
+    default_acceleration_scale: 0.2
+    servo_ns: 'right'
+    arm_controller_action: '/right_arm_controller/follow_joint_trajectory'
+    named_pose_names: ['home', 'safe', 'grasp_cube']
+    home_joint_positions:
+      - 0.0
+      - -1.5708
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    safe_joint_positions:
+      - 0.0
+      - -1.2
+      - 1.5
+      - 0.0
+      - 1.2
+      - 0.0
+    grasp_cube_joint_positions:
+      - 2.847
+      - -0.723
+      - 1.058
+      - 1.236
+      - 1.570
+      - 1.277
+
+/right/visual_align_server:
+  ros__parameters:
+    base_frame: 'right_base_link'
+    ee_frame: 'right_grasp_frame'
+    camera_frame: 'camera_color_optical_frame'
+    twist_topic: '/right/servo_node/delta_twist_cmds'
+    servo_ns: 'right'
+    servo_status_topic: '/right/servo_node/status'
+    j_img_to_base: [-0.001939, 0.000069, 0.0, 0.001957]
+    xy_kp: 1.0
+    xy_max_speed: 0.05
+    xy_min_pixel_err_to_move: 2.0
+    yaw_kp: 1.0
+    yaw_max_speed: 0.5
+    descend_max_speed: 0.05
+    lift_max_speed: 0.05
+
+/right/gripper_service:
+  ros__parameters:
+    gripper_topic: '/right_hand_controller/joint_trajectory'
+    finger_joint_names: ['right_finger1_joint', 'right_finger2_joint']
+    open_positions: [0.025, -0.025]
+    close_positions: [0.0, 0.0]
+    command_duration_sec: 1.0
+    settle_sec: 1.2
+    feedback_joint: 'right_finger1_joint'

@@ -11,12 +11,20 @@ from rclpy.callback_groups import CallbackGroup, ReentrantCallbackGroup
 from rclpy.duration import Duration
 
 from sensor_msgs.msg import JointState
-from moveit_msgs.srv import GetPositionIK
-from moveit_msgs.msg import RobotState
+from moveit_msgs.srv import GetPositionIK, GetMotionPlan
 
 from fairino_msgs.srv import GetAllIK
+from moveit_msgs.msg import (
+    RobotState, MotionPlanRequest, Constraints, JointConstraint,
+    RobotTrajectory,
+)
 
 from pymoveit2 import MoveIt2
+from rclpy.action import ActionClient
+from control_msgs.action import FollowJointTrajectory
+
+from control_msgs.msg import JointTolerance
+from builtin_interfaces.msg import Duration as DurationMsg
 
 
 class MoveItPlanner:
@@ -32,12 +40,14 @@ class MoveItPlanner:
         max_acc: float = 0.2,
         planner_id: str = "RRTConnect",
         pipeline_id: str = "fairino",
+        arm_controller_action: str = "",
     ):
         self.node = node
         self.joint_names = joint_names
         self.base_link = base_link
         self.end_effector = end_effector
         self.group_name = group_name
+        self.arm_controller_action = arm_controller_action
         cb = callback_group or ReentrantCallbackGroup()
         self._cb = cb
 
@@ -80,6 +90,17 @@ class MoveItPlanner:
         self._ik_client = node.create_client(
             GetPositionIK, '/compute_ik', callback_group=cb)
 
+        # ----  plan-only service + controller action client ----
+        self._plan_client = node.create_client(GetMotionPlan, '/plan_kinematic_path', callback_group=cb)
+        if arm_controller_action:
+            self._exec_client = ActionClient(
+                node, FollowJointTrajectory, arm_controller_action,
+                callback_group=cb)
+        else:
+            self._exec_client = None
+            node.get_logger().warn(
+                'arm_controller_action not set; will fallback to pymoveit2 execute')
+        
     # ============ joint state cache ============
     def _on_joint_state(self, msg: JointState):
         with self._js_lock:
@@ -279,5 +300,143 @@ class MoveItPlanner:
             self.node.get_logger().error(
                 f'joint length mismatch: {len(positions)} vs {len(self.joint_names)}')
             return False
-        self.moveit2.move_to_configuration(positions)
-        return self.moveit2.wait_until_executed()
+
+        # 无 controller action: fallback 到 pymoveit2 (单臂兼容路径)
+        if self._exec_client is None:
+            self.moveit2.move_to_configuration(positions)
+            return self.moveit2.wait_until_executed()
+
+        current = self.get_current_joint_positions()
+        if current is None:
+            self.node.get_logger().warn('no joint state; cannot plan')
+            return False
+
+        t0 = time.time()
+        traj = self._plan_joint_target(positions, current)
+        t_plan = time.time() - t0
+        if traj is None:
+            return False
+        n_pts = len(traj.joint_trajectory.points)
+        dur = traj.joint_trajectory.points[-1].time_from_start
+        dur_s = dur.sec + dur.nanosec / 1e9
+        self.node.get_logger().info(
+            f'plan OK: {n_pts} pts, {dur_s:.2f}s traj, {t_plan*1000:.0f}ms plan')
+
+        return self._execute_via_controller(traj, timeout_s=dur_s * 2 + 5.0)
+    
+    # ============ 方案 A: plan-only + controller-execute ============
+    def _plan_joint_target(self, positions: List[float],
+                            current: List[float],
+                            timeout_s: float = 8.0
+                           ) -> Optional[RobotTrajectory]:
+        """走 /plan_kinematic_path service, 只规划返回 trajectory."""
+        if not self._plan_client.service_is_ready():
+            if not self._plan_client.wait_for_service(timeout_sec=2.0):
+                self.node.get_logger().error(
+                    '/plan_kinematic_path not available')
+                return None
+
+        req = GetMotionPlan.Request()
+        mpr = req.motion_plan_request
+        mpr.group_name = self.group_name
+        mpr.planner_id = self.moveit2.planner_id
+        mpr.pipeline_id = self.moveit2.pipeline_id
+        mpr.num_planning_attempts = 10
+        mpr.allowed_planning_time = 5.0
+        mpr.max_velocity_scaling_factor = float(self.moveit2.max_velocity)
+        mpr.max_acceleration_scaling_factor = float(self.moveit2.max_acceleration)
+
+        rs = RobotState()
+        rs.joint_state.name = list(self.joint_names)
+        rs.joint_state.position = list(current)
+        rs.is_diff = False   # 明确不是增量, 免得 planning_scene 状态污染
+        mpr.start_state = rs
+
+        goal = Constraints()
+        for name, pos in zip(self.joint_names, positions):
+            jc = JointConstraint()
+            jc.joint_name = name
+            jc.position = float(pos)
+            jc.tolerance_above = 0.001
+            jc.tolerance_below = 0.001
+            jc.weight = 1.0
+            goal.joint_constraints.append(jc)
+        mpr.goal_constraints.append(goal)
+
+        future = self._plan_client.call_async(req)
+        res = self._wait_future(future, timeout_s)
+        if res is None:
+            self.node.get_logger().error('plan_kinematic_path timeout')
+            return None
+        code = res.motion_plan_response.error_code.val
+        if code != 1:   # SUCCESS = 1
+            self.node.get_logger().warn(
+                f'plan_kinematic_path failed: error_code={code}')
+            return None
+        return res.motion_plan_response.trajectory
+
+    def _execute_via_controller(self, trajectory: RobotTrajectory,
+                             timeout_s: float = 30.0) -> bool:
+        if self._exec_client is None:
+            self.node.get_logger().error(
+                'exec_client not initialized (arm_controller_action empty)')
+            return False
+        if not self._exec_client.wait_for_server(timeout_sec=3.0):
+            self.node.get_logger().error(
+                f'controller action unavailable: {self.arm_controller_action}')
+            return False
+
+        goal = FollowJointTrajectory.Goal()
+        goal.trajectory = trajectory.joint_trajectory
+        goal.trajectory.header.stamp.sec = 0
+        goal.trajectory.header.stamp.nanosec = 0
+
+        for name in self.joint_names:
+            tol = JointTolerance()
+            tol.name = name
+            tol.position = 0.05
+            tol.velocity = 0.1
+            goal.goal_tolerance.append(tol)
+        goal.goal_time_tolerance = DurationMsg(sec=5, nanosec=0)   # 从 2 调到 5, 给 sim 收尾余量
+
+        goal_future = self._exec_client.send_goal_async(goal)
+        goal_handle = self._wait_future(goal_future, timeout_s=3.0)   # 握手用 wall time
+        if goal_handle is None:
+            self.node.get_logger().error('send_goal timeout')
+            return False
+        if not goal_handle.accepted:
+            self.node.get_logger().error('goal rejected by controller')
+            return False
+
+        result_future = goal_handle.get_result_async()
+        # 关键: 用 sim time 等 result
+        wrapped = self._wait_future_sim(result_future, timeout_sim_s=timeout_s)
+        if wrapped is None:
+            self.node.get_logger().error(
+                f'execute timeout ({timeout_s:.1f}s sim time). '
+                f'arm may still be moving; check sim RTF.')
+            goal_handle.cancel_goal_async()
+            return False
+
+        err = wrapped.result.error_code
+        if err != 0:
+            self.node.get_logger().error(
+                f'controller execution failed: error_code={err}, '
+                f'msg="{wrapped.result.error_string}"')
+            return False
+        return True
+
+
+    def _wait_future_sim(self, future, timeout_sim_s: float):
+        """按 sim time 轮询 future 完成. 避免 wall-time 抢跑."""
+        import rclpy.duration
+        start = self.node.get_clock().now()
+        timeout = rclpy.duration.Duration(seconds=timeout_sim_s)
+        while rclpy.ok():
+            if future.done():
+                return future.result()
+            if self.node.get_clock().now() - start > timeout:
+                future.cancel()
+                return None
+            time.sleep(0.02)   # wall-time poll interval, 不影响 sim
+        return None

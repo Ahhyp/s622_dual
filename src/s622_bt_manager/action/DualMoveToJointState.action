@@ -1,0 +1,17 @@
+# Goal
+string named_pose            # 优先, 从 dual_arm_config.yaml 读预设
+float64[] left_positions     # 6 个, 若非空且 right_positions 也非空则覆盖 named_pose
+float64[] right_positions    # 6 个
+float32 velocity_scale
+float32 acceleration_scale
+float32 timeout_sec
+bool ensure_servo_stopped_left    
+bool ensure_servo_stopped_right   
+---
+# Result
+bool success
+int32 error_code
+string error_msg
+---
+# Feedback
+float32 progress             # 0.0 - 1.0 大致进度

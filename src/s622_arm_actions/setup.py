@@ -34,6 +34,7 @@ setup(
             'gripper_service = s622_arm_actions.gripper_service:main',
             'visual_align_server = s622_arm_actions.visual_align_server:main',
             'planning_scene_service = s622_arm_actions.planning_scene_service:main',
+            'dual_move_server = s622_arm_actions.dual_move_server:main', 
         ],
     },
 )

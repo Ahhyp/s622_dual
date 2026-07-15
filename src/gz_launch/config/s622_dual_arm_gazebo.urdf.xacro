@@ -1,0 +1,100 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="s622_dual_arm">
+
+    <xacro:property name="M_PI" value="3.14159265358979323846" />
+    
+    <xacro:arg name="instantiate" default="false"/>   <!-- ← 加这行 -->
+    
+    <!-- ============ world 根 link ============ -->
+    <link name="world" />
+
+    <!-- ============ Gazebo 全局插件 ============ -->
+    <gazebo>
+        <plugin filename="gz_ros2_control-system"
+            name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+            <parameters>$(find s622_moveit_config)/config/dual_arm_controllers.yaml</parameters>
+        </plugin>
+
+        <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher" />
+
+        <plugin filename="gz-sim-pose-publisher-system"
+            name="gz::sim::systems::PosePublisher">
+            <publish_link_pose>true</publish_link_pose>
+            <use_pose_vector_msg>true</use_pose_vector_msg>
+            <publish_nested_model_pose>true</publish_nested_model_pose>
+        </plugin>
+
+        <plugin filename="ignition-gazebo-sensors-system"
+            name="ignition::gazebo::systems::Sensors">
+            <render_engine>ogre2</render_engine>
+        </plugin>
+    </gazebo>
+
+    <!-- ============ 引入 arm macro (M2.3 已 macro 化) ============ -->
+    <xacro:include
+        filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
+
+    <!-- ============ Left Arm: (0.35, 0, 0), yaw=π ============ -->
+    <xacro:s622_arm prefix="left_" attach_world="false" />
+    <joint name="left_mount_joint" type="fixed">
+        <parent link="world" />
+        <child link="left_base_link" />
+        <origin xyz="0.35 0 0" rpy="0 0 ${M_PI}" />
+    </joint>
+
+    <!-- ============ Right Arm: (-0.35, 0, 0), yaw=0 ============ -->
+    <xacro:s622_arm prefix="right_" attach_world="false" />
+    <joint name="right_mount_joint" type="fixed">
+        <parent link="world" />
+        <child link="right_base_link" />
+        <origin xyz="-0.35 0 0" rpy="0 0 0" />
+    </joint>
+
+    <!-- ============ Gripper 摩擦 (双臂各一份, 从 M2.1 前缀化) ============ -->
+    <gazebo reference="left_finger1_joint">
+        <mu1>500.0</mu1>
+        <mu2>500.0</mu2>
+        <kp>30000</kp>
+        <kd>15</kd>
+    </gazebo>
+    <gazebo reference="left_finger2_joint">
+        <mu1>500.0</mu1>
+        <mu2>500.0</mu2>
+        <kp>30000</kp>
+        <kd>15</kd>
+    </gazebo>
+    <gazebo reference="right_finger1_joint">
+        <mu1>500.0</mu1>
+        <mu2>500.0</mu2>
+        <kp>30000</kp>
+        <kd>15</kd>
+    </gazebo>
+    <gazebo reference="right_finger2_joint">
+        <mu1>500.0</mu1>
+        <mu2>500.0</mu2>
+        <kp>30000</kp>
+        <kd>15</kd>
+    </gazebo>
+
+    <!-- ============ ros2_control x2 (左右各一份硬件接口) ============ -->
+    <xacro:include filename="$(find gz_launch)/config/s622_gazebo_ros2_control.xacro" />
+
+    <xacro:s622_moveit_descriptions_ros2_control
+        name="GazeboSimSystem"
+        initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
+        prefix="left_" />
+
+    <xacro:s622_moveit_descriptions_ros2_control
+        name="GazeboSimSystem"
+        initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
+        prefix="right_" />
+
+    <!-- ============ Camera 挂 world, 俯视 (0, 0, 0.75) ============ -->
+    <xacro:include filename="$(find s622_moveit_descriptions)/urdf/camera/camera.xacro" />
+    <xacro:camera_v0 parent="world">
+        <origin xyz="0 0.5 0.9" rpy="0 ${58*M_PI/180} ${-M_PI/2}" />
+    </xacro:camera_v0>
+    <xacro:camera_gazebo_v0 />
+
+</robot>

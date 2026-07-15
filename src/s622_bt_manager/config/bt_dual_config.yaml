@@ -1,0 +1,32 @@
+/bt_executor:
+  ros__parameters:
+    # ==================== Left arm place ====================
+    # left_base yaw=π → x_base(+) 指向 world_x(-)
+    # place_position (0.30, -0.20, 0.03) → world (0.05, +0.20, 0.03) 桌面中偏后左
+    left_place_frame_id: "left_base_link"
+    left_place_position:  [0.30, -0.20, 0.03]
+    left_place_rpy:       [3.14159, 0.0, 0.0]
+
+    left_pre_place_frame_id: "left_base_link"
+    left_pre_place_position: [0.30, -0.20, 0.20]
+    left_pre_place_rpy:      [3.14159, 0.0, 0.0]
+
+    # ==================== Right arm place ====================
+    # right_base yaw=0 → x_base(+) 指向 world_x(+)
+    # place_position (0.30, -0.20, 0.03) → world (-0.05, -0.20, 0.03) 桌面中偏后右
+    right_place_frame_id: "right_base_link"
+    right_place_position:  [0.30, -0.20, 0.03]
+    right_place_rpy:       [3.14159, 0.0, 0.0]
+
+    right_pre_place_frame_id: "right_base_link"
+    right_pre_place_position: [0.30, -0.20, 0.20]
+    right_pre_place_rpy:      [3.14159, 0.0, 0.0]
+
+    # ==================== M1.7 兼容 ====================
+    place_frame_id: "base_link"
+    place_position:  [0.30, -0.20, 0.03]
+    place_rpy:       [3.14159, 0.0, 0.0]
+
+    pre_place_frame_id: "base_link"
+    pre_place_position: [0.30, -0.20, 0.20]
+    pre_place_rpy:      [3.14159, 0.0, 0.0]

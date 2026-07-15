@@ -55,15 +55,21 @@ class VisualAlignServer(Node):
         self.declare_parameter('descend_max_speed', 0.05)
         self.declare_parameter('lift_max_speed', 0.05)
 
+        self.declare_parameter('servo_ns', '')     # ← 新增
+        self.declare_parameter('servo_status_topic', '/servo_node/status')   # ← 新增,servo status 也要 ns 化
+
         self._base = self.get_parameter('base_frame').value
         self._ee = self.get_parameter('ee_frame').value
         self._cam = self.get_parameter('camera_frame').value
         self._twist_topic = self.get_parameter('twist_topic').value
+        servo_ns = self.get_parameter('servo_ns').value            # ← 新增
+        servo_status_topic = self.get_parameter('servo_status_topic').value  # ← 新增
+        
         j = self.get_parameter('j_img_to_base').value
         self._j = [[float(j[0]), float(j[1])], [float(j[2]), float(j[3])]]
 
         cb = ReentrantCallbackGroup()
-        self.servo_lc = ServoLifecycleManager(self, callback_group=cb)
+        self.servo_lc = ServoLifecycleManager(self, callback_group=cb, servo_ns=servo_ns)
 
         self.twist_pub = self.create_publisher(
             TwistStamped, self._twist_topic, 10)
@@ -97,7 +103,7 @@ class VisualAlignServer(Node):
         self._servo_status: int = 0
         self._servo_status_lock = threading.Lock()
         self.create_subscription(
-            Int8, '/servo_node/status',
+            Int8, servo_status_topic,
             self._on_servo_status, 10, callback_group=cb)
         
         self.get_logger().info(
@@ -185,7 +191,7 @@ class VisualAlignServer(Node):
         self._cancel_request.clear()
 
         if goal.ensure_servo_started:
-            if not self.servo_lc.start_servo():
+            if not self.servo_lc.force_start():
                 result.success = False
                 result.error_msg = 'failed to start servo'
                 goal_handle.abort()
@@ -198,7 +204,7 @@ class VisualAlignServer(Node):
             self.get_logger().warning(
                 f'servo status={self._servo_status_name()}, force restarting...')
             self.servo_lc.force_stop()
-            self.servo_lc.start_servo()
+            self.servo_lc.force_start()
             self.get_logger().info('servo restarted')
 
         try:

@@ -11,7 +11,7 @@ from shape_msgs.msg import SolidPrimitive
 from moveit_msgs.msg import (
     AttachedCollisionObject, CollisionObject, PlanningScene)
 
-from s622_bt_manager.srv import AttachObject, DetachObject
+from s622_bt_manager.srv import AttachObject, DetachObject, TransferObject
 
 
 class PlanningSceneService(Node):
@@ -49,6 +49,10 @@ class PlanningSceneService(Node):
         self.detach_srv = self.create_service(
             DetachObject, 'detach_object', self._on_detach, callback_group=cb)
 
+        self.transfer_srv = self.create_service(
+            TransferObject, 'transfer_object', self._on_transfer, callback_group=cb)
+
+        
         # 启动幂等清理 + 可选 table
         self._attached = {}    # name -> (link, size)
         self.create_timer(0.5, self._initial_publish, callback_group=cb)
@@ -154,6 +158,7 @@ class PlanningSceneService(Node):
             scene.robot_state.attached_collision_objects = [aco]
 
             if req.put_back_in_world:
+                # place cube back into world at drop_pose
                 co = CollisionObject()
                 co.header.frame_id = self._base
                 co.id = req.object_name
@@ -164,6 +169,15 @@ class PlanningSceneService(Node):
                 co.primitives = [prim]
                 co.primitive_poses = [req.drop_pose]
                 scene.world.collision_objects = [co]
+            else:
+                # ← 新增: 强制把 cube 从 world 里也删掉
+                # MoveIt 默认在 detach 后会把 object 保留在 world (at attach pose),
+                # 必须显式发 world REMOVE 才能彻底清除.
+                co_remove = CollisionObject()
+                co_remove.header.frame_id = self._base
+                co_remove.id = req.object_name
+                co_remove.operation = CollisionObject.REMOVE
+                scene.world.collision_objects = [co_remove]
 
             self.scene_pub.publish(scene)
             del self._attached[req.object_name]
@@ -177,6 +191,73 @@ class PlanningSceneService(Node):
             self.get_logger().error(f'detach exception: {e}')
         return resp
 
+
+    def _on_transfer(self, req, resp):
+        """Atomic detach from old_link + attach to new_link.
+        单次 PlanningScene diff, 避免中间无 attach 状态窗口."""
+        try:
+            info = self._attached.get(req.object_name)
+            if info is None:
+                resp.success = False
+                resp.error_msg = f'{req.object_name} not currently attached, cannot transfer'
+                self.get_logger().error(resp.error_msg)
+                return resp
+
+            old_link, size = info
+            new_link = req.new_link_name
+            if not new_link:
+                resp.success = False
+                resp.error_msg = 'new_link_name required'
+                return resp
+
+            if new_link == old_link:
+                resp.success = True
+                resp.error_msg = 'already attached to target link, no-op'
+                self.get_logger().warn(resp.error_msg)
+                return resp
+
+            touch = list(req.touch_links) if req.touch_links else self._default_touch
+
+            # ---- 1. detach from old_link ----
+            aco_detach = AttachedCollisionObject()
+            aco_detach.link_name = old_link
+            aco_detach.object.id = req.object_name
+            aco_detach.object.operation = CollisionObject.REMOVE
+
+            # ---- 2. attach to new_link ----
+            aco_attach = AttachedCollisionObject()
+            aco_attach.link_name = new_link
+            aco_attach.touch_links = touch
+            aco_attach.object.header.frame_id = new_link
+            aco_attach.object.id = req.object_name
+            aco_attach.object.operation = CollisionObject.ADD
+            prim = SolidPrimitive()
+            prim.type = SolidPrimitive.BOX
+            prim.dimensions = size
+            aco_attach.object.primitives = [prim]
+            aco_attach.object.primitive_poses = [req.pose_in_new_link]
+
+            # ---- 3. 原子 diff: 一次 publish 同时下发 detach + attach ----
+            # MoveIt 按数组顺序处理: 先 REMOVE 再 ADD, 中间无窗口
+            scene = PlanningScene()
+            scene.is_diff = True
+            scene.robot_state.is_diff = True
+            scene.robot_state.attached_collision_objects = [aco_detach, aco_attach]
+            self.scene_pub.publish(scene)
+
+            self._attached[req.object_name] = (new_link, size)
+            resp.success = True
+            resp.error_msg = ''
+            self.get_logger().info(
+                f'transfer {req.object_name}: {old_link} -> {new_link}, '
+                f'size={size}, touch={touch}')
+        except Exception as e:
+            resp.success = False
+            resp.error_msg = str(e)
+            self.get_logger().error(f'transfer exception: {e}')
+        return resp
+
+        
 
 def main():
     rclpy.init()

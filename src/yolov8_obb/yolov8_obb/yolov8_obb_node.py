@@ -76,7 +76,7 @@ class Yolov8ObbNode(Node):
         
         self.declare_parameter("publish_debug_image", True)
         self.declare_parameter("debug_image_topic", "/yolov8/obb_debug_image")
-        self.declare_parameter("print_detections", True)
+        self.declare_parameter("print_detections", False)
         
         # ============================================================
         # 2. 读取参数

@@ -16,15 +16,22 @@ class ServoLifecycleManager:
     STOPPED = 'STOPPED'
     RUNNING = 'RUNNING'
 
-    def __init__(self, node: Node, callback_group: Optional[CallbackGroup] = None):
+    def __init__(self, node: Node,
+                 callback_group: Optional[CallbackGroup] = None,
+                 servo_ns: str = ''):
+        """servo_ns='' → /servo_node/... (M1.7 单臂)
+        servo_ns='left' → /left/servo_node/..."""
         self.node = node
         cb = callback_group or ReentrantCallbackGroup()
         self.state = self.STOPPED
         self._lock = threading.Lock()
+
+        prefix = f'/{servo_ns.strip("/")}' if servo_ns else ''
+        self._prefix = prefix
         self.start_cli = node.create_client(
-            Trigger, '/servo_node/start_servo', callback_group=cb)
+            Trigger, f'{prefix}/servo_node/start_servo', callback_group=cb)
         self.stop_cli = node.create_client(
-            Trigger, '/servo_node/stop_servo', callback_group=cb)
+            Trigger, f'{prefix}/servo_node/stop_servo', callback_group=cb)
 
     def _call(self, client, name: str, timeout: float = 3.0) -> bool:
         if not client.wait_for_service(timeout_sec=2.0):
@@ -52,9 +59,8 @@ class ServoLifecycleManager:
             ok = self._call(self.start_cli, 'start_servo')
             if ok:
                 self.state = self.RUNNING
-                # Humble 有些版本 start 后可能处于 paused 态，显式 unpause
                 unpause_cli = self.node.create_client(
-                    Trigger, '/servo_node/unpause_servo')
+                    Trigger, f'{self._prefix}/servo_node/unpause_servo')
                 self._call(unpause_cli, 'unpause_servo', timeout=1.0)
             return ok
 
@@ -72,4 +78,15 @@ class ServoLifecycleManager:
         with self._lock:
             ok = self._call(self.stop_cli, 'force_stop_servo')
             self.state = self.STOPPED
+            return ok
+
+    def force_start(self) -> bool:
+        """无条件 start，绕过状态缓存。用于 servo 被其他节点 kill 的场景。"""
+        with self._lock:
+            ok = self._call(self.start_cli, 'start_servo', timeout=3.0)
+            if ok:
+                unpause_cli = self.node.create_client(
+                    Trigger, f'{self._prefix}/servo_node/unpause_servo')
+                self._call(unpause_cli, 'unpause_servo', timeout=1.0)
+                self.state = self.RUNNING
             return ok

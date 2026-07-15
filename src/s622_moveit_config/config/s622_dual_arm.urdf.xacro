@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="s622_dual_arm">
+
+    <xacro:property name="M_PI" value="3.14159265358979323846" />
+
+    <!-- world 作为根 link, MoveIt 的规划坐标系 -->
+    <link name="world" />
+
+    <!-- 引入主 URDF, 抑制其顶层自动实例化 -->
+    <xacro:include
+        filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
+
+    <!-- ============ 左臂: base_link 在 (0.35, 0, 0), yaw=π ============ -->
+    <xacro:s622_arm prefix="left_" attach_world="false" />
+    <joint name="left_mount_joint" type="fixed">
+        <parent link="world" />
+        <child link="left_base_link" />
+        <origin xyz="0.35 0 0" rpy="0 0 ${M_PI}" />
+    </joint>
+
+    <!-- ============ 右臂: base_link 在 (-0.35, 0, 0), yaw=0 ============ -->
+    <xacro:s622_arm prefix="right_" attach_world="false" />
+    <joint name="right_mount_joint" type="fixed">
+        <parent link="world" />
+        <child link="right_base_link" />
+        <origin xyz="-0.35 0 0" rpy="0 0 0" />
+    </joint>
+
+</robot>

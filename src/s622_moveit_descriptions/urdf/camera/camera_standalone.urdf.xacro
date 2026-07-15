@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="shared_camera">
+    
+    <xacro:property name="M_PI" value="3.1415926535897931"/>
+    
+    <xacro:arg name="camera_xyz" default="0 0 0.75"/>
+    <xacro:arg name="camera_rpy" default="0 ${58*M_PI/180} 0"/>
+    
+    <!-- 根节点: 独立模型自己的 world -->
+    <link name="world"/>
+    
+    <!-- 挂载点 (作为 realsense macro 的 parent) -->
+    <link name="camera_mount_link"/>
+    <joint name="camera_world_mount" type="fixed">
+        <parent link="world"/>
+        <child link="camera_mount_link"/>
+        <origin xyz="$(arg camera_xyz)" rpy="$(arg camera_rpy)"/>
+    </joint>
+    
+    <!-- 引入 camera macro -->
+    <xacro:include
+        filename="$(find s622_moveit_descriptions)/urdf/camera/camera.xacro" />
+    
+    <!-- 相机本体挂 camera_mount_link -->
+    <xacro:camera_v0 parent="camera_mount_link">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:camera_v0>
+    
+    <!-- Gazebo 传感器 -->
+    <xacro:camera_gazebo_v0/>
+    
+    <!-- Gazebo 全局插件 (相机模型自己发 image topic 需要 Sensors 插件) -->
+    <gazebo>
+        <plugin filename="ignition-gazebo-sensors-system"
+            name="ignition::gazebo::systems::Sensors">
+            <render_engine>ogre2</render_engine>
+        </plugin>
+    </gazebo>
+    
+</robot>

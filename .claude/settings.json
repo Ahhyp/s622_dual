@@ -12,7 +12,19 @@
       "Bash(find /home/yep/S622_robotarm/src/s622_moveit_config -type f | sort | head -40)",
       "Read(//home/yep/S622_robotarm/src/s622_moveit_config/**)",
       "Bash(find /home/yep/S622_robotarm/src/pymoveit2 -type f -not -path \"*/.git/*\" | sort | head -30)",
-      "Read(//home/yep/S622_robotarm/src/pymoveit2/**)"
+      "Read(//home/yep/S622_robotarm/src/pymoveit2/**)",
+      "Read(//home/yep/S622_robotarm/src/gz_launch/config/**)",
+      "Read(//home/yep/S622_robotarm/src/gz_launch/launch/**)",
+      "Bash(ls -lt ~/.ros/log/ | grep launch | head -3)",
+      "Read(//home/yep/.ros/log/**)",
+      "mcp__codegraph__codegraph_files",
+      "Read(//home/yep/S622_robotarm/src/s622_moveit_descriptions/urdf/camera/**)",
+      "Read(//home/yep/S622_robotarm/src/gz_launch/scripts/**)",
+      "Read(//home/yep/S622_robotarm/src/realsense2_gz_description/urdf/**)",
+      "Read(//home/yep/S622_robotarm/src/yolov8_grasping/yolov8_grasping/scripts/**)",
+      "Read(//home/yep/S622_robotarm/src/visual_servo/visual_servo/**)",
+      "Read(//home/yep/S622_robotarm/src/octomap_yolo_grasping/octomap_yolo_grasping/**)",
+      "Bash(ign topic *)"
     ]
   },
   "skills": {

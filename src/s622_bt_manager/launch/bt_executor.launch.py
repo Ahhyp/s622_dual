@@ -10,8 +10,8 @@ def generate_launch_description():
         get_package_share_directory('s622_bt_manager'),
         'config', 'pick_place_poses.yaml')
     return LaunchDescription([
-        DeclareLaunchArgument('tree_file', default_value='single_arm_grasp_test_tree.xml'), # 
-        DeclareLaunchArgument('tree_id', default_value='SingleArmGraspTest'), #
+        DeclareLaunchArgument('tree_file', default_value=''), # 
+        DeclareLaunchArgument('tree_id', default_value=''), #
         DeclareLaunchArgument('auto_start', default_value='false'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
 

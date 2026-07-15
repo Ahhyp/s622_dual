@@ -1,0 +1,8 @@
+string object_name                       # e.g. "cube"
+string new_link_name                     # e.g. "right_grasp_frame"
+string[] touch_links                     # 新 link 的 touch_links, 空=default_touch_links
+geometry_msgs/Pose pose_in_new_link      # cube 在新 link 系里的位姿
+float64 timeout_sec
+---
+bool success
+string error_msg

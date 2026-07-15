@@ -11,3 +11,4 @@ __pycache__/
 *.o
 *.a
 *.swp
+compile_commands.json

@@ -27,9 +27,11 @@ find_package(sensor_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/MoveToPose.action"
   "action/VisualAlign.action"
+  "action/DualMoveToJointState.action" 
   "srv/SetGripper.srv"
   "srv/AttachObject.srv"
   "srv/DetachObject.srv"
+  "srv/TransferObject.srv"
   DEPENDENCIES geometry_msgs action_msgs std_msgs
 )
 

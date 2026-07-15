@@ -1,0 +1,42 @@
+/dual/dual_move_server:
+  ros__parameters:
+    use_sim_time: true
+    group_name: 'dual_arm'
+    planner_id: 'RRTConnect'
+    pipeline_id: 'ompl'
+    default_velocity_scale: 0.2
+    default_acceleration_scale: 0.2
+    allowed_planning_time: 10.0    # ← 从 8 调到 10, handover 位姿更复杂
+    num_planning_attempts: 15      # ← 从 10 调到 15
+
+    named_pose_names: ['dual_home', 'dual_handover_ready']   # ← 加
+
+    # dual_home: 双臂都竖直向上, 与 SRDF 里 group_state 一致
+    dual_home_joint_positions:
+      - 0.0        # left_j1
+      - -1.5708    # left_j2
+      - 0.0        # left_j3
+      - 0.0        # left_j4
+      - 0.0        # left_j5
+      - 0.0        # left_j6
+      - 0.0        # right_j1
+      - -1.5708    # right_j2
+      - 0.0        # right_j3
+      - 0.0        # right_j4
+      - 0.0        # right_j5
+      - 0.0        # right_j6
+
+    # M2.8: cube 交接位姿 (面对面水平, 距桌面 ~35cm)
+    dual_handover_ready_joint_positions:
+      - -0.5963    # left_j1
+      - -1.6969    # left_j2
+      - -2.2265    # left_j3
+      -  0.7825    # left_j4
+      -  2.1677    # left_j5
+      -  1.5715    # left_j6
+      - -2.5432    # right_j1
+      - -1.4419    # right_j2
+      -  2.2229    # right_j3
+      - -3.9223    # right_j4
+      - -2.1697    # right_j5
+      -  1.5713    # right_j6
