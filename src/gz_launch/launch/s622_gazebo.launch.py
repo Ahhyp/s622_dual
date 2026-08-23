@@ -12,6 +12,7 @@ from launch_ros.substitutions import FindPackageShare
 import yaml
 from launch_ros.parameter_descriptions import ParameterValue
 from launch.actions import SetEnvironmentVariable
+from manipulation_common.launch_utils.yaml_loader import load_yaml
 
 
 def generate_launch_description():
@@ -35,7 +36,8 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([
             get_package_share_directory("ros_gz_sim") + "/launch/gz_sim.launch.py"
         ]),
-        launch_arguments=[("gz_args", "empty.sdf -r")]
+        # 自定义 world：物理步长 0.005（200Hz，匹配 controller 200Hz），RTF 大幅提升
+        launch_arguments=[("gz_args", os.path.join(this_pkg, "worlds", "s622_world.sdf") + " -r")]
     )
 
     # 2. 时钟桥接
@@ -178,44 +180,97 @@ def generate_launch_description():
     with open(fairino_planning_yaml, 'r') as f:
         pipeline_params = yaml.safe_load(f)
 
-    fairino_ik_yaml = os.path.join(
-        get_package_share_directory("fairino_planning_core"),
-        "config", "fairino_ik_service.yaml"
-    )
-    
-    fairino_ik_service = Node(
-        package="fairino_planning_core",
-        executable="fairino_ik_service_node",
-        name="fairino_ik_service",          # ← 必须和 yaml 里的 key 一致
-        parameters=[
-            fairino_ik_yaml,
-            {"use_sim_time": True},
-        ],
-        output="screen",
-    )
+    # 7. move_group × 2（双 IK：/move_group_fairino 用 FairinoIKPlugin 解析 IK，/move_group_kdl 用 KDL）
+    #    参照 robotarm moveit_stack.py 的 remap 设计；kinematics 用 MoveIt 标准格式注入
+    kinematics_fairino = load_yaml("s622_moveit_config", "config/kinematics_fairino.yaml")
+    kinematics_kdl = load_yaml("s622_moveit_config", "config/kinematics_kdl.yaml")
 
-    # 7. move_group
-    move_group = Node(
+    mg_remappings = [
+        ("joint_states", "/joint_states"),
+        ("trajectory_execution_event", "/trajectory_execution_event"),
+        ("planning_scene", "/planning_scene"),
+        ("collision_object", "/collision_object"),
+        ("attached_collision_object", "/attached_collision_object"),
+        # controller action client remap（关键：源名相对，无前导 /，对齐 robotarm moveit_stack.py；
+        # 另加 5-topic 兜底——实测顶层 action 名 remap 对 client 不总是生效）
+        ("robot_arm_controller/follow_joint_trajectory", "/robot_arm_controller/follow_joint_trajectory"),
+        ("hand_controller/follow_joint_trajectory", "/hand_controller/follow_joint_trajectory"),
+        ("robot_arm_controller/follow_joint_trajectory/_action/feedback", "/robot_arm_controller/follow_joint_trajectory/_action/feedback"),
+        ("robot_arm_controller/follow_joint_trajectory/_action/status", "/robot_arm_controller/follow_joint_trajectory/_action/status"),
+        ("robot_arm_controller/follow_joint_trajectory/_action/cancel_goal", "/robot_arm_controller/follow_joint_trajectory/_action/cancel_goal"),
+        ("robot_arm_controller/follow_joint_trajectory/_action/get_result", "/robot_arm_controller/follow_joint_trajectory/_action/get_result"),
+        ("robot_arm_controller/follow_joint_trajectory/_action/send_goal", "/robot_arm_controller/follow_joint_trajectory/_action/send_goal"),
+        ("hand_controller/follow_joint_trajectory/_action/feedback", "/hand_controller/follow_joint_trajectory/_action/feedback"),
+        ("hand_controller/follow_joint_trajectory/_action/status", "/hand_controller/follow_joint_trajectory/_action/status"),
+        ("hand_controller/follow_joint_trajectory/_action/cancel_goal", "/hand_controller/follow_joint_trajectory/_action/cancel_goal"),
+        ("hand_controller/follow_joint_trajectory/_action/get_result", "/hand_controller/follow_joint_trajectory/_action/get_result"),
+        ("hand_controller/follow_joint_trajectory/_action/send_goal", "/hand_controller/follow_joint_trajectory/_action/send_goal"),
+        # monitored_planning_scene 不 remap 到根级：每个 move_group 发布到自己的
+        # /move_group_*/monitored_planning_scene，由 RViz 端 remap 订阅 fairino 实例（对齐 robotarm）
+        ("robot_description", "/robot_description"),
+        ("robot_description_semantic", "/robot_description_semantic"),
+    ]
+
+    # ── move_group #1：Fairino 解析 IK（服务保持 namespaced，客户端用 move_group_namespace 连）──
+    # 2026-08-23 架构迁移：不再 remap 到根级。对齐 robotarm 做法——move_group 服务留在
+    # /move_group_fairino/*，客户端（pymoveit2 move_group_namespace + RViz remap）显式连接。
+    move_group_fairino = Node(
         package="moveit_ros_move_group",
         executable="move_group",
+        namespace="move_group_fairino",
+        name="move_group",
+        output="screen",
+        remappings=mg_remappings,
         parameters=[
             moveit_config.to_dict(),
             pipeline_params,
+            {"robot_description_kinematics": kinematics_fairino},
             {"use_sim_time": True}
         ],
+    )
+
+    move_group_kdl = Node(
+        package="moveit_ros_move_group",
+        executable="move_group",
+        namespace="move_group_kdl",
+        name="move_group",
         output="screen",
+        remappings=mg_remappings,
+        parameters=[
+            moveit_config.to_dict(),
+            pipeline_params,
+            {"robot_description_kinematics": kinematics_kdl},
+            {"use_sim_time": True}
+        ],
     )
 
 
-    # 8. RViz
+    # 8. RViz（MotionPlanning 面板默认连根级，remap 到 fairino move_group，
+    #    对齐 robotarm moveit_stack.py:95-104——GUI 规划/执行与仿真保持一致）
+    #    注意：action 顶层名 remap 对 client 不总是生效，另加 5-topic 兜底（同 controller 处理）
     rviz_config = os.path.join(this_pkg, "rviz", "gz_launch.rviz")
+    rviz_remaps = [
+        ("get_planning_scene", "/move_group_fairino/get_planning_scene"),
+        ("plan_kinematic_path", "/move_group_fairino/plan_kinematic_path"),
+        ("query_planner_interface", "/move_group_fairino/query_planner_interface"),
+        ("compute_cartesian_path", "/move_group_fairino/compute_cartesian_path"),
+        ("execute_trajectory", "/move_group_fairino/execute_trajectory"),
+        ("move_action", "/move_group_fairino/move_action"),
+        ("monitored_planning_scene", "/move_group_fairino/monitored_planning_scene"),
+    ]
+    for _act in ("execute_trajectory", "move_action"):
+        for _sub in ("feedback", "status", "cancel_goal", "get_result", "send_goal"):
+            rviz_remaps.append(
+                (f"{_act}/_action/{_sub}", f"/move_group_fairino/{_act}/_action/{_sub}")
+            )
     rviz = Node(
         package="rviz2",
         executable="rviz2",
         arguments=["-d", rviz_config],
         parameters=[moveit_config.robot_description,
                      moveit_config.robot_description_semantic,
-                     {"use_sim_time": True}]
+                     {"use_sim_time": True}],
+        remappings=rviz_remaps,
     )
 
     
@@ -266,8 +321,7 @@ def generate_launch_description():
         # spawn_aruco_test,
         robot_state_pub,
         rviz, controller_spawner, 
-        fairino_ik_service,
-        move_group,
+        move_group_fairino, move_group_kdl,
         servo_node,
         obb_node,
     ])

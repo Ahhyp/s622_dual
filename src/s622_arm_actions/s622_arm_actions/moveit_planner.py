@@ -1,19 +1,17 @@
 """MoveIt 规划执行封装。
-v2: 接入 fairino_ik 多解 service,删除随机 KDL 循环。
+v3: IK 走 move_group 的 FairinoIKPlugin（内部 IKSelector 四维评分选解），
+    /fairino/get_all_ik service 已退役。
 """
-import math
 import threading
 import time
 from typing import List, Optional
 
 from rclpy.node import Node
 from rclpy.callback_groups import CallbackGroup, ReentrantCallbackGroup
-from rclpy.duration import Duration
 
 from sensor_msgs.msg import JointState
-from moveit_msgs.srv import GetPositionIK, GetMotionPlan
+from moveit_msgs.srv import GetMotionPlan
 
-from fairino_msgs.srv import GetAllIK
 from moveit_msgs.msg import (
     RobotState, MotionPlanRequest, Constraints, JointConstraint,
     RobotTrajectory,
@@ -36,11 +34,12 @@ class MoveItPlanner:
         end_effector: str,
         group_name: str,
         callback_group: Optional[CallbackGroup] = None,
-        max_vel: float = 0.2,
-        max_acc: float = 0.2,
+        max_vel: float = 1.0,
+        max_acc: float = 1.0,
         planner_id: str = "RRTConnect",
         pipeline_id: str = "fairino",
         arm_controller_action: str = "",
+        move_group_namespace: str = "/move_group_fairino",
     ):
         self.node = node
         self.joint_names = joint_names
@@ -48,6 +47,9 @@ class MoveItPlanner:
         self.end_effector = end_effector
         self.group_name = group_name
         self.arm_controller_action = arm_controller_action
+        # 2026-08-23 架构迁移：move_group 服务保持 namespaced（/move_group_fairino/*），
+        # 客户端显式连接（对齐 robotarm）。默认连 fairino 实例。
+        self.move_group_namespace = move_group_namespace
         cb = callback_group or ReentrantCallbackGroup()
         self._cb = cb
 
@@ -58,6 +60,7 @@ class MoveItPlanner:
             end_effector_name=end_effector,
             group_name=group_name,
             callback_group=cb,
+            move_group_namespace=move_group_namespace,
         )
         self.moveit2.max_velocity = max_vel
         self.moveit2.max_acceleration = max_acc
@@ -83,15 +86,13 @@ class MoveItPlanner:
             JointState, '/joint_states', self._on_joint_state, 10,
             callback_group=cb)
 
-        # ---- IK service clients ----
-        self._all_ik_client = node.create_client(
-            GetAllIK, '/fairino/get_all_ik', callback_group=cb)
-        # 保留 /compute_ik 作为 fallback
-        self._ik_client = node.create_client(
-            GetPositionIK, '/compute_ik', callback_group=cb)
-
         # ----  plan-only service + controller action client ----
-        self._plan_client = node.create_client(GetMotionPlan, '/plan_kinematic_path', callback_group=cb)
+        # v3: 不再创建 IK client——IK 由 move_group 的 FairinoIKPlugin 内部完成
+        #（解析法全解 + IKSelector 四维评分选解）
+        self._plan_client = node.create_client(
+            GetMotionPlan,
+            f'{self.move_group_namespace}/plan_kinematic_path',
+            callback_group=cb)
         if arm_controller_action:
             self._exec_client = ActionClient(
                 node, FollowJointTrajectory, arm_controller_action,
@@ -129,97 +130,6 @@ class MoveItPlanner:
             return None
         return future.result()
 
-    # ============ 多解 IK ============
-    def _call_all_ik(self, position, quat_xyzw,
-                     timeout_s: float = 1.0) -> List[List[float]]:
-        """调 fairino_ik service 拿全部解析解。"""
-        if not self._all_ik_client.service_is_ready():
-            if not self._all_ik_client.wait_for_service(timeout_sec=2.0):
-                self.node.get_logger().error('/fairino/get_all_ik not available')
-                return []
-
-        req = GetAllIK.Request()
-        req.pose.header.frame_id = self.base_link
-        req.pose.pose.position.x = float(position[0])
-        req.pose.pose.position.y = float(position[1])
-        req.pose.pose.position.z = float(position[2])
-        req.pose.pose.orientation.x = float(quat_xyzw[0])
-        req.pose.pose.orientation.y = float(quat_xyzw[1])
-        req.pose.pose.orientation.z = float(quat_xyzw[2])
-        req.pose.pose.orientation.w = float(quat_xyzw[3])
-        req.group_name = self.group_name
-
-        future = self._all_ik_client.call_async(req)
-        res = self._wait_future(future, timeout_s)
-        if res is None:
-            self.node.get_logger().error('GetAllIK timeout')
-            return []
-        if res.error_code != 0:
-            self.node.get_logger().warn(
-                f'GetAllIK failed: {res.error_message}')
-            return []
-        return [list(js.position) for js in res.solutions]
-
-    # ============ KDL IK fallback (备用) ============
-    def _compute_ik_kdl(self, position, quat_xyzw, seed_joints,
-                       timeout_s: float = 0.05) -> Optional[List[float]]:
-        """MoveIt 默认 IK,作为 fairino_ik 不可用时的 fallback。"""
-        if not self._ik_client.service_is_ready():
-            if not self._ik_client.wait_for_service(timeout_sec=1.0):
-                return None
-
-        req = GetPositionIK.Request()
-        req.ik_request.group_name = self.group_name
-        req.ik_request.ik_link_name = self.end_effector
-        req.ik_request.pose_stamped.header.frame_id = self.base_link
-        req.ik_request.pose_stamped.pose.position.x = float(position[0])
-        req.ik_request.pose_stamped.pose.position.y = float(position[1])
-        req.ik_request.pose_stamped.pose.position.z = float(position[2])
-        req.ik_request.pose_stamped.pose.orientation.x = float(quat_xyzw[0])
-        req.ik_request.pose_stamped.pose.orientation.y = float(quat_xyzw[1])
-        req.ik_request.pose_stamped.pose.orientation.z = float(quat_xyzw[2])
-        req.ik_request.pose_stamped.pose.orientation.w = float(quat_xyzw[3])
-        req.ik_request.timeout = Duration(seconds=timeout_s).to_msg()
-        req.ik_request.avoid_collisions = True
-
-        rs = RobotState()
-        rs.joint_state.name = list(self.joint_names)
-        rs.joint_state.position = list(seed_joints)
-        req.ik_request.robot_state = rs
-
-        future = self._ik_client.call_async(req)
-        res = self._wait_future(future, timeout_s + 0.2)
-        if res is None or res.error_code.val != 1:
-            return None
-        name_to_pos = dict(zip(res.solution.joint_state.name,
-                               res.solution.joint_state.position))
-        try:
-            return [name_to_pos[n] for n in self.joint_names]
-        except KeyError:
-            return None
-
-    # ============ 评分(软惩罚版) ============
-    def _score_ik(self, joints: List[float],
-                  current: List[float]) -> float:
-        """Lower is better. 软惩罚版,不直接拒绝越限解。"""
-        limit_penalty = 0.0
-        for j, (lo, hi) in zip(joints, self.joint_safety_limits):
-            margin = min(j - lo, hi - j)
-            if margin < 0:
-                # 越过 safety 区:重惩罚但不拒绝
-                limit_penalty += 1000.0 * margin * margin
-            elif margin < 0.25:
-                # 接近 safety 边界:中等惩罚
-                limit_penalty += 100.0 * (0.25 - margin) ** 2
-
-        # 关节最短路径距离(考虑 ±π 缠绕)
-        motion_cost = sum(
-            min(abs(j - c), 2 * math.pi - abs(j - c))
-            for j, c in zip(joints, current)
-        )
-
-        return limit_penalty + motion_cost
-
     # ============ public planning APIs ============
     def set_speed(self, vel: float, acc: float):
         self.moveit2.max_velocity = float(vel)
@@ -243,57 +153,18 @@ class MoveItPlanner:
     def plan_to_pose_smart(self, position, quat_xyzw,
                            planner_id: Optional[str] = None,
                            max_candidates: int = 8, cartesian: bool = False) -> bool:
-        """多解 IK + 评分选解 + 失败重试。"""
-        # 笛卡尔模式:绕开多解逻辑,直接走原 API
-        if cartesian:
-            return self.plan_to_pose(position, quat_xyzw, cartesian=True)
-        
-        current = self.get_current_joint_positions()
-        if current is None:
-            self.node.get_logger().warn(
-                'smart: no joint state, fallback to plan_to_pose')
-            return self.plan_to_pose(position, quat_xyzw)
+        """规划到位姿。
 
-        # ---- 1. 一次拿到所有解析解 ----
-        t0 = time.time()
-        solutions = self._call_all_ik(position, quat_xyzw)
-        t_ik = time.time() - t0
-
-        if not solutions:
-            self.node.get_logger().error(
-                f'smart: no analytical IK ({t_ik*1000:.1f}ms), '
-                f'fallback to plan_to_pose')
-            return self.plan_to_pose(position, quat_xyzw)
-
-        # ---- 2. 评分排序 ----
-        scored = sorted(
-            ((self._score_ik(s, current), s) for s in solutions),
-            key=lambda x: x[0]
-        )
-        scored = scored[:max_candidates]
-
-        self.node.get_logger().info(
-            f'smart: got {len(solutions)} IK solutions in {t_ik*1000:.1f}ms, '
-            f'top scores: {[f"{s:.2f}" for s, _ in scored[:3]]}'
-        )
-
-        # ---- 3. 切 planner,按顺序尝试规划 ----
+        v3: IK 由 move_group 的 FairinoIKPlugin 内部完成——
+            解析法枚举全解 → IKSelector 四维评分（连续性 S1/可操作度 S2/姿态 S3/关节安全 S4）
+            选最优解 → OMPL 规划 → 执行；规划失败 MoveIt 自动重试 IK。
+            客户端不再自己调 IK service 和评分（/fairino/get_all_ik 已退役）。
+        保留 max_candidates 参数仅为兼容调用方；robotarm 的"多条路径评分选优"
+        （select_best_path，腕部运动量最小）留待 manipulation_common 并入时引入。
+        """
         if planner_id is not None:
             self.set_planner(planner_id)
-
-        for i, (score, joints) in enumerate(scored):
-            self.node.get_logger().info(
-                f'smart: try IK #{i}/{len(scored)} score={score:.3f} '
-                f'j=[{",".join(f"{v:+.2f}" for v in joints)}]'
-            )
-            if self.plan_to_joint_positions(joints):
-                self.node.get_logger().info(
-                    f'smart: SUCCESS with IK #{i}')
-                return True
-
-        self.node.get_logger().error(
-            f'smart: all {len(scored)} IK candidates failed planning')
-        return False
+        return self.plan_to_pose(position, quat_xyzw, cartesian=cartesian)
 
     def plan_to_joint_positions(self, positions: List[float]) -> bool:
         if len(positions) != len(self.joint_names):

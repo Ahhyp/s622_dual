@@ -122,10 +122,10 @@ class VisualServoNode(Node):
         # ------------------------------------------------------------------
         # Core control and safety
         # ------------------------------------------------------------------
-        self.declare_parameter("control_rate", 50.0)
+        self.declare_parameter("control_rate", 100.0)
         self.declare_parameter("enable_motion", False)
-        self.declare_parameter("max_linear_vel", 0.08)
-        self.declare_parameter("max_angular_vel", 0.45)
+        self.declare_parameter("max_linear_vel", 0.3)
+        self.declare_parameter("max_angular_vel", 1.5)
         self.declare_parameter("avoid_collisions", True)
 
         # State timeouts (sec)
@@ -196,10 +196,10 @@ class VisualServoNode(Node):
 
 
         self.declare_parameter("j_img_to_base", [0.002544, 0.002325, 0.001149, 0.003549])
-        self.declare_parameter("visual_align_gain", 0.45)
+        self.declare_parameter("visual_align_gain", 1.0)
         self.declare_parameter("visual_align_pixel_tolerance", 8.0)
-        self.declare_parameter("visual_align_max_step", 0.0015)
-        self.declare_parameter("visual_align_max_vel", 0.045)
+        self.declare_parameter("visual_align_max_step", 0.004)
+        self.declare_parameter("visual_align_max_vel", 0.2)
         self.declare_parameter("use_adaptive_jacobian", True)
 
         # 锁定 target_uv 模式 (推荐): 进入 VISUAL_ALIGN_XY 时拍快照,后续不读 YOLO
@@ -221,8 +221,8 @@ class VisualServoNode(Node):
         # 顺便监测锁定值是否漂移过大 (像素)
         self.declare_parameter("lock_drift_warning_px", 25.0)
 
-        # BLIND_DESCEND: pure Z, no YOLO
-        self.declare_parameter("descend_speed", 0.018)
+        # BLIND_DESCEND: pure Z, no YOLO（仿真值 0.12，真机建议回 0.04 以下）
+        self.declare_parameter("descend_speed", 0.12)
 
         # YOLO OBB to gripper yaw mapping
         self.declare_parameter("obb_to_gripper_yaw_sign", 1.0)
@@ -303,7 +303,7 @@ class VisualServoNode(Node):
         )
 
         self.ik_client = self.create_client(
-            GetPositionIK, "/compute_ik", callback_group=self.cb_group)
+            GetPositionIK, "/move_group_fairino/compute_ik", callback_group=self.cb_group)
 
         self.create_subscription(CameraInfo, "/camera/color/camera_info", self.cb_info, 10)
         self.create_subscription(Image, "/camera/depth/image_raw", self.cb_depth, 10)
@@ -1049,7 +1049,7 @@ class VisualServoNode(Node):
                 self._enter_state(ServoState.DONE)
             return twist
 
-        vz = clamp(1.2 * z_err, 0.0, min(self.max_linear_vel, 0.05))
+        vz = clamp(1.2 * z_err, 0.0, min(self.max_linear_vel, 0.20))
         self.get_logger().info(
             f"[LIFTING] z_err={z_err*1000:.1f}mm vz={vz:+.3f}",
             throttle_duration_sec=0.25,

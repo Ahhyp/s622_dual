@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""手眼标定采集: pymoveit2 + 自写 IK（绕过 plan_kinematic_path）"""
+"""手眼标定采集: pymoveit2（IK 由 move_group 的 FairinoIKPlugin 内部完成）"""
 import os
 import sys
 import time
@@ -17,7 +17,6 @@ import cv2
 import tf_transformations as tft
 
 from pymoveit2 import MoveIt2
-from fairino_msgs.srv import GetAllIK
 
 from poses import generate_poses
 from aruco_utils import make_aruco_detector, solve_marker_pose
@@ -32,16 +31,6 @@ SETTLE_SEC  = 1.2
 JOINT_NAMES = ['j1', 'j2', 'j3', 'j4', 'j5', 'j6']
 GROUP_NAME  = 'robot_arm'
 # ==================================
-
-# IK 评分用的 safety limits (从 docs/机械臂参数.md)
-JOINT_SAFETY_LIMITS = [
-    (-3.05, 3.05),   # j1
-    (-4.63, 1.48),   # j2
-    (-2.83, 2.83),   # j3
-    (-4.63, 1.48),   # j4
-    (-3.05, 3.05),   # j5
-    (-3.05, 3.05),   # j6
-]
 
 
 def tf_msg_to_matrix(m):
@@ -73,9 +62,8 @@ class Collector(Node):
         self.create_subscription(JointState, '/joint_states',
                                  self._on_joint_state, 10, callback_group=self.cb)
 
-        # 自写 IK service client (绕过 pymoveit2 的 plan_kinematic_path)
-        self._ik_client = self.create_client(
-            GetAllIK, '/fairino/get_all_ik', callback_group=self.cb)
+        # v3: 不再创建 IK service client——IK 由 move_group 的 FairinoIKPlugin 内部完成
+        #（解析全解 + IKSelector 四维评分选解），pymoveit2 直接连 move_group
 
         self.moveit2 = MoveIt2(
             node=self,
@@ -85,6 +73,8 @@ class Collector(Node):
             group_name=GROUP_NAME,
             callback_group=self.cb,
             use_move_group_action=True,
+            # 2026-08-23 架构迁移：move_group 服务保持 namespaced，客户端显式连接
+            move_group_namespace="/move_group_fairino",
         )
         self.moveit2.planner_id = 'RRTConnectkConfigDefault'
         self.moveit2.max_velocity = 0.3
@@ -118,74 +108,17 @@ class Collector(Node):
         except KeyError:
             return None
 
-    def _call_ik(self, position, quat_xyzw, timeout_s=1.0):
-        """调 /fairino/get_all_ik，返回关节解列表"""
-        if not self._ik_client.wait_for_service(timeout_sec=2.0):
-            self.get_logger().error('/fairino/get_all_ik not available')
-            return []
-        req = GetAllIK.Request()
-        req.pose.header.frame_id = BASE_FRAME
-        req.pose.pose.position.x = float(position[0])
-        req.pose.pose.position.y = float(position[1])
-        req.pose.pose.position.z = float(position[2])
-        req.pose.pose.orientation.x = float(quat_xyzw[0])
-        req.pose.pose.orientation.y = float(quat_xyzw[1])
-        req.pose.pose.orientation.z = float(quat_xyzw[2])
-        req.pose.pose.orientation.w = float(quat_xyzw[3])
-        req.group_name = GROUP_NAME
-        future = self._ik_client.call_async(req)
-        done = threading.Event()
-        future.add_done_callback(lambda _: done.set())
-        if not done.wait(timeout=timeout_s):
-            future.cancel()
-            return []
-        res = future.result()
-        if res is None or res.error_code != 0:
-            return []
-        return [list(js.position) for js in res.solutions]
-
-    def _score_ik(self, joints, current):
-        """分数越低越好。inf = 不可用"""
-        limit_penalty = 0.0
-        for j, (lo, hi) in zip(joints, JOINT_SAFETY_LIMITS):
-            if j < lo or j > hi:
-                return float('inf')
-            margin = min(j - lo, hi - j)
-            if margin < 0.25:
-                limit_penalty += (0.25 - margin) ** 2 * 100.0
-        motion_cost = sum(abs(j - c) for j, c in zip(joints, current))
-        return limit_penalty + motion_cost
-
     def goto(self, xyz, rpy):
+        """移动机械臂到 xyz/rpy 位姿。
+
+        v3: IK 由 move_group 的 FairinoIKPlugin 内部完成（解析全解 + IKSelector
+            四维评分选解），不再自己调 /fairino/get_all_ik 和评分（service 已退役）。
+        """
         q = tft.quaternion_from_euler(rpy[0], rpy[1], rpy[2])
-        current = self._get_current_joints()
-
-        # 1. 取所有解析解
-        solutions = self._call_ik(list(xyz), list(q))
-        if not solutions:
-            self.get_logger().warn('no IK solution, fallback to pymoveit2')
-            self.moveit2.move_to_pose(
-                position=list(xyz), quat_xyzw=list(q),
-                cartesian=False, frame_id=BASE_FRAME)
-            return self.moveit2.wait_until_executed()
-
-        # 2. 评分排序
-        scored = []
-        for sol in solutions:
-            score = self._score_ik(sol, current) if current is not None else 0.0
-            scored.append((score, sol))
-        scored.sort(key=lambda x: x[0])
-
-        # 3. 按序尝试
-        for score, joints in scored:
-            if score == float('inf'):
-                continue
-            self.get_logger().info(
-                f'  try IK score={score:.1f} j={[f"{v:+.2f}" for v in joints]}')
-            self.moveit2.move_to_configuration(joints)
-            if self.moveit2.wait_until_executed():
-                return True
-        return False
+        self.moveit2.move_to_pose(
+            position=list(xyz), quat_xyzw=list(q),
+            cartesian=False, frame_id=BASE_FRAME)
+        return self.moveit2.wait_until_executed()
 
     def capture_one(self):
         if self.K is None or self.last_image is None:

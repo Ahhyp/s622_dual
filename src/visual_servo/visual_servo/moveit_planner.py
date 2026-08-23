@@ -29,8 +29,9 @@ class MoveItPlanner:
         end_effector: str,
         group_name: str,
         callback_group=None,
-        max_vel: float = 0.2,
-        max_acc: float = 0.2,
+        max_vel: float = 1.0,
+        max_acc: float = 1.0,
+        move_group_namespace: str = "/move_group_fairino",
     ):
         self.node = node
         cb = callback_group or ReentrantCallbackGroup()
@@ -42,6 +43,7 @@ class MoveItPlanner:
             end_effector_name=end_effector,
             group_name=group_name,
             callback_group=cb,
+            move_group_namespace=move_group_namespace,
         )
         self.moveit2.max_velocity = max_vel
         self.moveit2.max_acceleration = max_acc
