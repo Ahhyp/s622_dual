@@ -8,10 +8,14 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from sensor_msgs.msg import JointState
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from builtin_interfaces.msg import Duration
 
 from s622_bt_manager.srv import SetGripper
+
+# C2（2026-08-24）：夹爪控制改用 manipulation_common.MoveItMotion.control_gripper
+#（plan + execute，走 move_group → hand_controller），不再直接发 JointTrajectory。
+# 接口（SetGripper.srv）不变，BT 层无感知。
+from manipulation_common.planning.motion_executor import MoveItMotion
+from pymoveit2 import MoveIt2
 
 
 class GripperService(Node):
@@ -27,29 +31,59 @@ class GripperService(Node):
         self.declare_parameter('command_duration_sec', 1.0)
         self.declare_parameter('settle_sec', 1.2)
         self.declare_parameter('feedback_joint', 'finger1_joint')
+        self.declare_parameter('base_link', 'base_link')
+        self.declare_parameter('end_effector', 'grasp_frame')
 
-        self._topic = self.get_parameter('gripper_topic').value
+        self._topic = self.get_parameter('gripper_topic').value   # 保留（兼容 launch 参数）
         self._joint_names = list(self.get_parameter('finger_joint_names').value)
         self._open = [float(x) for x in self.get_parameter('open_positions').value]
         self._close = [float(x) for x in self.get_parameter('close_positions').value]
-        self._duration = float(self.get_parameter('command_duration_sec').value)
         self._settle = float(self.get_parameter('settle_sec').value)
         self._fb_joint = self.get_parameter('feedback_joint').value
+        base_link = self.get_parameter('base_link').value
+        end_effector = self.get_parameter('end_effector').value
 
         cb = ReentrantCallbackGroup()
-        self.cmd_pub = self.create_publisher(JointTrajectory, self._topic, 10)
         self.js_sub = self.create_subscription(
             JointState, '/joint_states',
             self._on_joint_states, 10, callback_group=cb)
 
         self._latest_js = None
 
+        # C2：MoveItMotion + 夹爪客户端（hand group）
+        self.moveit2_arm = MoveIt2(
+            node=self,
+            joint_names=['j1', 'j2', 'j3', 'j4', 'j5', 'j6'],
+            base_link_name=base_link,
+            end_effector_name=end_effector,
+            group_name='robot_arm',
+            callback_group=cb,
+            move_group_namespace='/move_group_fairino',
+        )
+        self.moveit2_gripper = MoveIt2(
+            node=self,
+            joint_names=list(self._joint_names),
+            base_link_name=base_link,
+            end_effector_name=end_effector,
+            group_name='hand',
+            callback_group=cb,
+            move_group_namespace='/move_group_fairino',
+            follow_joint_trajectory_action_name='/hand_controller/follow_joint_trajectory',
+        )
+        self.motion = MoveItMotion(
+            self,
+            arm_clients={'fairino': self.moveit2_arm},
+            gripper=self.moveit2_gripper,
+            open_positions=tuple(self._open),
+            close_positions=tuple(self._close),
+            action_delay=0.0,
+        )
+
         self.srv = self.create_service(
             SetGripper, 'set_gripper', self._on_set_gripper, callback_group=cb)
 
         self.get_logger().info(
-            f'gripper_service ready: topic={self._topic}, '
-            f'open={self._open}, close={self._close}')
+            f'gripper_service ready (MoveItMotion): open={self._open}, close={self._close}')
 
     def _on_joint_states(self, msg: JointState):
         self._latest_js = msg
@@ -63,34 +97,25 @@ class GripperService(Node):
         except ValueError:
             return float('nan')
 
-    def _send_traj(self, positions):
-        msg = JointTrajectory()
-        msg.joint_names = self._joint_names
-        pt = JointTrajectoryPoint()
-        pt.positions = list(positions)
-        pt.time_from_start = Duration(sec=int(self._duration),
-                                       nanosec=int((self._duration % 1) * 1e9))
-        msg.points = [pt]
-        self.cmd_pub.publish(msg)
-
     def _on_set_gripper(self, request, response):
         if request.command == 'open':
-            target = self._open
+            ok = self.motion.control_gripper(
+                open_gripper=True, action_name='SetGripper open')
         elif request.command == 'close':
-            target = self._close
+            ok = self.motion.control_gripper(
+                open_gripper=False, action_name='SetGripper close')
         else:
             response.success = False
             response.error_msg = f'unknown command: {request.command}'
             return response
 
-        self.get_logger().info(f'set_gripper: {request.command} -> {target}')
-        self._send_traj(target)
+        self.get_logger().info(f'set_gripper: {request.command} -> {"ok" if ok else "FAILED"}')
         time.sleep(self._settle)
 
         fb = self._read_finger_position()
-        response.success = True
+        response.success = ok
         response.finger_position = fb
-        response.error_msg = ''
+        response.error_msg = '' if ok else 'control_gripper failed'
         self.get_logger().info(f'set_gripper done: finger={fb:.4f}')
         return response
 

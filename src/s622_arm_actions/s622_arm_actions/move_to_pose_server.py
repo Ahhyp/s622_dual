@@ -14,7 +14,14 @@ from rclpy.executors import MultiThreadedExecutor
 from s622_bt_manager.action import MoveToPose
 
 from s622_arm_actions.servo_lifecycle import ServoLifecycleManager
-from s622_arm_actions.moveit_planner import MoveItPlanner
+
+# C2（2026-08-24）：运动执行改用 manipulation_common.MoveItMotion（对齐 robotarm），
+# 不再用自写 MoveItPlanner。接口（MoveToPose.action）不变，BT 层无感知。
+from manipulation_common.utils.pose_tools import PoseTools
+from manipulation_common.planning.motion_executor import MoveItMotion, PlanScoreConfig
+from manipulation_common.planning.trajectory_scoring import select_best_path
+from pymoveit2 import MoveIt2
+from geometry_msgs.msg import Pose
 
 
 class MoveToPoseServer(Node):
@@ -27,8 +34,8 @@ class MoveToPoseServer(Node):
         self.declare_parameter('base_link', 'base_link')
         self.declare_parameter('end_effector', 'grasp_frame')
         self.declare_parameter('group_name', 'robot_arm')
-        self.declare_parameter('default_velocity_scale', 0.2)
-        self.declare_parameter('default_acceleration_scale', 0.2)
+        self.declare_parameter('default_velocity_scale', 1.0)
+        self.declare_parameter('default_acceleration_scale', 1.0)
         self.declare_parameter('servo_ns', '')    
         self.declare_parameter('arm_controller_action', '')   
         
@@ -73,17 +80,29 @@ class MoveToPoseServer(Node):
 
         cb = ReentrantCallbackGroup()
         self.servo_lc = ServoLifecycleManager(self, callback_group=cb, servo_ns=servo_ns)
-        self.planner = MoveItPlanner(
+
+        # C2：MoveItMotion（对齐 robotarm fairino_pose_control_server）
+        self.moveit2 = MoveIt2(
             node=self,
             joint_names=joint_names,
-            base_link=base_link,
-            end_effector=end_effector,
+            base_link_name=base_link,
+            end_effector_name=end_effector,
             group_name=group_name,
             callback_group=cb,
-            max_vel=self._default_v,
-            max_acc=self._default_a,
-            arm_controller_action=arm_controller_action,
+            move_group_namespace="/move_group_fairino",
         )
+        self.moveit2.pipeline_id = "ompl"   # 对齐现有（现有 pipeline_id="fairino" 实为 OMPL 段）
+        self.motion = MoveItMotion(
+            self,
+            arm_clients={"fairino": self.moveit2},
+            gripper=None,                      # 夹爪由独立 gripper_service 控制（C2 范围内一并换）
+            pose_tools=PoseTools(self, base_frame=base_link),
+            select_best_path=select_best_path,
+            score_cfg=PlanScoreConfig(num_candidates=8),
+            action_delay=0.0,
+        )
+        self._vel = self._default_v
+        self._acc = self._default_a
 
         self._action_server = ActionServer(
             self,
@@ -95,7 +114,7 @@ class MoveToPoseServer(Node):
             callback_group=cb,
         )
         self.get_logger().info(
-            f'move_to_pose ready: group={group_name}, ee={end_effector}, '
+            f'move_to_pose ready (MoveItMotion): group={group_name}, ee={end_effector}, '
             f'base={base_link}, joints={joint_names}')
 
     def _execute(self, goal_handle):
@@ -108,12 +127,13 @@ class MoveToPoseServer(Node):
                 self.get_logger().warning(
                     'force_stop failed; continuing (servo may not be running)')
 
-        # 2) set speed
+        # 2) set speed（存参数，move_to_pose 时透传）
         v = goal.velocity_scale if goal.velocity_scale > 0 else self._default_v
         a = goal.acceleration_scale if goal.acceleration_scale > 0 else self._default_a
-        self.planner.set_speed(v, a)
+        self._vel = v
+        self._acc = a
 
-        # 3) plan + execute
+        # 3) plan + execute（MoveItMotion）
         try:
             if goal.named_pose:
                 if goal.named_pose not in self._named_poses:
@@ -124,15 +144,28 @@ class MoveToPoseServer(Node):
                     result.error_msg = msg
                     return result
                 self.get_logger().info(f'going to named pose: {goal.named_pose}')
-                ok = self.planner.plan_to_joint_positions(
-                    self._named_poses[goal.named_pose])
+                # move_to_joints 无速度参数：前置设置 moveit2 属性
+                self.moveit2.max_velocity = v
+                self.moveit2.max_acceleration = a
+                ok = self.motion.move_to_joints(
+                    self._named_poses[goal.named_pose],
+                    action_name=f"named:{goal.named_pose}",
+                    timeout_sec=60.0,
+                )
             else:
                 p = goal.target_pose.pose
-                ok = self.planner.plan_to_pose_smart(
-                    position=[p.position.x, p.position.y, p.position.z],
-                    quat_xyzw=[p.orientation.x, p.orientation.y,
-                               p.orientation.z, p.orientation.w],
+                pose = Pose()
+                pose.position.x = p.position.x
+                pose.position.y = p.position.y
+                pose.position.z = p.position.z
+                pose.orientation = p.orientation
+                ok = self.motion.move_to_pose(
+                    pose,
                     cartesian=False,
+                    action_name="move_to_pose",
+                    max_velocity=v,
+                    max_acceleration=a,
+                    timeout_sec=60.0,
                 )
         except Exception as e:
             self.get_logger().error(f'plan/execute exception: {e}')
