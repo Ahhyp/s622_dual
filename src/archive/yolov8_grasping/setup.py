@@ -10,6 +10,14 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/config', [
+            'config/demo_node.yaml',
+            'config/demo_node_without_gripper.yaml',
+        ]),
+        ('share/' + package_name + '/launch', [
+            'launch/demo.launch.py',
+            'launch/demo_without_gripper.launch.py',
+        ]),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -26,6 +34,8 @@ setup(
         'console_scripts': [
             'grasping_node = yolov8_grasping.grasping_node:main',
             "grasp_executor_node = yolov8_grasping.executor_node:main",
+            "demo_node = yolov8_grasping.demo_node:main",
+            "demo_node_without_gripper = yolov8_grasping.demo_node_without_gripper:main",
         ],
     },
 )
