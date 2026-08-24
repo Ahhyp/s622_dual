@@ -25,12 +25,6 @@ def generate_launch_description():
         os.path.join(this_pkg, "models")
         + ":" + os.environ.get("IGN_GAZEBO_RESOURCE_PATH", ""),
     )
-    # 加载自定义规划管线
-    fairino_planning_yaml = os.path.join(
-        get_package_share_directory("fairino_planning_ros"),
-        "config", "fairino_planning.yaml"
-    )
-
     # 1. Gazebo 空世界
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -82,11 +76,14 @@ def generate_launch_description():
     
 
     # 3. MoveIt 配置（告诉 move_group 用哪个 URDF/SRDF/kinematics）
+    #    规划管线统一（2026-08-25）：fairino（FairinoPlannerManager）+ ompl 备用，
+    #    默认 fairino。MoveItConfigsBuilder 自动加载 config/fairino_planning.yaml
+    #    （planning_plugin: fairino_planning/FairinoPlannerManager）与 config/ompl_planning.yaml。
     moveit_config = MoveItConfigsBuilder("s622_moveit_descriptions", package_name="s622_moveit_config") \
                     .robot_description(this_pkg + '/config/robot_gazebo.urdf.xacro') \
                     .robot_description_semantic('config/s622_moveit_descriptions.srdf') \
                     .robot_description_kinematics(robot_moveit_pkg + '/config/kinematics.yaml') \
-                    .planning_pipelines(pipelines=["ompl"],default_planning_pipeline="ompl") \
+                    .planning_pipelines(pipelines=["fairino", "ompl"], default_planning_pipeline="fairino") \
                     .to_moveit_configs()
     
     
@@ -176,9 +173,19 @@ def generate_launch_description():
         ]
     )
 
-    # 加载管线参数
-    with open(fairino_planning_yaml, 'r') as f:
-        pipeline_params = yaml.safe_load(f)
+    # 加载规划管线参数（2026-08-25 规划管线统一，对齐 robotarm moveit_stack.py）
+    # FairinoPlannerManager 从这些参数读取：
+    #   - fairino_planning: 顶层 planning_plugin + request_adapters（legacy 算法参数）
+    #   - planning_core: planner.* / fairino.optimizer.* 等（common_planning_params.yaml）
+    #   - aapf/tube/birrt/rrt star core: fairino.algorithms.<name>.*（各算法参数）
+    #   - ik_core: fairino.ik.*（IK 选择参数）
+    fairino_planning = load_yaml("s622_moveit_config", "config/fairino_planning.yaml")
+    planning_core = load_yaml("fairino_planning_core", "config/common_planning_params.yaml")
+    aapf_star_core = load_yaml("fairino_planning_core", "config/aapf_birrt__params.yaml")
+    tube_star_core = load_yaml("fairino_planning_core", "config/tube_birrt__params.yaml")
+    birrt_star_core = load_yaml("fairino_planning_core", "config/birrt__params.yaml")
+    rrt_star_core = load_yaml("fairino_planning_core", "config/rrt__params.yaml")
+    ik_core = load_yaml("fairino_planning_core", "config/ik_params.yaml")
 
     # 7. move_group × 2（双 IK：/move_group_fairino 用 FairinoIKPlugin 解析 IK，/move_group_kdl 用 KDL）
     #    参照 robotarm moveit_stack.py 的 remap 设计；kinematics 用 MoveIt 标准格式注入
@@ -214,6 +221,8 @@ def generate_launch_description():
     # ── move_group #1：Fairino 解析 IK（服务保持 namespaced，客户端用 move_group_namespace 连）──
     # 2026-08-23 架构迁移：不再 remap 到根级。对齐 robotarm 做法——move_group 服务留在
     # /move_group_fairino/*，客户端（pymoveit2 move_group_namespace + RViz remap）显式连接。
+    # 2026-08-25 规划管线统一：注入 fairino_planning + planning_core + 4 算法 core + ik_core
+    # （对齐 robotarm moveit_stack.py 的 fairino_parameters；task_profile=grasp 覆盖 ik_params 默认）
     move_group_fairino = Node(
         package="moveit_ros_move_group",
         executable="move_group",
@@ -223,7 +232,15 @@ def generate_launch_description():
         remappings=mg_remappings,
         parameters=[
             moveit_config.to_dict(),
-            pipeline_params,
+            fairino_planning,
+            planning_core,
+            aapf_star_core,
+            tube_star_core,
+            birrt_star_core,
+            rrt_star_core,
+            ik_core,
+            {"fairino": {"ik": {"task_profile": "grasp"}}},
+            {"planner": {"random_seed": 0}},
             {"robot_description_kinematics": kinematics_fairino},
             {"use_sim_time": True}
         ],
@@ -238,7 +255,14 @@ def generate_launch_description():
         remappings=mg_remappings,
         parameters=[
             moveit_config.to_dict(),
-            pipeline_params,
+            fairino_planning,
+            planning_core,
+            aapf_star_core,
+            tube_star_core,
+            birrt_star_core,
+            rrt_star_core,
+            ik_core,
+            {"planner": {"random_seed": 0}},
             {"robot_description_kinematics": kinematics_kdl},
             {"use_sim_time": True}
         ],
@@ -262,7 +286,8 @@ def generate_launch_description():
                      moveit_config.robot_description_semantic,
                      moveit_config.robot_description_kinematics,
                      moveit_config.joint_limits,
-                     pipeline_params,
+                     moveit_config.planning_pipelines,
+                     fairino_planning,
                      {"use_sim_time": True}],
     )
 
