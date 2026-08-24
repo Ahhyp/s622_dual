@@ -245,32 +245,25 @@ def generate_launch_description():
     )
 
 
-    # 8. RViz（MotionPlanning 面板默认连根级，remap 到 fairino move_group，
-    #    对齐 robotarm moveit_stack.py:95-104——GUI 规划/执行与仿真保持一致）
-    #    注意：action 顶层名 remap 对 client 不总是生效，另加 5-topic 兜底（同 controller 处理）
+    # 8. RViz —— 方案 A（2026-08-23 修复 namespace 振荡）
+    # 面板连接 move_group 只靠 .rviz 配置的 "Move Group Namespace: /move_group_fairino"
+    #（面板自加前缀直连绝对名）。**不再加 launch remap**：
+    # 之前同时用 .rviz namespace + launch remap 双路径，导致面板在
+    # "/ -> /move_group_fairino" 之间反复 reload（22 次），引发
+    # "Link [X] does not exist"（64 次）、TF jump、最终 RViz 段错误崩溃。
+    # robotarm 实际也只用 .rviz namespace（其 remap 中 query_planner_interfaces
+    # 复数不匹配故基本无效），本方案与其对齐。
     rviz_config = os.path.join(this_pkg, "rviz", "gz_launch.rviz")
-    rviz_remaps = [
-        ("get_planning_scene", "/move_group_fairino/get_planning_scene"),
-        ("plan_kinematic_path", "/move_group_fairino/plan_kinematic_path"),
-        ("query_planner_interface", "/move_group_fairino/query_planner_interface"),
-        ("compute_cartesian_path", "/move_group_fairino/compute_cartesian_path"),
-        ("execute_trajectory", "/move_group_fairino/execute_trajectory"),
-        ("move_action", "/move_group_fairino/move_action"),
-        ("monitored_planning_scene", "/move_group_fairino/monitored_planning_scene"),
-    ]
-    for _act in ("execute_trajectory", "move_action"):
-        for _sub in ("feedback", "status", "cancel_goal", "get_result", "send_goal"):
-            rviz_remaps.append(
-                (f"{_act}/_action/{_sub}", f"/move_group_fairino/{_act}/_action/{_sub}")
-            )
     rviz = Node(
         package="rviz2",
         executable="rviz2",
         arguments=["-d", rviz_config],
         parameters=[moveit_config.robot_description,
                      moveit_config.robot_description_semantic,
+                     moveit_config.robot_description_kinematics,
+                     moveit_config.joint_limits,
+                     pipeline_params,
                      {"use_sim_time": True}],
-        remappings=rviz_remaps,
     )
 
     
@@ -314,6 +307,21 @@ def generate_launch_description():
         ]
     )
 
+    # 10. trajectory_retime_server（TOTG 时间最优重定时，2026-08-23 阶段 D2）
+    #     pymoveit2 robotarm 版在 cartesian 路径规划后调用 /retime_trajectory，
+    #     让 max_velocity/max_acceleration 缩放真正生效（Humble cartesian 轨迹无时间戳问题）
+    #     use_sim_time 从外层传入（不硬编码在 retime_server.launch.py）
+    retime_server_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("trajectory_retime_server"),
+                "launch",
+                "retime_server.launch.py",
+            )
+        ),
+        launch_arguments={"use_sim_time": "true"}.items(),
+    )
+
     return LaunchDescription([
         set_model_path,
         gazebo, clock_bridge, camera_bridge,
@@ -323,5 +331,6 @@ def generate_launch_description():
         rviz, controller_spawner, 
         move_group_fairino, move_group_kdl,
         servo_node,
+        retime_server_launch,
         obb_node,
     ])

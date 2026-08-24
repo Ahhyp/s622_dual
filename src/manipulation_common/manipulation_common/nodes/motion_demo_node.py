@@ -71,6 +71,7 @@ class MotionDemoNode(rclpy.node.Node):
         self.demo_cycles = int(param(self, "demo_cycles", 1))
         self.enable_motion = bool(param(self, "enable_motion", True))
         self.return_to_origin = bool(param(self, "return_to_origin", False))
+        self.cartesian = bool(param(self, "cartesian", False))
         self.max_velocity = float(param(self, "max_velocity", 0.5))
         self.max_acceleration = float(param(self, "max_acceleration", 0.5))
         self.allowed_planning_time = float(param(self, "allowed_planning_time", 5.0))
@@ -183,7 +184,7 @@ class MotionDemoNode(rclpy.node.Node):
             success = self.motion.move_to_pose(
                 target,
                 planning_client="fairino",
-                cartesian=False,
+                cartesian=self.cartesian,
                 action_name=f"motion_demo cycle {i + 1}: descend",
                 max_velocity=self.max_velocity,
                 max_acceleration=self.max_acceleration,

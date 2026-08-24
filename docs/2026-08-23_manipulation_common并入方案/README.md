@@ -3,7 +3,7 @@
 - **日期**：2026-08-23
 - **目录**：`docs/2026-08-23_manipulation_common并入方案/`
 - **目标**：将 robotarm 的 `manipulation_common`（通用操作库）正式纳入 my_S622，渐进接入现有体系
-- **状态**：✅ **阶段 A、B、C1 + 架构迁移 已完成**（A 记录见 [阶段A_pymoveit2替换记录.md](阶段A_pymoveit2替换记录.md)，B 见 [manipulation_common_API清单.md](manipulation_common_API清单.md)，C1 见 [阶段C1_demo验证记录.md](阶段C1_demo验证记录.md)，架构迁移见 [架构迁移_namespaced记录.md](架构迁移_namespaced记录.md)），阶段 C2/C3、D 待执行
+- **状态**：✅ **阶段 A、B、C1、D2 + 架构迁移 已完成**（A 记录见 [阶段A_pymoveit2替换记录.md](阶段A_pymoveit2替换记录.md)，B 见 [manipulation_common_API清单.md](manipulation_common_API清单.md)，C1 见 [阶段C1_demo验证记录.md](阶段C1_demo验证记录.md)，架构迁移见 [架构迁移_namespaced记录.md](架构迁移_namespaced记录.md)，D2/RViz 修复见 [阶段D2_RViz修复记录.md](阶段D2_RViz修复记录.md)），阶段 C2/C3 待执行
 
 ---
 
