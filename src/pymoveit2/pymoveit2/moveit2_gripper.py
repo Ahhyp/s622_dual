@@ -27,6 +27,7 @@ class MoveIt2Gripper(MoveIt2):
         callback_group: Optional[CallbackGroup] = None,
         follow_joint_trajectory_action_name: str = "DEPRECATED",
         use_move_group_action: bool = False,
+        move_group_namespace: str = "",
     ):
         """
         Construct an instance of `MoveIt2Gripper` interface.
@@ -72,6 +73,7 @@ class MoveIt2Gripper(MoveIt2):
             ignore_new_calls_while_executing=ignore_new_calls_while_executing,
             callback_group=callback_group,
             use_move_group_action=use_move_group_action,
+            move_group_namespace=move_group_namespace,
         )
         self.__del_redundant_attributes()
 

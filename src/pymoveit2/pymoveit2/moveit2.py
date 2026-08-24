@@ -76,6 +76,7 @@ class MoveIt2:
         callback_group: Optional[CallbackGroup] = None,
         follow_joint_trajectory_action_name: str = "DEPRECATED",
         use_move_group_action: bool = False,
+        move_group_namespace: str = "",
 
         # --- Cartesian retime options (recommended for ROS2 Humble cartesian paths) ---
         retime_cartesian: bool = True,
@@ -104,6 +105,9 @@ class MoveIt2:
 
         self._node = node
         self._callback_group = callback_group
+        self.__move_group_namespace = self.__normalize_move_group_namespace(
+            move_group_namespace
+        )
 
         # --- Cartesian retime options ---
         self.__retime_cartesian = bool(retime_cartesian)
@@ -189,7 +193,7 @@ class MoveIt2:
         self.__move_action_client = ActionClient(
             node=self._node,
             action_type=MoveGroup,
-            action_name="move_action",
+            action_name=self.__resolve_move_group_name("move_action"),
             goal_service_qos_profile=QoSProfile(
                 durability=QoSDurabilityPolicy.VOLATILE,
                 reliability=QoSReliabilityPolicy.RELIABLE,
@@ -226,7 +230,7 @@ class MoveIt2:
         # Also create a separate service client for planning
         self._plan_kinematic_path_service = self._node.create_client(
             srv_type=GetMotionPlan,
-            srv_name="plan_kinematic_path",
+            srv_name=self.__resolve_move_group_name("plan_kinematic_path"),
             qos_profile=QoSProfile(
                 durability=QoSDurabilityPolicy.VOLATILE,
                 reliability=QoSReliabilityPolicy.RELIABLE,
@@ -240,7 +244,7 @@ class MoveIt2:
         # Create a separate service client for Cartesian planning
         self._plan_cartesian_path_service = self._node.create_client(
             srv_type=GetCartesianPath,
-            srv_name="compute_cartesian_path",
+            srv_name=self.__resolve_move_group_name("compute_cartesian_path"),
             qos_profile=QoSProfile(
                 durability=QoSDurabilityPolicy.VOLATILE,
                 reliability=QoSReliabilityPolicy.RELIABLE,
@@ -255,7 +259,7 @@ class MoveIt2:
         self._execute_trajectory_action_client = ActionClient(
             node=self._node,
             action_type=ExecuteTrajectory,
-            action_name="execute_trajectory",
+            action_name=self.__resolve_move_group_name("execute_trajectory"),
             goal_service_qos_profile=QoSProfile(
                 durability=QoSDurabilityPolicy.VOLATILE,
                 reliability=QoSReliabilityPolicy.RELIABLE,
@@ -292,7 +296,7 @@ class MoveIt2:
         # Create a service for getting the planning scene
         self._get_planning_scene_service = self._node.create_client(
             srv_type=GetPlanningScene,
-            srv_name="get_planning_scene",
+            srv_name=self.__resolve_move_group_name("get_planning_scene"),
             qos_profile=QoSProfile(
                 durability=QoSDurabilityPolicy.VOLATILE,
                 reliability=QoSReliabilityPolicy.RELIABLE,
@@ -308,7 +312,7 @@ class MoveIt2:
         # Create a service for applying the planning scene
         self._apply_planning_scene_service = self._node.create_client(
             srv_type=ApplyPlanningScene,
-            srv_name="apply_planning_scene",
+            srv_name=self.__resolve_move_group_name("apply_planning_scene"),
             qos_profile=QoSProfile(
                 durability=QoSDurabilityPolicy.VOLATILE,
                 reliability=QoSReliabilityPolicy.RELIABLE,
@@ -2180,129 +2184,111 @@ class MoveIt2:
         )
 
     def _send_goal_async_move_action(self):
-        self.__execution_mutex.acquire()
-        stamp = self._node.get_clock().now().to_msg()
-        self.__move_action_goal.request.workspace_parameters.header.stamp = stamp
-        if not self.__move_action_client.server_is_ready():
-            self._node.get_logger().warn(
-                f"Action server '{self.__move_action_client._action_name}' is not yet available. Better luck next time!"
+        with self.__execution_mutex:
+            stamp = self._node.get_clock().now().to_msg()
+            self.__move_action_goal.request.workspace_parameters.header.stamp = stamp
+            if not self.__move_action_client.server_is_ready():
+                self._node.get_logger().warn(
+                    f"Action server '{self.__move_action_client._action_name}' is not yet available. Better luck next time!"
+                )
+                return
+
+            self.__last_error_code = None
+            self.__is_motion_requested = True
+            future = self.__move_action_client.send_goal_async(
+                goal=self.__move_action_goal,
+                feedback_callback=None,
             )
-            return
-
-        self.__last_error_code = None
-        self.__is_motion_requested = True
-        self.__send_goal_future_move_action = self.__move_action_client.send_goal_async(
-            goal=self.__move_action_goal,
-            feedback_callback=None,
-        )
-
-        self.__send_goal_future_move_action.add_done_callback(
-            self.__response_callback_move_action
-        )
-
-        self.__execution_mutex.release()
+            self.__send_goal_future_move_action = future
+        future.add_done_callback(self.__response_callback_move_action)
 
     def __response_callback_move_action(self, response):
-        self.__execution_mutex.acquire()
         goal_handle = response.result()
         if not goal_handle.accepted:
             self._node.get_logger().warn(
                 f"Action '{self.__move_action_client._action_name}' was rejected."
             )
-            self.__is_motion_requested = False
+            with self.__execution_mutex:
+                self.__is_motion_requested = False
             return
 
-        self.__execution_goal_handle = goal_handle
-        self.__is_executing = True
-        self.__is_motion_requested = False
-
-        self.__get_result_future_move_action = goal_handle.get_result_async()
-        self.__get_result_future_move_action.add_done_callback(
-            self.__result_callback_move_action
-        )
-        self.__execution_mutex.release()
+        result_future = goal_handle.get_result_async()
+        with self.__execution_mutex:
+            self.__execution_goal_handle = goal_handle
+            self.__is_executing = True
+            self.__is_motion_requested = False
+            self.__get_result_future_move_action = result_future
+        result_future.add_done_callback(self.__result_callback_move_action)
 
     def __result_callback_move_action(self, res):
-        self.__execution_mutex.acquire()
-        if res.result().status != GoalStatus.STATUS_SUCCEEDED:
-            self._node.get_logger().warn(
-                f"Action '{self.__move_action_client._action_name}' was unsuccessful: {res.result().status}."
-            )
-            self.motion_suceeded = False
-        else:
-            self.motion_suceeded = True
-
-        self.__last_error_code = res.result().result.error_code
-
-        self.__execution_goal_handle = None
-        self.__is_executing = False
-        self.__execution_mutex.release()
+        result = res.result()
+        with self.__execution_mutex:
+            if result.status != GoalStatus.STATUS_SUCCEEDED:
+                self._node.get_logger().warn(
+                    f"Action '{self.__move_action_client._action_name}' was unsuccessful: {result.status}."
+                )
+                self.motion_suceeded = False
+            else:
+                self.motion_suceeded = True
+            self.__last_error_code = result.result.error_code
+            self.__execution_goal_handle = None
+            self.__is_executing = False
 
     def _send_goal_async_execute_trajectory(
         self,
         goal: ExecuteTrajectory,
         wait_until_response: bool = False,
     ):
-        self.__execution_mutex.acquire()
+        with self.__execution_mutex:
+            if not self._execute_trajectory_action_client.server_is_ready():
+                self._node.get_logger().warn(
+                    f"Action server '{self._execute_trajectory_action_client._action_name}' is not yet available. Better luck next time!"
+                )
+                return
 
-        if not self._execute_trajectory_action_client.server_is_ready():
-            self._node.get_logger().warn(
-                f"Action server '{self._execute_trajectory_action_client._action_name}' is not yet available. Better luck next time!"
-            )
-            return
-
-        self.__last_error_code = None
-        self.__is_motion_requested = True
-        self.__send_goal_future_execute_trajectory = (
-            self._execute_trajectory_action_client.send_goal_async(
+            self.__last_error_code = None
+            self.__is_motion_requested = True
+            future = self._execute_trajectory_action_client.send_goal_async(
                 goal=goal,
                 feedback_callback=None,
             )
-        )
-
-        self.__send_goal_future_execute_trajectory.add_done_callback(
-            self.__response_callback_execute_trajectory
-        )
-        self.__execution_mutex.release()
+            self.__send_goal_future_execute_trajectory = future
+        future.add_done_callback(self.__response_callback_execute_trajectory)
 
     def __response_callback_execute_trajectory(self, response):
-        self.__execution_mutex.acquire()
         goal_handle = response.result()
         if not goal_handle.accepted:
             self._node.get_logger().warn(
                 f"Action '{self._execute_trajectory_action_client._action_name}' was rejected."
             )
-            self.__is_motion_requested = False
+            with self.__execution_mutex:
+                self.__is_motion_requested = False
             return
 
-        self.__execution_goal_handle = goal_handle
-        self.__is_executing = True
-        self.__is_motion_requested = False
-
-        self.__get_result_future_execute_trajectory = goal_handle.get_result_async()
-        self.__get_result_future_execute_trajectory.add_done_callback(
-            self.__result_callback_execute_trajectory
-        )
-        self.__execution_mutex.release()
+        result_future = goal_handle.get_result_async()
+        with self.__execution_mutex:
+            self.__execution_goal_handle = goal_handle
+            self.__is_executing = True
+            self.__is_motion_requested = False
+            self.__get_result_future_execute_trajectory = result_future
+        result_future.add_done_callback(self.__result_callback_execute_trajectory)
 
     def __response_callback_with_event_set_execute_trajectory(self, response):
         self.__future_done_event.set()
 
     def __result_callback_execute_trajectory(self, res):
-        self.__execution_mutex.acquire()
-        if res.result().status != GoalStatus.STATUS_SUCCEEDED:
-            self._node.get_logger().warn(
-                f"Action '{self._execute_trajectory_action_client._action_name}' was unsuccessful: {res.result().status}."
-            )
-            self.motion_suceeded = False
-        else:
-            self.motion_suceeded = True
-
-        self.__last_error_code = res.result().result.error_code
-
-        self.__execution_goal_handle = None
-        self.__is_executing = False
-        self.__execution_mutex.release()
+        result = res.result()
+        with self.__execution_mutex:
+            if result.status != GoalStatus.STATUS_SUCCEEDED:
+                self._node.get_logger().warn(
+                    f"Action '{self._execute_trajectory_action_client._action_name}' was unsuccessful: {result.status}."
+                )
+                self.motion_suceeded = False
+            else:
+                self.motion_suceeded = True
+            self.__last_error_code = result.result.error_code
+            self.__execution_goal_handle = None
+            self.__is_executing = False
 
     @classmethod
     def __init_move_action_goal(
@@ -2347,10 +2333,24 @@ class MoveIt2:
 
         return move_action_goal
 
+    @staticmethod
+    def __normalize_move_group_namespace(namespace: str) -> str:
+        ns = (namespace or "").strip()
+        if ns in ("", "/"):
+            return ""
+        if not ns.startswith("/"):
+            ns = "/" + ns
+        return ns.rstrip("/")
+
+    def __resolve_move_group_name(self, name: str) -> str:
+        if not self.__move_group_namespace:
+            return name
+        return f"{self.__move_group_namespace}/{name}"
+
     def __init_compute_fk(self):
         self.__compute_fk_client = self._node.create_client(
             srv_type=GetPositionFK,
-            srv_name="compute_fk",
+            srv_name=self.__resolve_move_group_name("compute_fk"),
             callback_group=self._callback_group,
         )
 
@@ -2367,7 +2367,7 @@ class MoveIt2:
         # Service client for IK
         self.__compute_ik_client = self._node.create_client(
             srv_type=GetPositionIK,
-            srv_name="compute_ik",
+            srv_name=self.__resolve_move_group_name("compute_ik"),
             callback_group=self._callback_group,
         )
 

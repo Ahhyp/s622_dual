@@ -29,6 +29,7 @@ class GripperInterface(MoveIt2Gripper, GripperCommand):
         follow_joint_trajectory_action_name: str = "DEPRECATED",
         gripper_command_action_name: str = "gripper_action_controller/gripper_cmd",
         use_move_group_action: bool = False,
+        move_group_namespace: str = "",
     ):
         """
         Combination of `MoveIt2Gripper` and `GripperCommand` interfaces that automatically
@@ -58,6 +59,7 @@ class GripperInterface(MoveIt2Gripper, GripperCommand):
             skip_planning_fixed_motion_duration=skip_planning_fixed_motion_duration,
             callback_group=callback_group,
             use_move_group_action=use_move_group_action,
+            move_group_namespace=move_group_namespace,
         )
 
         GripperCommand.__init__(
