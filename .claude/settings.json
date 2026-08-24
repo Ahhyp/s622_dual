@@ -24,7 +24,22 @@
       "Read(//home/yep/S622_robotarm/src/yolov8_grasping/yolov8_grasping/scripts/**)",
       "Read(//home/yep/S622_robotarm/src/visual_servo/visual_servo/**)",
       "Read(//home/yep/S622_robotarm/src/octomap_yolo_grasping/octomap_yolo_grasping/**)",
-      "Bash(ign topic *)"
+      "Bash(ign topic *)",
+      "Bash(cd /home/yep/s622_embodied && grep -n 'kp=\"500\"' s622_mujoco/mjcf/s622_dual_arm_v1.xml)",
+      "Read(//home/yep/s622_embodied/**)",
+      "Bash(cd /home/yep/s622_embodied && grep -n 'cube\\\\|box\\\\|0.5\\\\|0.2' s622_mujoco/mjcf/s622_dual_arm_v1.xml | head -20)",
+      "Bash(codegraph --version)",
+      "Bash(cat ~/.claude/settings.json 2>/dev/null)",
+      "Read(//home/yep/.claude/**)",
+      "Read(//home/yep/s622_embodied/s622_mujoco/tests/**)",
+      "Read(//home/yep/s622_embodied/s622_mujoco/mjcf/**)"
+    ],
+    "additionalDirectories": [
+      "/home/yep/s622_embodied/s622_mujoco/s622_mujoco/experts",
+      "/home/yep/s622_embodied/s622_mujoco/mjcf",
+      "/home/yep/s622_embodied/s622_mujoco/tests",
+      "/home/yep/s622_embodied/s622_mujoco/s622_mujoco",
+      "/home/yep/s622_embodied/s622_mujoco/scripts"
     ]
   },
   "skills": {

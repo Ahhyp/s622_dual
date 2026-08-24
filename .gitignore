@@ -12,3 +12,7 @@ __pycache__/
 *.a
 *.swp
 compile_commands.json
+# 大文件 / 工具生成目录 / 临时备份（2026-08-25）
+*.tar.gz
+.codegraph/
+tmp/

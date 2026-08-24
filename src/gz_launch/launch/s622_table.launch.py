@@ -160,22 +160,6 @@ def generate_launch_description():
     with open(fairino_planning_yaml, 'r') as f:
         pipeline_params = yaml.safe_load(f)
 
-    fairino_ik_yaml = os.path.join(
-        get_package_share_directory("fairino_planning_core"),
-        "config", "fairino_ik_service.yaml"
-    )
-    
-    fairino_ik_service = Node(
-        package="fairino_planning_core",
-        executable="fairino_ik_service_node",
-        name="fairino_ik_service",          # ← 必须和 yaml 里的 key 一致
-        parameters=[
-            fairino_ik_yaml,
-            {"use_sim_time": True},
-        ],
-        output="screen",
-    )
-
     # 7. move_group
     move_group = Node(
         package="moveit_ros_move_group",
@@ -247,7 +231,6 @@ def generate_launch_description():
         spawn_robot, spawn_box, 
         robot_state_pub,
         rviz, controller_spawner, 
-        fairino_ik_service,
         move_group,
         servo_node,
         obb_node,

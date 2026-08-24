@@ -2,9 +2,9 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="s622_dual_arm">
 
     <xacro:property name="M_PI" value="3.14159265358979323846" />
-    
-    <xacro:arg name="instantiate" default="false"/>   <!-- ← 加这行 -->
-    
+
+    <xacro:arg name="instantiate" default="false" />   <!-- ← 加这行 -->
+
     <!-- ============ world 根 link ============ -->
     <link name="world" />
 
@@ -34,7 +34,7 @@
     <!-- ============ 引入 arm macro (M2.3 已 macro 化) ============ -->
     <xacro:include
         filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
-
+    <xacro:property name="instantiate" value="false" />
     <!-- ============ Left Arm: (0.35, 0, 0), yaw=π ============ -->
     <xacro:s622_arm prefix="left_" attach_world="false" />
     <joint name="left_mount_joint" type="fixed">

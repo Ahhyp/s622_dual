@@ -8,6 +8,7 @@
     <xacro:arg name="prefix" default=""/>
     <xacro:arg name="attach_world" default="true"/>
     <xacro:arg name="include_camera" default="true"/>
+    <xacro:arg name="include_camera_visual" default="false"/>  <!-- false=简化几何体，RViz 不卡 -->
     <xacro:arg name="controllers_yaml" 
                default="$(find s622_moveit_config)/config/ros2_controllers.yaml"/>
     <xacro:arg name="initial_positions_file"
@@ -18,6 +19,11 @@
     <!-- ============ 引入本体 URDF (xacro) ============ -->
     <xacro:include
         filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
+
+    <!-- ============ 显式实例化机械臂本体 ============
+         M2.8 后主 xacro 的 instantiate 默认改为 false（供双臂顶层显式实例化），
+         单臂顶层需显式调用 s622_arm 一次（与 s622_dual_arm_gazebo.urdf.xacro 风格一致） -->
+    <xacro:s622_arm prefix="$(arg prefix)" attach_world="$(arg attach_world)" />
 
     <!-- ============ Gazebo 全局插件 ============ -->
     <gazebo>
@@ -65,11 +71,13 @@
         prefix="${prefix}" />
 
     <!-- ============ Camera (可选) ============ -->
+    <!-- include_camera_visual: false(默认)=简化几何体，RViz 不卡；true=真实 mesh -->
     <xacro:if value="$(arg include_camera)">
         <xacro:include
             filename="$(find s622_moveit_descriptions)/urdf/camera/camera.xacro" />
 
-        <xacro:camera_v0 parent="${prefix}base_link">
+        <xacro:camera_v0 parent="${prefix}base_link"
+                         use_camera_visual="$(arg include_camera_visual)">
             <origin xyz="0.35 0.5 0.9" rpy="0 ${58*M_PI/180} ${-M_PI/2}"/>
         </xacro:camera_v0>
 

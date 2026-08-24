@@ -4,10 +4,10 @@
   <xacro:macro name="gazebo_rgbd_split"
     params="
   name:=camera
-  fps:=30
+  fps:=20
   gz_topic_name:=camera
-  image_width:=960
-  image_height:=540
+  image_width:=640
+  image_height:=480
   h_fov
   v_fov
   min_depth:=0.05

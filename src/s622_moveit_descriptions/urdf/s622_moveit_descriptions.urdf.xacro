@@ -7,7 +7,8 @@
        ================================================================== -->
     <xacro:arg name="prefix" default="" />
     <xacro:arg name="attach_world" default="true" />
-    <xacro:arg name="instantiate" default="true" />
+    <!-- <xacro:arg name="instantiate" default="true" /> -->
+         <xacro:arg name="instantiate" default="false" />
 
     <!-- ==================================================================
        Macro: s622_arm

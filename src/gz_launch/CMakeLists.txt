@@ -30,7 +30,6 @@ install(DIRECTORY scripts launch config rviz worlds models
 install(
   PROGRAMS
     scripts/demo_pathplanning_node.py
-    launch/gazebo.launch.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

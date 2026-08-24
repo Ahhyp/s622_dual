@@ -20,7 +20,7 @@ status_topic: "~/status"
 ###############################################################################
 command_out_type: "trajectory_msgs/JointTrajectory"
 command_out_topic: "/robot_arm_controller/joint_trajectory"
-publish_period: 0.034                           # ~30Hz
+publish_period: 0.02                           # ~50Hz
 publish_joint_positions: true
 publish_joint_velocities: false
 publish_joint_accelerations: false
