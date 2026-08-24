@@ -1,6 +1,7 @@
 """Dual-arm 联合规划执行 server (方案 D).
 
-规划: /plan_kinematic_path service, group='dual_arm', 12 joint 约束
+规划: /move_group_fairino/plan_kinematic_path service (S4: namespaced + fairino 管线),
+      group='dual_arm', 12 joint 约束
 执行: 拆分 12-DOF 轨迹, 分别发 left/right_arm_controller 的 follow_joint_trajectory
 
 用于 handover 等需要双臂时间同步的场景.
@@ -43,7 +44,11 @@ class DualMoveServer(Node):
         # ---- 参数 ----
         self.declare_parameter('group_name', 'dual_arm')
         self.declare_parameter('planner_id', 'RRTConnect')
+        # 2026-08-25 S5 实测：fairino_planning_core NUM_JOINTS=6 硬编码，
+        # FairinoPlannerManager 只支持单臂 6-DOF 组；dual_arm 12-DOF 联合规划
+        # 必须用 ompl 管线（M2.8 已验证 RRTConnect 可行）。
         self.declare_parameter('pipeline_id', 'ompl')
+        self.declare_parameter('move_group_namespace', '/move_group_fairino')
         self.declare_parameter('default_velocity_scale', 0.2)
         self.declare_parameter('default_acceleration_scale', 0.2)
         self.declare_parameter('allowed_planning_time', 8.0)
@@ -55,6 +60,7 @@ class DualMoveServer(Node):
         self._group_name = self.get_parameter('group_name').value
         self._planner_id = self.get_parameter('planner_id').value
         self._pipeline_id = self.get_parameter('pipeline_id').value
+        self._mg_ns = self.get_parameter('move_group_namespace').value
         self._default_v = self.get_parameter('default_velocity_scale').value
         self._default_a = self.get_parameter('default_acceleration_scale').value
         self._planning_time = self.get_parameter('allowed_planning_time').value
@@ -89,7 +95,7 @@ class DualMoveServer(Node):
             callback_group=cb)
 
         self._plan_cli = self.create_client(
-            GetMotionPlan, '/plan_kinematic_path', callback_group=cb)
+            GetMotionPlan, f'{self._mg_ns}/plan_kinematic_path', callback_group=cb)
         self._left_ctrl_cli = ActionClient(
             self, FollowJointTrajectory, '/left_arm_controller/follow_joint_trajectory',
             callback_group=cb)
@@ -112,7 +118,8 @@ class DualMoveServer(Node):
 
         self.get_logger().info(
             f'dual_move_server ready: group={self._group_name}, '
-            f'planner={self._planner_id}, pipeline={self._pipeline_id}')
+            f'planner={self._planner_id}, pipeline={self._pipeline_id}, '
+            f'mg_ns={self._mg_ns}')
 
     # ==================== callbacks ====================
     def _on_joint_state(self, msg: JointState):
@@ -158,7 +165,7 @@ class DualMoveServer(Node):
                     velocity_scale: float, acceleration_scale: float):
         if not self._plan_cli.service_is_ready():
             if not self._plan_cli.wait_for_service(timeout_sec=2.0):
-                self.get_logger().error('/plan_kinematic_path unavailable')
+                self.get_logger().error(f'{self._mg_ns}/plan_kinematic_path unavailable')
                 return None
 
         req = GetMotionPlan.Request()
@@ -191,7 +198,7 @@ class DualMoveServer(Node):
         future = self._plan_cli.call_async(req)
         res = self._wait_future_wall(future, timeout_s=self._planning_time + 3.0)
         if res is None:
-            self.get_logger().error('/plan_kinematic_path timeout')
+            self.get_logger().error(f'{self._mg_ns}/plan_kinematic_path timeout')
             return None
         code = res.motion_plan_response.error_code.val
         if code != 1:

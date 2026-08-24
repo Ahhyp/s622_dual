@@ -1,0 +1,11 @@
+# 双臂运动学（FairinoIKPlugin 解析 IK，S3 双臂现代化）
+# dual_arm 组（12-DOF 联合规划）不配 IK（关节空间规划无需 IK），对齐 robotarm 处理
+left_arm:
+  kinematics_solver: fairino_planning/FairinoIKPlugin
+  kinematics_solver_search_resolution: 0.005
+  kinematics_solver_timeout: 0.1
+
+right_arm:
+  kinematics_solver: fairino_planning/FairinoIKPlugin
+  kinematics_solver_search_resolution: 0.005
+  kinematics_solver_timeout: 0.1

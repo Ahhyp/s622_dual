@@ -17,13 +17,13 @@ from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
+from manipulation_common.launch_utils.yaml_loader import load_yaml
 
 
 def generate_launch_description():
     this_pkg = get_package_share_directory("gz_launch")
     robot_desc_pkg = get_package_share_directory("s622_moveit_descriptions")
     robot_moveit_pkg = get_package_share_directory("s622_moveit_config")
-    fairino_planning_pkg = get_package_share_directory("fairino_planning_ros")
 
     # ============ 环境变量: gz sim model search path ============
     set_model_path = SetEnvironmentVariable(
@@ -69,6 +69,9 @@ def generate_launch_description():
     )
 
     # ============ 3. MoveIt config (双臂 URDF+SRDF) ============
+    # S3（2026-08-25）：规划管线统一 —— fairino（FairinoPlannerManager）+ ompl 备用，
+    # 默认 fairino。MoveItConfigsBuilder 自动加载 config/fairino_planning.yaml
+    # 与 config/ompl_planning.yaml（文件名规则 <pipeline>_planning.yaml）。
     dual_arm_gazebo_xacro = os.path.join(
         this_pkg, "config", "s622_dual_arm_gazebo.urdf.xacro"
     )
@@ -78,7 +81,7 @@ def generate_launch_description():
         .robot_description_semantic(file_path="config/s622_dual_arm.srdf")
         .robot_description_kinematics(file_path="config/dual_arm_kinematics.yaml")
         .trajectory_execution(file_path="config/dual_arm_moveit_controllers.yaml")
-        .planning_pipelines(pipelines=["ompl"], default_planning_pipeline="ompl")
+        .planning_pipelines(pipelines=["fairino", "ompl"], default_planning_pipeline="fairino")
         .planning_scene_monitor(
             publish_robot_description=True,
             publish_robot_description_semantic=True,
@@ -86,12 +89,24 @@ def generate_launch_description():
         .to_moveit_configs()
     )
 
-    # 自定义 planning pipeline 参数 (M1.7 有的话保留)
-    fairino_planning_yaml = os.path.join(
-        fairino_planning_pkg, "config", "fairino_planning.yaml"
-    )
-    with open(fairino_planning_yaml, 'r') as f:
-        pipeline_params = yaml.safe_load(f)
+    # 加载规划管线参数（S3，对齐单臂 s622_gazebo.launch.py）
+    # FairinoPlannerManager 从这些参数读取：
+    #   - fairino_planning: 顶层 planning_plugin + request_adapters
+    #   - planning_core: planner.* / fairino.optimizer.* 等
+    #   - aapf/tube/birrt/rrt star core: fairino.algorithms.<name>.*
+    #   - ik_core: fairino.ik.*
+    fairino_planning = load_yaml("s622_moveit_config", "config/fairino_planning.yaml")
+    planning_core = load_yaml("fairino_planning_core", "config/common_planning_params.yaml")
+    aapf_star_core = load_yaml("fairino_planning_core", "config/aapf_birrt__params.yaml")
+    tube_star_core = load_yaml("fairino_planning_core", "config/tube_birrt__params.yaml")
+    birrt_star_core = load_yaml("fairino_planning_core", "config/birrt__params.yaml")
+    rrt_star_core = load_yaml("fairino_planning_core", "config/rrt__params.yaml")
+    ik_core = load_yaml("fairino_planning_core", "config/ik_params.yaml")
+
+    dual_arm_kinematics_fairino = load_yaml(
+        "s622_moveit_config", "config/dual_arm_kinematics_fairino.yaml")
+    dual_arm_kinematics_kdl = load_yaml(
+        "s622_moveit_config", "config/dual_arm_kinematics_kdl.yaml")
 
     # ============ 4. Spawn robot ============
     # 把 package:// URI 替换成绝对路径, 让 gz sim 能找到 mesh
@@ -201,24 +216,97 @@ def generate_launch_description():
         ],
     )
 
-    # ============ 9. move_group (等 controller_manager 起来后) ============
-    move_group = TimerAction(
+    # ============ 9. move_group × 2（S3 双臂现代化，对齐单臂 namespaced 架构）
+    #   /move_group_fairino：left_arm/right_arm 用 FairinoIKPlugin 解析 IK + fairino 规划管线
+    #   /move_group_kdl：KDL 兜底（kinematics 用 KDL，管线仍 fairino+ompl）
+    #   服务保持 namespaced，客户端（pymoveit2 move_group_namespace + RViz）显式连接。
+    #   dual_arm 组（12-DOF 联合规划）不配 IK，两个实例都能做关节空间规划。
+    mg_remappings = [
+        ("joint_states", "/joint_states"),
+        ("trajectory_execution_event", "/trajectory_execution_event"),
+        ("planning_scene", "/planning_scene"),
+        ("collision_object", "/collision_object"),
+        ("attached_collision_object", "/attached_collision_object"),
+        # controller action client remap（对齐单臂经验：源名相对 + 5-topic 兜底）
+        ("left_arm_controller/follow_joint_trajectory", "/left_arm_controller/follow_joint_trajectory"),
+        ("left_hand_controller/follow_joint_trajectory", "/left_hand_controller/follow_joint_trajectory"),
+        ("right_arm_controller/follow_joint_trajectory", "/right_arm_controller/follow_joint_trajectory"),
+        ("right_hand_controller/follow_joint_trajectory", "/right_hand_controller/follow_joint_trajectory"),
+        ("left_arm_controller/follow_joint_trajectory/_action/feedback", "/left_arm_controller/follow_joint_trajectory/_action/feedback"),
+        ("left_arm_controller/follow_joint_trajectory/_action/status", "/left_arm_controller/follow_joint_trajectory/_action/status"),
+        ("left_arm_controller/follow_joint_trajectory/_action/cancel_goal", "/left_arm_controller/follow_joint_trajectory/_action/cancel_goal"),
+        ("left_arm_controller/follow_joint_trajectory/_action/get_result", "/left_arm_controller/follow_joint_trajectory/_action/get_result"),
+        ("left_arm_controller/follow_joint_trajectory/_action/send_goal", "/left_arm_controller/follow_joint_trajectory/_action/send_goal"),
+        ("left_hand_controller/follow_joint_trajectory/_action/feedback", "/left_hand_controller/follow_joint_trajectory/_action/feedback"),
+        ("left_hand_controller/follow_joint_trajectory/_action/status", "/left_hand_controller/follow_joint_trajectory/_action/status"),
+        ("left_hand_controller/follow_joint_trajectory/_action/cancel_goal", "/left_hand_controller/follow_joint_trajectory/_action/cancel_goal"),
+        ("left_hand_controller/follow_joint_trajectory/_action/get_result", "/left_hand_controller/follow_joint_trajectory/_action/get_result"),
+        ("left_hand_controller/follow_joint_trajectory/_action/send_goal", "/left_hand_controller/follow_joint_trajectory/_action/send_goal"),
+        ("right_arm_controller/follow_joint_trajectory/_action/feedback", "/right_arm_controller/follow_joint_trajectory/_action/feedback"),
+        ("right_arm_controller/follow_joint_trajectory/_action/status", "/right_arm_controller/follow_joint_trajectory/_action/status"),
+        ("right_arm_controller/follow_joint_trajectory/_action/cancel_goal", "/right_arm_controller/follow_joint_trajectory/_action/cancel_goal"),
+        ("right_arm_controller/follow_joint_trajectory/_action/get_result", "/right_arm_controller/follow_joint_trajectory/_action/get_result"),
+        ("right_arm_controller/follow_joint_trajectory/_action/send_goal", "/right_arm_controller/follow_joint_trajectory/_action/send_goal"),
+        ("right_hand_controller/follow_joint_trajectory/_action/feedback", "/right_hand_controller/follow_joint_trajectory/_action/feedback"),
+        ("right_hand_controller/follow_joint_trajectory/_action/status", "/right_hand_controller/follow_joint_trajectory/_action/status"),
+        ("right_hand_controller/follow_joint_trajectory/_action/cancel_goal", "/right_hand_controller/follow_joint_trajectory/_action/cancel_goal"),
+        ("right_hand_controller/follow_joint_trajectory/_action/get_result", "/right_hand_controller/follow_joint_trajectory/_action/get_result"),
+        ("right_hand_controller/follow_joint_trajectory/_action/send_goal", "/right_hand_controller/follow_joint_trajectory/_action/send_goal"),
+        ("robot_description", "/robot_description"),
+        ("robot_description_semantic", "/robot_description_semantic"),
+    ]
+
+    mg_common_params = [
+        moveit_config.to_dict(),
+        fairino_planning,
+        planning_core,
+        aapf_star_core,
+        tube_star_core,
+        birrt_star_core,
+        rrt_star_core,
+        ik_core,
+        {"planner": {"random_seed": 0}},
+        {"use_sim_time": True},
+    ]
+
+    move_group_fairino = TimerAction(
         period=15.0,
         actions=[
             Node(
                 package="moveit_ros_move_group",
                 executable="move_group",
-                parameters=[
-                    moveit_config.to_dict(),
-                    pipeline_params,
-                    {"use_sim_time": True},
-                ],
+                namespace="move_group_fairino",
+                name="move_group",
                 output="screen",
+                remappings=mg_remappings,
+                parameters=[
+                    *mg_common_params,
+                    {"fairino": {"ik": {"task_profile": "grasp"}}},
+                    {"robot_description_kinematics": dual_arm_kinematics_fairino},
+                ],
             )
         ],
     )
 
-    # ============ 10. RViz ============
+    move_group_kdl = TimerAction(
+        period=15.0,
+        actions=[
+            Node(
+                package="moveit_ros_move_group",
+                executable="move_group",
+                namespace="move_group_kdl",
+                name="move_group",
+                output="screen",
+                remappings=mg_remappings,
+                parameters=[
+                    *mg_common_params,
+                    {"robot_description_kinematics": dual_arm_kinematics_kdl},
+                ],
+            )
+        ],
+    )
+
+    # ============ 10. RViz（S3：注入 planning_pipelines + fairino_planning，面板可见管线列表） ============
     rviz_config = os.path.join(robot_moveit_pkg, "config", "dual_arm.rviz")
     rviz = TimerAction(
         period=28.0,
@@ -231,6 +319,9 @@ def generate_launch_description():
                     moveit_config.robot_description,
                     moveit_config.robot_description_semantic,
                     moveit_config.robot_description_kinematics,
+                    moveit_config.joint_limits,
+                    moveit_config.planning_pipelines,
+                    fairino_planning,
                     {"use_sim_time": True},
                 ],
             )
@@ -269,9 +360,9 @@ def generate_launch_description():
                     # namespaced node 默认订阅 /left/tf, 必须 remap 回全局 TF
                     ("/tf", "/tf"),
                     ("/tf_static", "/tf_static"),
-                    # 全局 joint_states 和 planning_scene (由 move_group 单例发)
+                    # 全局 joint_states；planning scene 用 fairino move_group 实例的
                     ("/left/joint_states", "/joint_states"),
-                    ("/left/monitored_planning_scene", "/monitored_planning_scene"),
+                    ("/left/monitored_planning_scene", "/move_group_fairino/monitored_planning_scene"),
                 ],
                 output="screen",
             )
@@ -297,7 +388,7 @@ def generate_launch_description():
                     ("/tf", "/tf"),
                     ("/tf_static", "/tf_static"),
                     ("/right/joint_states", "/joint_states"),
-                    ("/right/monitored_planning_scene", "/monitored_planning_scene"),
+                    ("/right/monitored_planning_scene", "/move_group_fairino/monitored_planning_scene"),
                 ],
                 output="screen",
             )
@@ -376,20 +467,16 @@ def generate_launch_description():
         ],
     )
     
-    # ============ 14. Fairino IK Service (DH 解析法, 提供 /fairino/get_all_ik) ============
-    fairino_ik_yaml = os.path.join(
-        get_package_share_directory("fairino_planning_core"),
-        "config", "fairino_ik_service.yaml"
-    )
-    fairino_ik_service = Node(
-        package="fairino_planning_core",
-        executable="fairino_ik_service_node",
-        name="fairino_ik_service",
-        parameters=[
-            fairino_ik_yaml,
-            {"use_sim_time": True},
-        ],
-        output="screen",
+    # ============ 14. trajectory_retime_server（S3，对齐单臂阶段 D2） ============
+    retime_server_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("trajectory_retime_server"),
+                "launch",
+                "retime_server.launch.py",
+            )
+        ),
+        launch_arguments={"use_sim_time": "true"}.items(),
     )
 
     return LaunchDescription([
@@ -399,8 +486,8 @@ def generate_launch_description():
         robot_state_pub,
         jsb_spawner, arm_hand_spawner,
         planning_scene,
-        move_group, rviz,
+        move_group_fairino, move_group_kdl, rviz,
         left_servo_node, right_servo_node,
         arm_actions_launch, obb_node, bt_executor,
-        fairino_ik_service,
+        retime_server_launch,
     ])

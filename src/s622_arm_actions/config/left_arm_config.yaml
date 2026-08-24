@@ -5,10 +5,13 @@
     base_link: 'left_base_link'
     end_effector: 'left_grasp_frame'
     group_name: 'left_arm'
-    default_velocity_scale: 0.2
-    default_acceleration_scale: 0.2
+    default_velocity_scale: 1.0
+    default_acceleration_scale: 1.0
     servo_ns: 'left'
     arm_controller_action: '/left_arm_controller/follow_joint_trajectory'
+    # S2（2026-08-25）：双臂 MoveItMotion 参数化
+    move_group_namespace: '/move_group_fairino'
+    pipeline_id: 'fairino'
     named_pose_names: ['home', 'safe', 'grasp_cube']
     home_joint_positions:
       - 0.0
@@ -60,3 +63,9 @@
     command_duration_sec: 1.0
     settle_sec: 1.2
     feedback_joint: 'left_finger1_joint'
+    # S2（2026-08-25）：双臂 MoveItMotion 参数化
+    move_group_namespace: '/move_group_fairino'
+    arm_joint_names: ['left_j1', 'left_j2', 'left_j3', 'left_j4', 'left_j5', 'left_j6']
+    arm_group_name: 'left_arm'
+    gripper_group_name: 'left_hand'
+    gripper_controller_action: '/left_hand_controller/follow_joint_trajectory'

@@ -4,8 +4,11 @@ move_to_pose_server:
     base_link: 'base_link'
     end_effector: 'grasp_frame'
     group_name: 'robot_arm'
-    default_velocity_scale: 0.2
-    default_acceleration_scale: 0.2
+    default_velocity_scale: 1.0
+    default_acceleration_scale: 1.0
+    # S2（2026-08-25）：单臂也显式声明（默认值一致，保持兼容）
+    move_group_namespace: '/move_group_fairino'
+    pipeline_id: 'fairino'
 
     named_pose_names: ['home', 'safe', 'grasp_cube']
 
@@ -39,8 +42,8 @@ move_to_pose_server:
 #     base_link: 'base_link'
 #     end_effector: 'grasp_frame'
 #     group_name: 'robot_arm'   # ⚠️ 改成你的 SRDF 里的实际 group_name
-#     default_velocity_scale: 0.2
-#     default_acceleration_scale: 0.2
+#     default_velocity_scale: 1.0
+#     default_acceleration_scale: 1.0
 #     named_poses:
 #       home: [0.5, -1.05, 1.05, -1.05, -0.8, 0]   # ⚠️ 改成你机器人的实际 home
 #       safe: [0.0, -1.2, 1.5, 0.0, 1.2, 0.0]

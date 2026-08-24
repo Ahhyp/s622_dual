@@ -38,6 +38,9 @@ class MoveToPoseServer(Node):
         self.declare_parameter('default_acceleration_scale', 1.0)
         self.declare_parameter('servo_ns', '')    
         self.declare_parameter('arm_controller_action', '')   
+        # S2（2026-08-25）：move_group namespace / pipeline 参数化（双臂引入 MoveItMotion）
+        self.declare_parameter('move_group_namespace', '/move_group_fairino')
+        self.declare_parameter('pipeline_id', 'fairino')
         
         # named poses (joint positions)
         # self.declare_parameter('named_poses.home',
@@ -60,6 +63,8 @@ class MoveToPoseServer(Node):
         self._default_a = self.get_parameter('default_acceleration_scale').value
         servo_ns = self.get_parameter('servo_ns').value
         arm_controller_action = self.get_parameter('arm_controller_action').value     
+        move_group_namespace = self.get_parameter('move_group_namespace').value
+        pipeline_id = self.get_parameter('pipeline_id').value
         
         # self._named_poses = {
         #     'home': list(self.get_parameter('named_poses.home').value),
@@ -82,6 +87,7 @@ class MoveToPoseServer(Node):
         self.servo_lc = ServoLifecycleManager(self, callback_group=cb, servo_ns=servo_ns)
 
         # C2：MoveItMotion（对齐 robotarm fairino_pose_control_server）
+        # S2：move_group_namespace / pipeline_id 参数化（双臂按臂传入）
         self.moveit2 = MoveIt2(
             node=self,
             joint_names=joint_names,
@@ -89,9 +95,9 @@ class MoveToPoseServer(Node):
             end_effector_name=end_effector,
             group_name=group_name,
             callback_group=cb,
-            move_group_namespace="/move_group_fairino",
+            move_group_namespace=move_group_namespace,
         )
-        self.moveit2.pipeline_id = "ompl"   # 对齐现有（现有 pipeline_id="fairino" 实为 OMPL 段）
+        self.moveit2.pipeline_id = pipeline_id
         self.motion = MoveItMotion(
             self,
             arm_clients={"fairino": self.moveit2},
@@ -115,7 +121,8 @@ class MoveToPoseServer(Node):
         )
         self.get_logger().info(
             f'move_to_pose ready (MoveItMotion): group={group_name}, ee={end_effector}, '
-            f'base={base_link}, joints={joint_names}')
+            f'base={base_link}, joints={joint_names}, mg_ns={move_group_namespace}, '
+            f'pipeline={pipeline_id}')
 
     def _execute(self, goal_handle):
         goal = goal_handle.request

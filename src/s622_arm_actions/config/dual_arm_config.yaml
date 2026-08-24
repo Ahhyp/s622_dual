@@ -2,10 +2,13 @@
   ros__parameters:
     use_sim_time: true
     group_name: 'dual_arm'
+    # S4（2026-08-25）：namespaced move_group。pipeline 用 ompl（S5 实测：
+    # fairino_planning_core NUM_JOINTS=6 硬编码，FairinoPlannerManager 只支持单臂 6-DOF）
     planner_id: 'RRTConnect'
     pipeline_id: 'ompl'
-    default_velocity_scale: 0.2
-    default_acceleration_scale: 0.2
+    move_group_namespace: '/move_group_fairino'
+    default_velocity_scale: 1.0
+    default_acceleration_scale: 1.0
     allowed_planning_time: 10.0    # ← 从 8 调到 10, handover 位姿更复杂
     num_planning_attempts: 15      # ← 从 10 调到 15
 

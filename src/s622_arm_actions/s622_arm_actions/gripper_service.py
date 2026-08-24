@@ -33,6 +33,13 @@ class GripperService(Node):
         self.declare_parameter('feedback_joint', 'finger1_joint')
         self.declare_parameter('base_link', 'base_link')
         self.declare_parameter('end_effector', 'grasp_frame')
+        # S2（2026-08-25）：双臂引入 MoveItMotion —— namespace / group / controller 参数化
+        self.declare_parameter('move_group_namespace', '/move_group_fairino')
+        self.declare_parameter('arm_joint_names', ['j1', 'j2', 'j3', 'j4', 'j5', 'j6'])
+        self.declare_parameter('arm_group_name', 'robot_arm')
+        self.declare_parameter('gripper_group_name', 'hand')
+        self.declare_parameter('gripper_controller_action',
+                               '/hand_controller/follow_joint_trajectory')
 
         self._topic = self.get_parameter('gripper_topic').value   # 保留（兼容 launch 参数）
         self._joint_names = list(self.get_parameter('finger_joint_names').value)
@@ -42,6 +49,11 @@ class GripperService(Node):
         self._fb_joint = self.get_parameter('feedback_joint').value
         base_link = self.get_parameter('base_link').value
         end_effector = self.get_parameter('end_effector').value
+        move_group_namespace = self.get_parameter('move_group_namespace').value
+        arm_joint_names = list(self.get_parameter('arm_joint_names').value)
+        arm_group_name = self.get_parameter('arm_group_name').value
+        gripper_group_name = self.get_parameter('gripper_group_name').value
+        gripper_controller_action = self.get_parameter('gripper_controller_action').value
 
         cb = ReentrantCallbackGroup()
         self.js_sub = self.create_subscription(
@@ -51,24 +63,25 @@ class GripperService(Node):
         self._latest_js = None
 
         # C2：MoveItMotion + 夹爪客户端（hand group）
+        # S2：namespace / group / controller 参数化（双臂按臂传入）
         self.moveit2_arm = MoveIt2(
             node=self,
-            joint_names=['j1', 'j2', 'j3', 'j4', 'j5', 'j6'],
+            joint_names=arm_joint_names,
             base_link_name=base_link,
             end_effector_name=end_effector,
-            group_name='robot_arm',
+            group_name=arm_group_name,
             callback_group=cb,
-            move_group_namespace='/move_group_fairino',
+            move_group_namespace=move_group_namespace,
         )
         self.moveit2_gripper = MoveIt2(
             node=self,
             joint_names=list(self._joint_names),
             base_link_name=base_link,
             end_effector_name=end_effector,
-            group_name='hand',
+            group_name=gripper_group_name,
             callback_group=cb,
-            move_group_namespace='/move_group_fairino',
-            follow_joint_trajectory_action_name='/hand_controller/follow_joint_trajectory',
+            move_group_namespace=move_group_namespace,
+            follow_joint_trajectory_action_name=gripper_controller_action,
         )
         self.motion = MoveItMotion(
             self,
@@ -83,7 +96,9 @@ class GripperService(Node):
             SetGripper, 'set_gripper', self._on_set_gripper, callback_group=cb)
 
         self.get_logger().info(
-            f'gripper_service ready (MoveItMotion): open={self._open}, close={self._close}')
+            f'gripper_service ready (MoveItMotion): open={self._open}, close={self._close}, '
+            f'mg_ns={move_group_namespace}, arm_group={arm_group_name}, '
+            f'gripper_group={gripper_group_name}')
 
     def _on_joint_states(self, msg: JointState):
         self._latest_js = msg
