@@ -1,62 +1,33 @@
-# planning_pipelines:
-#   pipeline_names: ["ompl", "fairino"]
-#   default_planning_pipeline: fairino
+planning_plugin: fairino_planning/FairinoPlannerManager
 
-# fairino:
-#   planning_plugin: fairino_planning_ros/FairinoPlannerManager
-#   request_adapters: "default_planner_request_adapters/AddTimeOptimalParameterization default_planner_request_adapters/ResolveConstraintFrames default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints"
-#   start_state_max_bounds_error: 0.1
+request_adapters: >-
+  default_planner_request_adapters/AddTimeOptimalParameterization
+  default_planner_request_adapters/ResolveConstraintFrames
+  default_planner_request_adapters/FixWorkspaceBounds
+  default_planner_request_adapters/FixStartStateBounds
+  default_planner_request_adapters/FixStartStateCollision
+  default_planner_request_adapters/FixStartStatePathConstraints
 
-planning_pipelines:
-  pipeline_names: ["ompl", "fairino"]
-  default_planning_pipeline: fairino
+response_adapters: ""
 
-fairino:
-  planning_plugin: ompl_interface/OMPLPlanner
-  request_adapters: >-
-    default_planner_request_adapters/AddTimeOptimalParameterization
-    default_planner_request_adapters/ResolveConstraintFrames
-    default_planner_request_adapters/FixWorkspaceBounds
-    default_planner_request_adapters/FixStartStateBounds
-    default_planner_request_adapters/FixStartStateCollision
-    default_planner_request_adapters/FixStartStatePathConstraints
-  start_state_max_bounds_error: 0.1
 
-  planner_configs:
-    # 快速首解(默认用这个,毫秒级,适合简单 PTP)
-    RRTConnect:
-      type: geometric::RRTConnect
-      range: 0.0
-    
-    # 渐近最优,质量好但慢
-    RRTstar:
-      type: geometric::RRTstar
-      range: 0.0
-      goal_bias: 0.05
-      delay_collision_checking: 1
-    
-    # 近似最优,介于两者之间(推荐主力)
-    LBTRRT:
-      type: geometric::LBTRRT
-      range: 0.0
-      goal_bias: 0.05
-      epsilon: 0.4
-
-    # 用 RRTConnect 找首解后做 shortcut 优化(高质量+快)
-    AnytimePathShortening:
-      type: geometric::AnytimePathShortening
-      shortcut: 1
-      hybridize: 1
-      max_hybrid_paths: 24
-      num_planners: 4
-      planners: "RRTConnect,RRTConnect,RRTConnect,RRTConnect"
-
-  robot_arm:
-    default_planner_config: RRTConnect
-    planner_configs:
-      - RRTConnect
-      - LBTRRT
-      - RRTstar
-      - AnytimePathShortening
-    longest_valid_segment_fraction: 0.005
-    projection_evaluator: joints(j1,j2)
+max_iterations: 12000
+max_step: 0.20
+goal_threshold: 0.08
+goal_bias: 0.20
+prob_tube: 0.20
+sigma_local: 0.4363
+max_ik_tries: 2
+gamma: 1.5
+max_rewire_radius: 0.25
+max_near: 20
+continue_after_goal: true
+rewire_after_goal_iters: 200
+kd_rebuild_every: 600
+prob_uniform: 0.12
+tube_radius: 0.18
+validation_distance: 0.10
+connect_max_steps: 15
+connect_goal_bias: 0.12
+rewire_every_k: 3
+rewire_max_neighbors: 5

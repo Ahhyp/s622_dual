@@ -1,135 +1,95 @@
+// src/moveit_collision_checker.cpp
 #include "fairino_planning_ros/moveit_collision_checker.h"
-
-#include <algorithm>
 #include <cmath>
-
 #include <moveit/collision_detection/collision_common.h>
-#include <moveit/robot_model/joint_model_group.h>
 
-namespace fairino_planning_ros
-{
+namespace fairino_planning {
 
-    MoveItCollisionChecker::MoveItCollisionChecker(
-        planning_scene::PlanningSceneConstPtr planning_scene, // 场景指针
-        const std::string &group_name)                        // 规划组名
-        : planning_scene_(planning_scene), group_name_(group_name)
-    {
-        if (!planning_scene_)
-        {
-            throw std::invalid_argument(
-                "MoveItCollisionChecker: planning_scene is null");
-        }
+MoveItCollisionChecker::MoveItCollisionChecker(
+    const planning_scene::PlanningSceneConstPtr& scene,//保存场景指针
+    const std::string& group_name)//保存规划组名
+    : scene_(scene),
+      group_name_(group_name),
+      jmg_(nullptr) {//从机器人模型中获取指定规划组的 JointModelGroup 指针，用于后续操作
+    if (scene_ && scene_->getRobotModel()) {
+        jmg_ = scene_->getRobotModel()->getJointModelGroup(group_name_);
+    }
+}
 
-        // 缓存 JointModelGroup 指针，避免每次查找
-        jmg_ = planning_scene_->getRobotModel()->getJointModelGroup(group_name_);
-        if (!jmg_)
-        {
-            throw std::invalid_argument(
-                "MoveItCollisionChecker: group '" + group_name_ + "' not found");
-        }
+bool MoveItCollisionChecker::setJointValues(
+    moveit::core::RobotState& state, const JointConfig& q) const {
+    if (!jmg_ || jmg_->getVariableCount() != NUM_JOINTS) {
+        return false;
     }
 
-    // 单状态碰撞检测
-    bool MoveItCollisionChecker::isStateValid(const fairino_planning::JointArray &q) const
-    {
-        // ① 在 PlanningScene 当前状态基础上构造 RobotState
-        //    用 getCurrentState() 拿到完整状态（含 group 之外的关节，如夹爪）
-        moveit::core::RobotState state = planning_scene_->getCurrentState();
-
-        // ② 只设置目标 group 的关节角
-        std::vector<double> q_vec(q.begin(), q.end());
-        state.setJointGroupPositions(jmg_, q_vec);
-        state.update(); // 触发 FK，更新所有 link 位姿
-
-        // ③ 关节限位检查（MoveIt 的检查比手写更全：包含连续关节、mimic 等）
-        if (!state.satisfiesBounds(jmg_))
-        {
+    for (int i = 0; i < NUM_JOINTS; ++i) {
+        if (!std::isfinite(q[i])) {
             return false;
         }
+    }
 
-        // ④ 碰撞检测（含自碰撞 + 环境碰撞）
-        collision_detection::CollisionRequest req;
-        collision_detection::CollisionResult res;
-        req.group_name = group_name_;
-        req.contacts = false; // 不需要接触点细节，省时间
-        req.cost = false;
-        req.distance = false;
+    std::vector<double> values(q.data(), q.data() + NUM_JOINTS);//返回 Eigen 向量内部数组的指针，q.data() + NUM_JOINTS 指向末尾，因此构造的 std::vector<double> 包含了 q 的所有元素
+    state.setJointGroupPositions(jmg_, values);//将 values 设置到指定关节组的所有关节上
+    state.update();//根据关节值重新计算所有连杆的位姿变换，保证后续碰撞检测使用最新的运动学信息
+    return state.satisfiesBounds(jmg_);
+}
 
-        planning_scene_->checkCollision(req, res, state);
-        if (res.collision)
-        {
+bool MoveItCollisionChecker::isStateValid(const JointConfig& q) const {
+    if (!scene_ || !scene_->getRobotModel() || !jmg_) {
+        return false;
+    }
+
+    for (int i = 0; i < NUM_JOINTS; ++i) {
+        if (!std::isfinite(q[i])) {
             return false;
         }
-
-        // ⑤ 路径约束（如方向约束、可见性约束等，规划时由上层注入）
-        //    没有约束就跳过；有约束就检查
-        //    可选：planning_scene_->isStateConstrained(state, ...)
-
-        return true;
     }
 
-    // 一段运动的碰撞检测：在关节空间沿直线离散采样
-    bool MoveItCollisionChecker::isMotionValid(
-        const fairino_planning::JointArray &from,
-        const fairino_planning::JointArray &to,
-        double resolution) const
-    {
-        // ① 确定离散步数：以最大关节移动量除以分辨率
-        double max_delta = 0.0;
-        for (int i = 0; i < fairino_planning::DOF; ++i)
-        {
-            max_delta = std::max(max_delta, std::abs(to[i] - from[i]));
-        }
-
-        // 完全没动，只检查端点
-        if (max_delta < 1e-9)
-        {
-            return isStateValid(from);
-        }
-
-        // resolution 默认例如 0.05 rad ≈ 3°
-        const int steps = std::max(
-            1, static_cast<int>(std::ceil(max_delta / resolution)));
-
-        // ② 复用一个 RobotState（避免每步重建）
-        moveit::core::RobotState state = planning_scene_->getCurrentState();
-
-        collision_detection::CollisionRequest req;
-        collision_detection::CollisionResult res;
-        req.group_name = group_name_;
-        req.contacts = false;
-
-        // ③ 沿直线插值采样，每个点都做完整碰撞检测
-        //    采样顺序：先两端，再中点二分——更早发现碰撞，提前退出
-        //    简化做法：从头到尾顺序采样
-        std::vector<double> q_vec(fairino_planning::DOF);
-
-        for (int k = 0; k <= steps; ++k)
-        {
-            const double t = static_cast<double>(k) / steps;
-
-            for (int i = 0; i < fairino_planning::DOF; ++i)
-            {
-                q_vec[i] = from[i] + t * (to[i] - from[i]);
-            }
-
-            state.setJointGroupPositions(jmg_, q_vec);
-            state.update();
-
-            if (!state.satisfiesBounds(jmg_))
-            {
-                return false;
-            }
-
-            res.clear(); // 复用 res 必须 clear
-            planning_scene_->checkCollision(req, res, state);
-            if (res.collision)
-            {
-                return false;
-            }
-        }
-
-        return true;
+    moveit::core::RobotState robot_state(scene_->getCurrentState());
+    if (!setJointValues(robot_state, q)) {//设置状态：setJointValues(robot_state_, q) 更新 robot_state_ 为当前关节角
+        return false;
     }
 
-} // namespace fairino_planning_ros
+    // 碰撞检查
+    collision_detection::CollisionRequest req;//创建 CollisionRequest 对象，设置 group_name 为当前规划组
+    collision_detection::CollisionResult res;//CollisionResult 用于存储结果
+    req.group_name = group_name_;
+    scene_->checkCollision(req, res, robot_state);//调用 scene_->checkCollision(req, res, robot_state_)，由 MoveIt2 执行实际的碰撞检测
+    return !res.collision;
+}
+
+bool MoveItCollisionChecker::isMotionValid(
+    const JointConfig& q1, const JointConfig& q2,
+    double validation_distance) const {
+
+    if (!scene_ || !jmg_ || validation_distance <= 0.0 ||
+        !std::isfinite(validation_distance)) {
+        return false;
+    }
+
+    // Match MoveIt's exported trajectory: bounded joints are interpolated
+    // between their requested values, not along a wrapped shortcut.
+    const JointConfig dq = q2 - q1;
+    const double d = dq.norm();
+    int n_steps = std::max(2, static_cast<int>(std::ceil(d / validation_distance)) + 1);
+
+    for (int s = 1; s <= n_steps; ++s) {
+        double alpha = static_cast<double>(s) / n_steps;
+        JointConfig q_interp = q1 + alpha * dq;
+        if (!isStateValid(q_interp))
+            return false;
+    }
+    return true;
+}
+
+std::vector<bool> MoveItCollisionChecker::areStatesValid(
+    const std::vector<JointConfig>& states) const {
+    std::vector<bool> out;
+    out.reserve(states.size());
+    for (const auto& s : states) {
+        out.push_back(isStateValid(s));
+    }
+    return out;
+}
+
+}  // namespace fairino_planning

@@ -1,0 +1,15 @@
+<library path="fairino_planning_ros">
+    <class
+        name="fairino_planning_ros/FairinoPlannerManager"
+        type="fairino_planning_ros::FairinoPlannerManager"
+        base_class_type="planning_interface::PlannerManager">
+        <description>Fairino custom planner plugin</description>
+    </class>
+
+    <class
+        name="fairino_planning_ros/FairinoIKPlugin"
+        type="fairino_planning_ros::FairinoIKPlugin"
+        base_class_type="kinematics::KinematicsBase">
+        <description>Fairino analytic IK plugin</description>
+    </class>
+</library>

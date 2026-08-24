@@ -1,130 +1,109 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.16)
 project(fairino_planning_core)
 
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+  add_compile_options(-Wall -Wextra -Wpedantic -O3)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# ---------------- find dependencies ----------------
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)                # ← 新增
-find_package(geometry_msgs REQUIRED)         # ← 新增
-find_package(sensor_msgs REQUIRED)           # ← 新增
-find_package(tf2 REQUIRED)                   # ← 新增（如果用 tf2 转 pose）
-find_package(tf2_eigen REQUIRED)             # ← 新增
 find_package(Eigen3 REQUIRED)
-find_package(fairino_msgs REQUIRED)
 
-# ---------------- nanoflann (保留原逻辑) ----------------
-include(FetchContent)
-
-find_path(NANOFLANN_INCLUDE_DIR
-  NAMES nanoflann.hpp
-  HINTS /usr/include /usr/local/include
-)
-
-if(NOT NANOFLANN_INCLUDE_DIR)
-  message(STATUS "nanoflann not found locally. Fetching nanoflann...")
-  FetchContent_Declare(
-    nanoflann
-    GIT_REPOSITORY https://github.com/jlblancoc/nanoflann.git
-    GIT_TAG master
-  )
-  FetchContent_MakeAvailable(nanoflann)
-  set(NANOFLANN_INCLUDE_DIR ${nanoflann_SOURCE_DIR}/include)
-endif()
-
-# ---------------- 核心 library ----------------
-add_library(${PROJECT_NAME} SHARED
+# ─── 收集实际存在的源文件 ───
+# 先列出所有预期源文件, 再过滤掉不存在的
+set(ALL_EXPECTED_SOURCES
+  src/aapf/aapf_potential_field.cpp
+  src/aapf/sobol_sequence_3d.cpp
   src/dh_kinematics.cpp
   src/ik/fairino_ik.cpp
   src/ik/ik_selector.cpp
+  src/ik/cartesian_path_planner.cpp
   src/tree/rrt_tree.cpp
+  src/samplers/mixed_sampler.cpp
+  src/samplers/aapf_guided_sampler.cpp
+  src/constraints/orientation_checker.cpp
+  src/trajectory/path_shortcut.cpp
+  src/trajectory/trajectory_smoother.cpp
+  src/algorithms/aapf_bi_rrt_star.cpp
+  src/algorithms/tube_bi_rrt_star.cpp
+  src/algorithms/rrt_star.cpp
   src/algorithms/bi_rrt_star.cpp
-  src/service/fairino_ik_service.cpp
 )
+
+set(CORE_SOURCES "")
+foreach(src_file ${ALL_EXPECTED_SOURCES})
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${src_file}")
+    list(APPEND CORE_SOURCES ${src_file})
+  else()
+    message(WARNING "Source file not found, skipping: ${src_file}")
+  endif()
+endforeach()
+
+if(NOT CORE_SOURCES)
+  message(FATAL_ERROR "No source files found in src/!")
+endif()
+
+message(STATUS "Building with sources: ${CORE_SOURCES}")
+
+# ─── 库 ───
+add_library(${PROJECT_NAME} SHARED ${CORE_SOURCES})
 
 target_include_directories(${PROJECT_NAME}
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-    ${EIGEN3_INCLUDE_DIRS}
-    ${NANOFLANN_INCLUDE_DIR}
-)
-
-# 用 ament_target_dependencies 自动处理 include + link
-ament_target_dependencies(${PROJECT_NAME}
-  rclcpp
-  geometry_msgs
-  sensor_msgs
-  tf2
-  tf2_eigen
-  fairino_msgs
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include>"
 )
 
 target_link_libraries(${PROJECT_NAME}
-  Eigen3::Eigen
+  PUBLIC Eigen3::Eigen
 )
 
-# ---------------- 可执行文件 1: test_core ----------------
-add_executable(test_core
-  src/test_core.cpp
-)
-target_link_libraries(test_core ${PROJECT_NAME})
-target_include_directories(test_core PRIVATE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  ${EIGEN3_INCLUDE_DIRS}
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
 )
 
-# ---------------- 可执行文件 2: service node ----------------
-add_executable(fairino_ik_service_node
-  src/nodes/fairino_ik_service_node.cpp
-)
-target_link_libraries(fairino_ik_service_node ${PROJECT_NAME})
-ament_target_dependencies(fairino_ik_service_node
-  rclcpp
-  fairino_msgs
+# ─── 安装头文件 ───
+install(DIRECTORY include/
+  DESTINATION include
 )
 
-# ---------------- install ----------------
-install(
-  TARGETS ${PROJECT_NAME}
+# ─── 安装库 ───
+install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
 
-install(
-  TARGETS test_core fairino_ik_service_node
-  DESTINATION lib/${PROJECT_NAME}
-)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/config")
+  install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
+endif()
 
-install(
-  DIRECTORY include/
-  DESTINATION include
-)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs")
+  install(DIRECTORY docs/ DESTINATION share/${PROJECT_NAME}/docs)
+endif()
 
-install(
-  DIRECTORY config
-  DESTINATION share/${PROJECT_NAME}
-)
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_aapf_bi_rrt_star test/test_aapf_bi_rrt_star.cpp)
+  target_link_libraries(test_aapf_bi_rrt_star ${PROJECT_NAME})
+  ament_add_gtest(test_bi_rrt_star test/test_bi_rrt_star.cpp)
+  target_link_libraries(test_bi_rrt_star ${PROJECT_NAME})
+  ament_add_gtest(test_rrt_tree test/test_rrt_tree.cpp)
+  target_link_libraries(test_rrt_tree ${PROJECT_NAME})
+  ament_add_gtest(test_ik_selector_profiles test/test_ik_selector_profiles.cpp)
+  target_link_libraries(test_ik_selector_profiles ${PROJECT_NAME})
+endif()
 
-
-# ---------------- export ----------------
+# ─── ament 导出 ───
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
+ament_export_dependencies(Eigen3)
 ament_export_include_directories(include)
-ament_export_dependencies(
-  rclcpp
-  geometry_msgs
-  sensor_msgs
-  tf2
-  tf2_eigen
-  fairino_msgs
-  Eigen3
-)
+ament_export_libraries(${PROJECT_NAME})
 
 ament_package()
