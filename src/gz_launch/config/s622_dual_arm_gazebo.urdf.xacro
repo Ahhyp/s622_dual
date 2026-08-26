@@ -4,6 +4,9 @@
     <xacro:property name="M_PI" value="3.14159265358979323846" />
 
     <xacro:arg name="instantiate" default="false" />   <!-- ← 加这行 -->
+    <!-- 2026-08-25 对齐单臂/robotarm：include_camera_visual=false（默认）=
+         简化几何体，RViz 不卡；true=真实 mesh（d435.dae） -->
+    <xacro:arg name="include_camera_visual" default="false" />
 
     <!-- ============ world 根 link ============ -->
     <link name="world" />
@@ -92,7 +95,8 @@
 
     <!-- ============ Camera 挂 world, 俯视 (0, 0, 0.75) ============ -->
     <xacro:include filename="$(find s622_moveit_descriptions)/urdf/camera/camera.xacro" />
-    <xacro:camera_v0 parent="world">
+    <xacro:camera_v0 parent="world"
+                     use_camera_visual="$(arg include_camera_visual)">
         <origin xyz="0 0.5 0.9" rpy="0 ${58*M_PI/180} ${-M_PI/2}" />
     </xacro:camera_v0>
     <xacro:camera_gazebo_v0 />

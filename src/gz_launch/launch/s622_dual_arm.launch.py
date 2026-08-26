@@ -72,12 +72,27 @@ def generate_launch_description():
     # S3（2026-08-25）：规划管线统一 —— fairino（FairinoPlannerManager）+ ompl 备用，
     # 默认 fairino。MoveItConfigsBuilder 自动加载 config/fairino_planning.yaml
     # 与 config/ompl_planning.yaml（文件名规则 <pipeline>_planning.yaml）。
+    # 2026-08-25 时序/性能对齐 robotarm：
+    #   - 延迟参数化（robot_spawn_delay / controller_spawn_delay），move_group 不再延迟
+    #   - include_camera_visual=false 简化相机几何体，RViz 不卡
+    robot_spawn_delay = DeclareLaunchArgument('robot_spawn_delay', default_value='5.0')
+    controller_spawn_delay = DeclareLaunchArgument('controller_spawn_delay', default_value='8.0')
+    rv_spawn_delay = LaunchConfiguration('robot_spawn_delay')
+    ctrl_spawn_delay = LaunchConfiguration('controller_spawn_delay')
+
     dual_arm_gazebo_xacro = os.path.join(
         this_pkg, "config", "s622_dual_arm_gazebo.urdf.xacro"
     )
     moveit_config = (
         MoveItConfigsBuilder("s622_dual_arm", package_name="s622_moveit_config")
-        .robot_description(file_path=dual_arm_gazebo_xacro, mappings={"instantiate": "false"})
+        .robot_description(
+            file_path=dual_arm_gazebo_xacro,
+            mappings={
+                "instantiate": "false",
+                # 2026-08-25：相机简化几何体（对齐单臂 include_camera_visual=false）
+                "include_camera_visual": "false",
+            },
+        )
         .robot_description_semantic(file_path="config/s622_dual_arm.srdf")
         .robot_description_kinematics(file_path="config/dual_arm_kinematics.yaml")
         .trajectory_execution(file_path="config/dual_arm_moveit_controllers.yaml")
@@ -108,24 +123,29 @@ def generate_launch_description():
     dual_arm_kinematics_kdl = load_yaml(
         "s622_moveit_config", "config/dual_arm_kinematics_kdl.yaml")
 
-    # ============ 4. Spawn robot ============
+    # ============ 4. Spawn robot（2026-08-25：延迟参数化，对齐 robotarm） ============
     # 把 package:// URI 替换成绝对路径, 让 gz sim 能找到 mesh
     gz_urdf = moveit_config.robot_description["robot_description"].replace(
         "package://s622_moveit_descriptions", robot_desc_pkg
     )
-    spawn_robot = Node(
-        package="ros_gz_sim",
-        executable="create",
-        arguments=[
-            "-string", gz_urdf,
-            "-x", "0.0", "-y", "0.0", "-z", "0.0",
-            "-R", "0", "-P", "0", "-Y", "0",
-            "-name", "s622_dual_arm",
+    spawn_robot = TimerAction(
+        period=rv_spawn_delay,
+        actions=[
+            Node(
+                package="ros_gz_sim",
+                executable="create",
+                arguments=[
+                    "-string", gz_urdf,
+                    "-x", "0.0", "-y", "0.0", "-z", "0.0",
+                    "-R", "0", "-P", "0", "-Y", "0",
+                    "-name", "s622_dual_arm",
+                ],
+                output="screen",
+            )
         ],
-        output="screen",
     )
 
-    # ============ 5. Spawn target cube ============
+    # ============ 5. Spawn target cube（默认 robot_spawn_delay=5 + 2 = 7s，晚于 robot） ============
     # 双臂布置: cube 放桌面中间偏左, 靠近左臂工作区
     spawn_box = TimerAction(
         period=7.0,
@@ -151,13 +171,14 @@ def generate_launch_description():
         parameters=[moveit_config.robot_description, {"use_sim_time": True}],
     )
 
-    # ============ 7. Controllers spawner (分两轮: JSB 先, arm/hand 后) ============
+    # ============ 7. Controllers spawner（2026-08-25：延迟参数化，对齐 robotarm）
+    #    JSB 先（controller_spawn_delay=8s），arm/hand 后（+1s） ============
     dual_arm_controllers_yaml = os.path.join(
         robot_moveit_pkg, "config", "dual_arm_controllers.yaml"
     )
 
     jsb_spawner = TimerAction(
-        period=8.0,
+        period=ctrl_spawn_delay,
         actions=[
             Node(
                 package="controller_manager",
@@ -173,7 +194,7 @@ def generate_launch_description():
     )
 
     arm_hand_spawner = TimerAction(
-        period=12.0,
+        period=9.0,   # 默认 ctrl=8 + 1（固定偏移，避免 LaunchConfiguration 运算）
         actions=[
             Node(
                 package="controller_manager",
@@ -191,9 +212,9 @@ def generate_launch_description():
         ],
     )
 
-    # ============ 8. planning_scene_service (双臂 touch_links, table 中心 0,0) ============
+    # ============ 8. planning_scene_service（2026-08-25：controller 后 +1s，不再等 25s） ============
     planning_scene = TimerAction(
-        period=25.0,
+        period=10.0,   # 默认 ctrl=8 + 2
         actions=[
             Node(
                 package="s622_arm_actions",
@@ -221,6 +242,7 @@ def generate_launch_description():
     #   /move_group_kdl：KDL 兜底（kinematics 用 KDL，管线仍 fairino+ompl）
     #   服务保持 namespaced，客户端（pymoveit2 move_group_namespace + RViz）显式连接。
     #   dual_arm 组（12-DOF 联合规划）不配 IK，两个实例都能做关节空间规划。
+    #   2026-08-25：立即启动（对齐 robotarm，move_group 不延迟；controller 稍后就绪）。
     mg_remappings = [
         ("joint_states", "/joint_states"),
         ("trajectory_execution_event", "/trajectory_execution_event"),
@@ -269,47 +291,37 @@ def generate_launch_description():
         {"use_sim_time": True},
     ]
 
-    move_group_fairino = TimerAction(
-        period=15.0,
-        actions=[
-            Node(
-                package="moveit_ros_move_group",
-                executable="move_group",
-                namespace="move_group_fairino",
-                name="move_group",
-                output="screen",
-                remappings=mg_remappings,
-                parameters=[
-                    *mg_common_params,
-                    {"fairino": {"ik": {"task_profile": "grasp"}}},
-                    {"robot_description_kinematics": dual_arm_kinematics_fairino},
-                ],
-            )
+    move_group_fairino = Node(
+        package="moveit_ros_move_group",
+        executable="move_group",
+        namespace="move_group_fairino",
+        name="move_group",
+        output="screen",
+        remappings=mg_remappings,
+        parameters=[
+            *mg_common_params,
+            {"fairino": {"ik": {"task_profile": "grasp"}}},
+            {"robot_description_kinematics": dual_arm_kinematics_fairino},
         ],
     )
 
-    move_group_kdl = TimerAction(
-        period=15.0,
-        actions=[
-            Node(
-                package="moveit_ros_move_group",
-                executable="move_group",
-                namespace="move_group_kdl",
-                name="move_group",
-                output="screen",
-                remappings=mg_remappings,
-                parameters=[
-                    *mg_common_params,
-                    {"robot_description_kinematics": dual_arm_kinematics_kdl},
-                ],
-            )
+    move_group_kdl = Node(
+        package="moveit_ros_move_group",
+        executable="move_group",
+        namespace="move_group_kdl",
+        name="move_group",
+        output="screen",
+        remappings=mg_remappings,
+        parameters=[
+            *mg_common_params,
+            {"robot_description_kinematics": dual_arm_kinematics_kdl},
         ],
     )
 
-    # ============ 10. RViz（S3：注入 planning_pipelines + fairino_planning，面板可见管线列表） ============
+    # ============ 10. RViz（2026-08-25：controller 后 +1s=9s，对齐 robotarm；面板可见管线列表） ============
     rviz_config = os.path.join(robot_moveit_pkg, "config", "dual_arm.rviz")
     rviz = TimerAction(
-        period=28.0,
+        period=9.0,
         actions=[
             Node(
                 package="rviz2",
@@ -328,7 +340,7 @@ def generate_launch_description():
         ],
     )
     
-    # ============ 11. MoveIt Servo (双实例, 各自 namespace) ============
+    # ============ 11. MoveIt Servo (双实例, 各自 namespace; 2026-08-25: controller 后 +2s=10s) ============
     left_servo_yaml_path = os.path.join(
         robot_moveit_pkg, "config", "left_servo_config.yaml"
     )
@@ -342,7 +354,7 @@ def generate_launch_description():
         right_servo_params = {"moveit_servo": yaml.safe_load(f)}
 
     left_servo_node = TimerAction(
-        period=17.0,
+        period=10.0,
         actions=[
             Node(
                 package="moveit_servo",
@@ -370,7 +382,7 @@ def generate_launch_description():
     )
 
     right_servo_node = TimerAction(
-        period=17.0,
+        period=10.0,
         actions=[
             Node(
                 package="moveit_servo",
@@ -396,7 +408,7 @@ def generate_launch_description():
     )
 
     arm_actions_launch = TimerAction(
-        period=18.0,   # 在 servo (17s) 之后
+        period=11.0,   # 在 servo (10s) 之后 1s
         actions=[
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
@@ -441,7 +453,7 @@ def generate_launch_description():
         description='BT root ID matching tree_file')
     
     bt_executor = TimerAction(
-        period=22.0,   # 在 arm_actions (18s) 之后, planning_scene (25s) 之前
+        period=13.0,   # 在 arm_actions (11s) 之后 2s, planning_scene (10s) 之后 3s
         actions=[
             Node(
                 package="s622_bt_manager",
@@ -480,7 +492,8 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        set_model_path,tree_file_arg, tree_id_arg,         # ← 新增
+        set_model_path, tree_file_arg, tree_id_arg,
+        robot_spawn_delay, controller_spawn_delay,
         gazebo, clock_bridge, camera_bridge,
         spawn_robot, spawn_box,
         robot_state_pub,
