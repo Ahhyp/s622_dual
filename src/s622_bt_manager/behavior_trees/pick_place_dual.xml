@@ -9,8 +9,9 @@
         <!-- ===== Pick ===== -->
         <SetGripper arm_prefix="{arm}" command="open" timeout_sec="5.0" />
 
+        <!-- 2026-08-25 提速：运动 0.3→0.8（对齐单臂 config velocity=1.0），place 保持低速 -->
         <MoveToPose arm_prefix="{arm}" named_pose="home"
-            velocity_scale="0.3" acceleration_scale="0.2"
+            velocity_scale="0.8" acceleration_scale="0.8"
             ensure_servo_stopped="true"
             timeout_sec="30.0" />
 
@@ -33,7 +34,7 @@
             locked_u="{lu}" locked_v="{lv}" />
 
         <MoveToPose arm_prefix="{arm}" target_pose="{pregrasp_pose}"
-            velocity_scale="0.2" acceleration_scale="0.2"
+            velocity_scale="0.8" acceleration_scale="0.8"
             ensure_servo_stopped="true"
             timeout_sec="25.0" />
 
@@ -78,7 +79,7 @@
             timeout_sec="20.0" />
 
         <MoveToPose arm_prefix="{arm}" named_pose="safe"
-            velocity_scale="0.30" acceleration_scale="0.30"
+            velocity_scale="0.8" acceleration_scale="0.8"
             timeout_sec="20.0"
             ensure_servo_stopped="true" />
 
@@ -88,7 +89,7 @@
             pre_place_pose="{pre_place_pose}" />
 
         <MoveToPose arm_prefix="{arm}" target_pose="{pre_place_pose}"
-            velocity_scale="0.20" acceleration_scale="0.20"
+            velocity_scale="0.8" acceleration_scale="0.8"
             timeout_sec="20.0"
             ensure_servo_stopped="true" />
 
@@ -108,7 +109,7 @@
             timeout_sec="20.0" />
 
         <MoveToPose arm_prefix="{arm}" named_pose="home"
-            velocity_scale="0.30" acceleration_scale="0.30"
+            velocity_scale="0.8" acceleration_scale="0.8"
             timeout_sec="20.0"
             ensure_servo_stopped="true" />
       </Sequence>
@@ -133,14 +134,14 @@
 
         <ForceSuccess>
           <MoveToPose arm_prefix="{arm}" named_pose="safe"
-              velocity_scale="0.20" acceleration_scale="0.20"
+              velocity_scale="0.6" acceleration_scale="0.6"
               timeout_sec="15.0"
               ensure_servo_stopped="true" />
         </ForceSuccess>
 
         <ForceSuccess>
           <MoveToPose arm_prefix="{arm}" named_pose="home"
-              velocity_scale="0.20" acceleration_scale="0.20"
+              velocity_scale="0.6" acceleration_scale="0.6"
               timeout_sec="15.0" />
         </ForceSuccess>
 

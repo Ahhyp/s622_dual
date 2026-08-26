@@ -15,6 +15,7 @@ from s622_bt_manager.srv import SetGripper
 #（plan + execute，走 move_group → hand_controller），不再直接发 JointTrajectory。
 # 接口（SetGripper.srv）不变，BT 层无感知。
 from manipulation_common.planning.motion_executor import MoveItMotion
+from manipulation_common.task.abort_manager import AbortManager
 from pymoveit2 import MoveIt2
 
 
@@ -83,10 +84,18 @@ class GripperService(Node):
             move_group_namespace=move_group_namespace,
             follow_joint_trajectory_action_name=gripper_controller_action,
         )
+        # 2026-08-25 回归修复：夹爪组（2 关节）必须用 ompl 管线。
+        # fairino 管线（BiRRT* 等）是 6-DOF 机械臂算法，对 hand 组不可用
+        # （start configuration in collision）。对齐 robotarm：gripper 客户端
+        # pipeline_id='ompl'（fairino_pose_control_server.py:119 同款）。
+        self.moveit2_gripper.pipeline_id = 'ompl'
+        # 2026-08-25 回归修复：传入 AbortManager，否则 _wait 只 sleep 0.5s 提前返回
+        self.abort = AbortManager(self, arm=self.moveit2_arm, gripper=self.moveit2_gripper)
         self.motion = MoveItMotion(
             self,
             arm_clients={'fairino': self.moveit2_arm},
             gripper=self.moveit2_gripper,
+            abort=self.abort,
             open_positions=tuple(self._open),
             close_positions=tuple(self._close),
             action_delay=0.0,

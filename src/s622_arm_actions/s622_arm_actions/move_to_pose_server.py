@@ -20,6 +20,7 @@ from s622_arm_actions.servo_lifecycle import ServoLifecycleManager
 from manipulation_common.utils.pose_tools import PoseTools
 from manipulation_common.planning.motion_executor import MoveItMotion, PlanScoreConfig
 from manipulation_common.planning.trajectory_scoring import select_best_path
+from manipulation_common.task.abort_manager import AbortManager
 from pymoveit2 import MoveIt2
 from geometry_msgs.msg import Pose
 
@@ -98,11 +99,16 @@ class MoveToPoseServer(Node):
             move_group_namespace=move_group_namespace,
         )
         self.moveit2.pipeline_id = pipeline_id
+        # 2026-08-25 回归修复：必须传入 AbortManager，否则 MoveItMotion._wait 只 sleep 0.5s
+        # 就返回 SUCCESS（机械臂实际还在执行）→ BT 提前进入下一步 → 未到位就 descend/关爪。
+        # 对齐 robotarm fairino_pose_control_server（abort=self.abort）。
+        self.abort = AbortManager(self, arm=self.moveit2, gripper=None)
         self.motion = MoveItMotion(
             self,
             arm_clients={"fairino": self.moveit2},
             gripper=None,                      # 夹爪由独立 gripper_service 控制（C2 范围内一并换）
             pose_tools=PoseTools(self, base_frame=base_link),
+            abort=self.abort,
             select_best_path=select_best_path,
             score_cfg=PlanScoreConfig(num_candidates=8),
             action_delay=0.0,
