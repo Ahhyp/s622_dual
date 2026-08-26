@@ -11,6 +11,7 @@
 #include "s622_bt_manager/srv/attach_object.hpp"
 #include "s622_bt_manager/srv/detach_object.hpp"
 #include "s622_bt_manager/srv/transfer_object.hpp"
+#include "s622_bt_manager/perception_nodes.hpp"
 
 namespace s622_bt
 {
@@ -46,7 +47,7 @@ namespace s622_bt
     {
     public:
         DetachObjectNode(const std::string &name, const BT::NodeConfig &config,
-                         rclcpp::Node::SharedPtr node);
+                         RosContextPtr ros);
         static BT::PortsList providedPorts()
         {
             return {
@@ -61,7 +62,7 @@ namespace s622_bt
         BT::NodeStatus tick() override;
 
     private:
-        rclcpp::Node::SharedPtr node_;
+        RosContextPtr ros_;
         rclcpp::Client<s622_bt_manager::srv::DetachObject>::SharedPtr client_;
     };
 
@@ -92,6 +93,6 @@ namespace s622_bt
     };
 
     void registerSceneNodes(BT::BehaviorTreeFactory &factory,
-                            rclcpp::Node::SharedPtr node);
+                            RosContextPtr ros);
 
 } // namespace s622_bt

@@ -74,7 +74,7 @@ public:
         s622_bt::registerMotionNodes(factory_, shared_from_this());
         s622_bt::registerGripperNodes(factory_, shared_from_this());
         s622_bt::registerServoNodes(factory_, shared_from_this());
-        s622_bt::registerSceneNodes(factory_, shared_from_this());
+        s622_bt::registerSceneNodes(factory_, ros_ctx_);
 
         auto pkg_share = ament_index_cpp::get_package_share_directory("s622_bt_manager");
         auto tree_path = pkg_share + "/behavior_trees/" + get_parameter("tree_file").as_string();

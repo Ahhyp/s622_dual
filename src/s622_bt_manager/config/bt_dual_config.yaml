@@ -1,25 +1,26 @@
 /bt_executor:
   ros__parameters:
     # ==================== Left arm place ====================
-    # left_base yaw=π → x_base(+) 指向 world_x(-)
-    # place_position (0.30, -0.20, 0.03) → world (0.05, +0.20, 0.03) 桌面中偏后左
+    # left_base yaw=π → left 系→world: (0.35-x, -y)
+    # place (0.25,-0.20,0.06) → world (0.10, +0.20, 0.06) → right 系 (0.45, 0.20) 前方偏左，舒适夹取
+    # z 0.03→0.06：指尖离桌面留余量，避免 place goal in collision
     left_place_frame_id: "left_base_link"
-    left_place_position:  [0.30, -0.20, 0.03]
+    left_place_position:  [0.25, -0.20, 0.06]
     left_place_rpy:       [3.14159, 0.0, 0.0]
 
     left_pre_place_frame_id: "left_base_link"
-    left_pre_place_position: [0.30, -0.20, 0.20]
+    left_pre_place_position: [0.25, -0.20, 0.20]
     left_pre_place_rpy:      [3.14159, 0.0, 0.0]
 
     # ==================== Right arm place ====================
-    # right_base yaw=0 → x_base(+) 指向 world_x(+)
-    # place_position (0.30, -0.20, 0.03) → world (-0.05, -0.20, 0.03) 桌面中偏后右
+    # right_base yaw=0 → right 系→world: (x-0.35, y)
+    # place (0.25, 0.20, 0.06) → world (-0.10, +0.20, 0.06) → left 系 (0.45, -0.20) 前方偏右，舒适夹取（对称）
     right_place_frame_id: "right_base_link"
-    right_place_position:  [0.30, -0.20, 0.03]
+    right_place_position:  [0.25, 0.20, 0.06]
     right_place_rpy:       [3.14159, 0.0, 0.0]
 
     right_pre_place_frame_id: "right_base_link"
-    right_pre_place_position: [0.30, -0.20, 0.20]
+    right_pre_place_position: [0.25, 0.20, 0.20]
     right_pre_place_rpy:      [3.14159, 0.0, 0.0]
 
     # ==================== M1.7 兼容 ====================

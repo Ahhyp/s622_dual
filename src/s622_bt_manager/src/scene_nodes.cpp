@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
 using namespace std::chrono_literals;
 
 namespace s622_bt
@@ -74,10 +76,11 @@ namespace s622_bt
 
     DetachObjectNode::DetachObjectNode(const std::string &name,
                                        const BT::NodeConfig &config,
-                                       rclcpp::Node::SharedPtr node)
-        : BT::SyncActionNode(name, config), node_(node)
+                                       RosContextPtr ros)
+        : BT::SyncActionNode(name, config), ros_(ros)
     {
-        client_ = node_->create_client<s622_bt_manager::srv::DetachObject>("detach_object");
+        client_ = ros_->node->create_client<s622_bt_manager::srv::DetachObject>(
+            "detach_object");
     }
 
     BT::NodeStatus DetachObjectNode::tick()
@@ -88,7 +91,8 @@ namespace s622_bt
         if (!client_->wait_for_service(std::chrono::milliseconds(
                 static_cast<int>(timeout * 1000))))
         {
-            RCLCPP_ERROR(node_->get_logger(), "detach_object service unavailable (arm=%s)",
+            RCLCPP_ERROR(ros_->node->get_logger(),
+                         "detach_object service unavailable (arm=%s)",
                          arm_prefix.c_str());
             return BT::NodeStatus::FAILURE;
         }
@@ -100,7 +104,22 @@ namespace s622_bt
         auto drop_ps = getInput<geometry_msgs::msg::PoseStamped>("drop_pose");
         if (drop_ps.has_value())
         {
-            req->drop_pose = drop_ps.value().pose;
+            // drop_pose 是 'left_base_link'/'right_base_link' 系（GeneratePlaceCandidate 输出），
+            // 而 planning_scene_service 以 world 为 frame 发布 → 必须变换到 world。
+            try
+            {
+                geometry_msgs::msg::PoseStamped world_ps =
+                    ros_->tf_buffer->transform(drop_ps.value(), "world",
+                                               tf2::durationFromSec(0.5));
+                req->drop_pose = world_ps.pose;
+            }
+            catch (const tf2::TransformException &e)
+            {
+                RCLCPP_WARN(ros_->node->get_logger(),
+                            "detach drop_pose transform failed (%s), using raw pose",
+                            e.what());
+                req->drop_pose = drop_ps.value().pose;
+            }
         }
         else
         {
@@ -112,19 +131,19 @@ namespace s622_bt
         if (future.wait_for(std::chrono::duration<double>(timeout)) !=
             std::future_status::ready)
         {
-            RCLCPP_ERROR(node_->get_logger(),
+            RCLCPP_ERROR(ros_->node->get_logger(),
                          "detach_object timeout (arm=%s)", arm_prefix.c_str());
             return BT::NodeStatus::FAILURE;
         }
         auto resp = future.get();
         if (!resp->success)
         {
-            RCLCPP_ERROR(node_->get_logger(),
+            RCLCPP_ERROR(ros_->node->get_logger(),
                          "detach failed (arm=%s): %s",
                          arm_prefix.c_str(), resp->error_msg.c_str());
             return BT::NodeStatus::FAILURE;
         }
-        RCLCPP_INFO(node_->get_logger(),
+        RCLCPP_INFO(ros_->node->get_logger(),
                     "detached %s (arm=%s)",
                     req->object_name.c_str(), arm_prefix.c_str());
         return BT::NodeStatus::SUCCESS;
@@ -196,20 +215,20 @@ namespace s622_bt
     }
 
     void registerSceneNodes(BT::BehaviorTreeFactory &factory,
-                            rclcpp::Node::SharedPtr node)
+                            RosContextPtr ros)
     {
         factory.registerBuilder<AttachObjectNode>(
             "AttachObject",
-            [node](const std::string &name, const BT::NodeConfig &config)
-            { return std::make_unique<AttachObjectNode>(name, config, node); });
+            [ros](const std::string &name, const BT::NodeConfig &config)
+            { return std::make_unique<AttachObjectNode>(name, config, ros->node); });
         factory.registerBuilder<DetachObjectNode>(
             "DetachObject",
-            [node](const std::string &name, const BT::NodeConfig &config)
-            { return std::make_unique<DetachObjectNode>(name, config, node); });
+            [ros](const std::string &name, const BT::NodeConfig &config)
+            { return std::make_unique<DetachObjectNode>(name, config, ros); });
         factory.registerBuilder<TransferObjectNode>(
             "TransferObject",
-            [node](const std::string &name, const BT::NodeConfig &config)
-            { return std::make_unique<TransferObjectNode>(name, config, node); });
+            [ros](const std::string &name, const BT::NodeConfig &config)
+            { return std::make_unique<TransferObjectNode>(name, config, ros->node); });
         }
 
 } // namespace s622_bt
