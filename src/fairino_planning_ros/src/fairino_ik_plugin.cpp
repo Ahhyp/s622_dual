@@ -236,6 +236,43 @@ bool FairinoIKPlugin::initialize(
     group_name_  = group_name;
     base_frame_  = base_frame;
 
+    // 2026-08-25 双臂支持：MoveIt 的 ik_pose 在 model root frame。
+    // 单臂 root==base_frame 免转换；双臂（root=world, base=left_base_link）
+    // 需把 ik_pose 从 root 系转到 base 系再喂 DH 求解器。
+    robot_model_ = &robot_model;
+    const std::string root_name = robot_model.getRootLinkName();
+    root_is_base_ = (root_name == base_frame_);
+    if (!root_is_base_) {
+        // 沿 base link 的固定关节链累乘，求 base 在 root 系下的位姿
+        //（双臂场景 world->left_base_link 是固定关节，与关节状态无关）。
+        const moveit::core::LinkModel* link =
+            robot_model.getLinkModel(base_frame_);
+        Eigen::Isometry3d base_in_root = Eigen::Isometry3d::Identity();
+        bool ok = (link != nullptr);
+        while (ok && link) {
+            base_in_root = link->getJointOriginTransform() * base_in_root;
+            const moveit::core::JointModel* parent_joint = link->getParentJointModel();
+            if (!parent_joint || parent_joint->getParentLinkModel() == nullptr) {
+                break;
+            }
+            link = parent_joint->getParentLinkModel();
+        }
+        if (ok && link != nullptr) {
+            base_to_root_ = base_in_root.inverse();
+            RCLCPP_INFO(
+                node->get_logger(),
+                "FairinoIKPlugin: root='%s' != base='%s' (dual-arm), "
+                "enabling ik_pose root->base transform",
+                root_name.c_str(), base_frame_.c_str());
+        } else {
+            RCLCPP_WARN(
+                node->get_logger(),
+                "FairinoIKPlugin: cannot resolve fixed chain to base='%s', "
+                "fallback to no-transform", base_frame_.c_str());
+            root_is_base_ = true;
+        }
+    }
+
     tool_model_override_ = config::loadToolModelOverride(node);
     ik_select_params_ = config::loadIKSelectParams(node);
     analytical_ik_params_ = config::loadAnalyticalIKParams(node);
@@ -408,6 +445,11 @@ bool FairinoIKPlugin::solveIK(
 
     // 1. 将 ROS Pose 转换为 Eigen 矩阵
     Eigen::Matrix4d T_target = poseToEigen(ik_pose);
+    // 2026-08-25 双臂支持：ik_pose 在 model root frame（双臂=world），
+    // 转换到 DH base frame（left_base_link 等）再求解。
+    if (!root_is_base_) {
+        T_target = base_to_root_.matrix() * T_target;
+    }
 
     // 2. 确定本次 IK 使用的工具模型（法兰或夹爪）
     const ToolModel tool_model = resolveToolModelForIK();

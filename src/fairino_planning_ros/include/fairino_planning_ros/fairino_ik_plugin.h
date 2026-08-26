@@ -120,6 +120,11 @@ private:
     std::vector<std::string> tip_frames_;    // 末端连杆名称列表
     std::string group_name_;                 // 规划组名称
     std::string base_frame_;                 // 基坐标系名称
+    // 2026-08-25 双臂支持：MoveIt 传入的 ik_pose 在 model root frame（双臂=world），
+    // DH 模型假设 base_frame 系，需用 robot_model 求 root<->base 变换。
+    const moveit::core::RobotModel* robot_model_ = nullptr;
+    bool root_is_base_ = true;               // root frame == base_frame（单臂）时免转换
+    Eigen::Isometry3d base_to_root_ = Eigen::Isometry3d::Identity();
 
     // ★ 工具模型覆盖参数（可通过 ROS 参数配置）
     // 可选值: "auto"（自动根据 tip_frame 判断）, "flange", "gripper"
