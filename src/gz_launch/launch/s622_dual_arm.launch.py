@@ -75,6 +75,8 @@ def generate_launch_description():
     # 2026-08-25 时序/性能对齐 robotarm：
     #   - 延迟参数化（robot_spawn_delay / controller_spawn_delay），move_group 不再延迟
     #   - include_camera_visual=false 简化相机几何体，RViz 不卡
+    # 2026-08-27：S1 已解决 spawner 竞态（超时参数），S2 时序调整已回退（见
+    #   docs/2026-08-27_双臂控制器启动竞态），恢复 robotarm 对齐时序。
     robot_spawn_delay = DeclareLaunchArgument('robot_spawn_delay', default_value='5.0')
     controller_spawn_delay = DeclareLaunchArgument('controller_spawn_delay', default_value='8.0')
     rv_spawn_delay = LaunchConfiguration('robot_spawn_delay')
@@ -172,7 +174,9 @@ def generate_launch_description():
     )
 
     # ============ 7. Controllers spawner（2026-08-25：延迟参数化，对齐 robotarm）
-    #    JSB 先（controller_spawn_delay=8s），arm/hand 后（+1s） ============
+    #    JSB 先（controller_spawn_delay=8s），arm/hand 后（+1s）
+    #    2026-08-27 S1：spawner 加长 service 超时（--service-call-timeout 60 等），
+    #    解决启动风暴下 10s 默认超时误判（S2 时序调整已回退，S1 足够） ============
     dual_arm_controllers_yaml = os.path.join(
         robot_moveit_pkg, "config", "dual_arm_controllers.yaml"
     )
@@ -186,6 +190,12 @@ def generate_launch_description():
                 arguments=[
                     "-p", dual_arm_controllers_yaml,
                     "joint_state_broadcaster",
+                    # 2026-08-27 S1：启动风暴下 CM service 响应可能 >10s，
+                    # 默认 --service-call-timeout=10.0 会导致 spawner 误判失败重试
+                    # （already loaded）→ 后续 controller 不启动。拉长防御。
+                    "--service-call-timeout", "60.0",
+                    "--controller-manager-timeout", "60.0",
+                    "--switch-timeout", "60.0",
                 ],
                 parameters=[{"use_sim_time": True}],
                 output="screen",
@@ -205,6 +215,11 @@ def generate_launch_description():
                     "left_hand_controller",
                     "right_arm_controller",
                     "right_hand_controller",
+                    # 2026-08-27 S1：同上，left_arm_controller 扛启动风暴，
+                    # 10s 默认超时曾致误判失败（详见 docs/2026-08-27_双臂控制器启动竞态）
+                    "--service-call-timeout", "60.0",
+                    "--controller-manager-timeout", "60.0",
+                    "--switch-timeout", "60.0",
                 ],
                 parameters=[{"use_sim_time": True}],
                 output="screen",
@@ -243,6 +258,7 @@ def generate_launch_description():
     #   服务保持 namespaced，客户端（pymoveit2 move_group_namespace + RViz）显式连接。
     #   dual_arm 组（12-DOF 联合规划）不配 IK，两个实例都能做关节空间规划。
     #   2026-08-25：立即启动（对齐 robotarm，move_group 不延迟；controller 稍后就绪）。
+    #   2026-08-27：S2 曾延后到 14s，已回退（S1 超时参数足够，见 docs/2026-08-27_双臂控制器启动竞态）。
     mg_remappings = [
         ("joint_states", "/joint_states"),
         ("trajectory_execution_event", "/trajectory_execution_event"),
@@ -479,7 +495,7 @@ def generate_launch_description():
         ],
     )
     
-    # ============ 14. trajectory_retime_server（S3，对齐单臂阶段 D2） ============
+    # ============ 14. trajectory_retime_server（S3 对齐单臂 D2；2026-08-27：S2 曾延后已回退） ============
     retime_server_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(

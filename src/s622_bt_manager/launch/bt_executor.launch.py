@@ -14,6 +14,11 @@ def generate_launch_description():
         DeclareLaunchArgument('tree_id', default_value=''), #
         DeclareLaunchArgument('auto_start', default_value='false'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
+        # 2026-08-27：加 arm 参数（默认 left）——此前缺失导致单独启动时
+        # arm=''（single-arm compat mode），BT 连无前缀 server（/set_gripper 等）
+        # 而双臂 server 在 /left/* /right/* 下 → service unavailable → FAILURE。
+        DeclareLaunchArgument('arm', default_value='left',
+                              description='left / right / dual'),
 
         Node(
             package='s622_bt_manager',
@@ -29,6 +34,7 @@ def generate_launch_description():
                 'tick_rate_hz': 10,
                 'groot2_port': 1667,
                 'use_sim_time': LaunchConfiguration('use_sim_time'),
+                'arm': LaunchConfiguration('arm'),
                 }
             ]
         ),
