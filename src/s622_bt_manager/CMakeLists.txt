@@ -14,6 +14,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(action_msgs REQUIRED)
+find_package(controller_manager_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(rosidl_default_runtime REQUIRED)
 find_package(ament_index_cpp REQUIRED)
@@ -56,6 +57,7 @@ target_include_directories(bt_executor_node PRIVATE include)
 ament_target_dependencies(bt_executor_node
   rclcpp rclcpp_action std_msgs std_srvs sensor_msgs geometry_msgs
   ament_index_cpp behaviortree_cpp yolov8_obb_msgs
+  controller_manager_msgs
   tf2 tf2_ros tf2_geometry_msgs
 )
 

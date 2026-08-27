@@ -495,7 +495,13 @@ def generate_launch_description():
         ],
     )
     
-    # ============ 14. trajectory_retime_server（S3 对齐单臂 D2；2026-08-27：S2 曾延后已回退） ============
+    # ============ 14. trajectory_retime_server（S3 对齐单臂 D2） ============
+    # 2026-08-27 S4：必须传双臂 URDF/SRDF/kinematics——retime_server.launch.py 默认加载
+    # 单臂模型（robot_gazebo.urdf.xacro，group=robot_arm）；双臂轨迹（left_j1.. / dual_arm 组）
+    # 的 joint 集合/group 在单臂模型上不存在 → retime（TOTG）失败。双臂 launch 覆盖三参数。
+    with open(os.path.join(robot_moveit_pkg, "config", "s622_dual_arm.srdf"),
+              "r", encoding="utf-8") as f:
+        dual_arm_srdf_str = f.read()
     retime_server_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -504,7 +510,12 @@ def generate_launch_description():
                 "retime_server.launch.py",
             )
         ),
-        launch_arguments={"use_sim_time": "true"}.items(),
+        launch_arguments={
+            "use_sim_time": "true",
+            "robot_description": moveit_config.robot_description["robot_description"],
+            "robot_description_semantic": dual_arm_srdf_str,
+            "robot_description_kinematics": yaml.safe_dump(dual_arm_kinematics_fairino),
+        }.items(),
     )
 
     return LaunchDescription([

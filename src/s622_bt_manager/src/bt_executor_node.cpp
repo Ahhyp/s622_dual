@@ -68,7 +68,7 @@ public:
         ros_ctx_->initTf();
         ros_ctx_->initGraspVizPublisher(get_parameter("grasp_viz_topic").as_string());
 
-        s622_bt::registerDummyNodes(factory_);
+        s622_bt::registerDummyNodes(factory_, shared_from_this());
         s622_bt::registerPerceptionNodes(factory_, ros_ctx_);
         s622_bt::registerGraspNodes(factory_, ros_ctx_);
         s622_bt::registerMotionNodes(factory_, shared_from_this());
