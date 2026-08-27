@@ -13,15 +13,31 @@ namespace fairino_hardware
         info_ = sysinfo; // info_是父类中定义的变量,保存硬件信息（info_ 是 SystemInterface 基类里常见的成员）。后面导出接口、遍历 joints 都靠它。
 
         // =========================
-        // [MOD] 先扫描 joints，识别 finger1/finger2 是否存在
+        // [真机双臂] 从 ros2_control <hardware><param> 读取 ip / prefix
+        //   <param name="ip">192.168.58.3</param>      → 覆盖默认控制器 IP
+        //   <param name="prefix">left_</param>         → joint 名前缀（双臂），单臂不写则保持空
+        // 缺省回退：ip → CONTROLLER_IP_ADDRESS 宏（58.2）；prefix → 空（单臂兼容，行为与改动前一致）
+        // =========================
+        {
+            auto hw_param = [this](const std::string &key, const std::string &def)
+            {
+                auto it = info_.hardware_parameters.find(key);
+                return (it != info_.hardware_parameters.end()) ? it->second : def;
+            };
+            _controller_ip = hw_param("ip", CONTROLLER_IP_ADDRESS);
+            _prefix = hw_param("prefix", "");
+        }
+
+        // =========================
+        // [MOD] 先扫描 joints，识别 finger1/finger2 是否存在（带前缀，双臂 left_finger1_joint 等）
         // =========================
         _has_finger1 = false;
         _has_finger2 = false;
         for (const auto &joint : info_.joints)
         {
-            if (joint.name == "finger1_joint")
+            if (joint.name == _prefix + "finger1_joint")
                 _has_finger1 = true;
-            if (joint.name == "finger2_joint")
+            if (joint.name == _prefix + "finger2_joint")
                 _has_finger2 = true;
         }
 
@@ -127,35 +143,35 @@ namespace fairino_hardware
         //   }
         for (const auto &joint : info_.joints)
         {
-            if (joint.name == "j1")
+            if (joint.name == _prefix + "j1")
             {
                 state_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_state[0]);
             }
-            else if (joint.name == "j2")
+            else if (joint.name == _prefix + "j2")
             {
                 state_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_state[1]);
             }
-            else if (joint.name == "j3")
+            else if (joint.name == _prefix + "j3")
             {
                 state_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_state[2]);
             }
-            else if (joint.name == "j4")
+            else if (joint.name == _prefix + "j4")
             {
                 state_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_state[3]);
             }
-            else if (joint.name == "j5")
+            else if (joint.name == _prefix + "j5")
             {
                 state_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_state[4]);
             }
-            else if (joint.name == "j6")
+            else if (joint.name == _prefix + "j6")
             {
                 state_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_state[5]);
             }
-            else if (joint.name == "finger1_joint")
+            else if (joint.name == _prefix + "finger1_joint")
             { // [MOD]
                 state_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_finger_position_state[0]);
             }
-            else if (joint.name == "finger2_joint")
+            else if (joint.name == _prefix + "finger2_joint")
             { // [MOD]
                 state_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_finger_position_state[1]);
             }
@@ -163,8 +179,8 @@ namespace fairino_hardware
             {
                 // [MOD] 未识别的joint直接报错
                 RCLCPP_FATAL(rclcpp::get_logger("FairinoHardwareInterface"),
-                             "Unknown joint name '%s' in ros2_control. Please check URDF joints list.",
-                             joint.name.c_str());
+                             "Unknown joint name '%s' in ros2_control. Please check URDF joints list. (prefix='%s')",
+                             joint.name.c_str(), _prefix.c_str());
             }
         }
 
@@ -187,43 +203,43 @@ namespace fairino_hardware
         //   }
         for (const auto &joint : info_.joints)
         {
-            if (joint.name == "j1")
+            if (joint.name == _prefix + "j1")
             {
                 command_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_command[0]);
             }
-            else if (joint.name == "j2")
+            else if (joint.name == _prefix + "j2")
             {
                 command_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_command[1]);
             }
-            else if (joint.name == "j3")
+            else if (joint.name == _prefix + "j3")
             {
                 command_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_command[2]);
             }
-            else if (joint.name == "j4")
+            else if (joint.name == _prefix + "j4")
             {
                 command_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_command[3]);
             }
-            else if (joint.name == "j5")
+            else if (joint.name == _prefix + "j5")
             {
                 command_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_command[4]);
             }
-            else if (joint.name == "j6")
+            else if (joint.name == _prefix + "j6")
             {
                 command_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_jnt_position_command[5]);
             }
-            else if (joint.name == "finger1_joint")
+            else if (joint.name == _prefix + "finger1_joint")
             { // [MOD]
                 command_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_finger_position_command[0]);
             }
-            else if (joint.name == "finger2_joint")
+            else if (joint.name == _prefix + "finger2_joint")
             { // [MOD]
                 command_interfaces.emplace_back(joint.name, hardware_interface::HW_IF_POSITION, &_finger_position_command[1]);
             }
             else
             {
                 RCLCPP_FATAL(rclcpp::get_logger("FairinoHardwareInterface"),
-                             "Unknown joint name '%s' in ros2_control. Please check URDF joints list.",
-                             joint.name.c_str());
+                             "Unknown joint name '%s' in ros2_control. Please check URDF joints list. (prefix='%s')",
+                             joint.name.c_str(), _prefix.c_str());
             }
         }
 
@@ -234,7 +250,8 @@ namespace fairino_hardware
     hardware_interface::CallbackReturn FairinoHardwareInterface::on_activate(const rclcpp_lifecycle::State &previous_state) // 生命周期：激活硬件,一般在 controller 启动前调用
     {
         using namespace std::chrono_literals;                                                      // 允许写 200ms 这种字面量
-        RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "Starting ...please wait..."); // 提示启动中
+        const std::string tag = _prefix.empty() ? "" : "[" + _prefix + "]";                       // [真机双臂] 日志前缀区分左右
+        RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "Starting %s...please wait...", tag.c_str()); // 提示启动中
         // 做变量的初始化工作
         _ptr_robot = std::make_unique<FRRobot>(); // 创建机器人实例,创建厂家 SDK 的机器人对象
         for (int i = 0; i < 6; i++)
@@ -260,12 +277,13 @@ namespace fairino_hardware
         rclcpp::sleep_for(200ms);                                     // 等待一段时间让控制器的rpc连接建立完毕,等待连接建立
         if (returncode != 0)
         {
-            RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "机械臂SDK连接失败！请检查端口时候被占用");
+            RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "机械臂%sSDK连接失败！ip=%s 请检查端口时候被占用",
+                        tag.c_str(), _controller_ip.c_str());
             return hardware_interface::CallbackReturn::ERROR; // 连接失败则报错并返回 ERROR
         }
         else
         {
-            RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "机械臂SDK连接成功！"); // 提示 SDK 连接成功
+            RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "机械臂%sSDK连接成功！ip=%s", tag.c_str(), _controller_ip.c_str()); // 提示 SDK 连接成功
         }
         // 做第一步的工作，读取当前状态数据
         JointPos jntpos; // 厂家 SDK 的关节位置结构体
@@ -293,7 +311,15 @@ namespace fairino_hardware
 
             RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "初始指令位置: %f,%f,%f,%f,%f,%f", _jnt_position_command[0],
                         _jnt_position_command[1], _jnt_position_command[2], _jnt_position_command[3], _jnt_position_command[4], _jnt_position_command[5]);
-            RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "机械臂硬件启动成功!"); // 激活成功
+
+            // 2026-08-27 真机排查记录：曾临时加过 ServoMoveStart/RobotEnable/Mode(0)
+            // 诊断 ServoJ ERR_EXECUTION_FAILED(14)，已全部移除：
+            //   - Mode(0) 会在 launch 启动时把机械臂切自动模式（用户确认不期望，启动不该改状态）
+            //   - RobotEnable/Mode 均 rc=0（使能/模式正常，非 14 原因）
+            //   - ServoMoveStart 对 14 无效（success 后仍速度超限），robotarm 裸 ServoJ 可动
+            // 最终对齐 robotarm 行为：裸 ServoJ + cmdT 0.0016，仅保留 ip/prefix 参数化。
+
+            RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "机械臂%s硬件启动成功!", tag.c_str()); // 激活成功
             return hardware_interface::CallbackReturn::SUCCESS;
         }
         else
@@ -307,6 +333,7 @@ namespace fairino_hardware
     hardware_interface::CallbackReturn FairinoHardwareInterface::on_deactivate(const rclcpp_lifecycle::State &previous_state)
     {
         RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "Stopping ...please wait..."); // 提示停止
+        // 2026-08-27：曾临时加 ServoMoveEnd 配对，已移除（对齐 robotarm，避免关闭时状态副作用）
         _ptr_robot->StopMotion();                                                                  // 停止机器人
         _ptr_robot->CloseRPC();                                                                    // 销毁实例，连接断开
         _ptr_robot.release();
@@ -380,7 +407,10 @@ namespace fairino_hardware
             }
             //RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "ServoJ下发位置:%f,%f,%f,%f,%f,%f",\
             cmd.jPos[0],cmd.jPos[1],cmd.jPos[2],cmd.jPos[3],cmd.jPos[4],cmd.jPos[5]);
-            int returncode = _ptr_robot->ServoJ(&cmd, &extcmd, 0, 0, 0.004, 0, 0); // 把关节目标以 ServoJ 方式发送给控制器
+            int returncode = _ptr_robot->ServoJ(&cmd, &extcmd, 0, 0, 0.0016, 0, 0); // 把关节目标以 ServoJ 方式发送给控制器
+            // 2026-08-27 真机修复: cmdT 0.004 -> 0.0016（对齐 robotarm 58.2 验证值）。
+            // SDK 注释要求 cmdT 建议范围 [0.001~0.0016]；0.004 超出 2.5 倍，
+            // 58.3 首测 ServoJ 报 ERR_EXECUTION_FAILED(14)，怀疑周期不匹配被控制器拒绝。
             if (returncode != 0)
             {
                 RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "ServoJ指令下发错误,错误码:%d", returncode);

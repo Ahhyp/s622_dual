@@ -1,0 +1,46 @@
+# src/yolov8_grasping/config/demo_node_without_gripper.yaml
+# Demo 节点（无夹爪）参数配置 — 通过 TF 读取当前末端位姿做 Z 轴微动
+demo_node_without_gripper:
+  ros__parameters:
+    # ── 运动组 ──
+    arm_group_name: "robot_arm"
+    base_frame: "base_link"
+    ee_frame: "grasp_frame"
+    move_group_ns_fairino: "/move_group_fairino"
+    move_group_ready_timeout_sec: 10.0
+
+    # ── 规划器 ──
+    planning_pipeline_id: "fairino"
+    planner_id: "tube_birrt*"
+
+    # ── 运动学限速 ──
+    max_step_size: 0.05
+    arm_max_velocity: 0.3
+    arm_max_acceleration: 0.3
+    allowed_planning_time: 15.0
+    position_tolerance: 0.005
+    orientation_tolerance: 0.005
+    allowed_start_tolerance: 0.1
+    action_delay: 0.5
+
+    # ── 微动距离（米）──
+    # 2026-08-27 移植：默认改 5mm（robotarm 原 0.05 偏大，真机首验用 5mm）
+    move_distance: 0.005
+
+    # ── 轨迹打分 ──
+    num_candidate_plans: 5
+    wrist_weight: 50.0
+    wrist_joint_indices: [2, 3, 4]
+
+    # ── J2 约束（可选）──
+    j2_constraint_position: -1.5708
+    j2_constraint_tolerance: 1.5708
+
+    # ── 演示循环次数（1 = 单次，0 = 无限循环）──
+    demo_cycles: 1
+
+    # ── 执行开关 ──
+    # true  = 规划 + 执行（真实运动）
+    # false = 只规划、打印轨迹，不执行（Plan Only 安全模式）
+    # 2026-08-27 移植：默认 false（Plan Only），launch 参数可覆盖
+    execute_motion: false

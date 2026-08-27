@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="s622">
+    <!-- ==================================================================
+        Mock 硬件单臂 URDF（2026-08-27，无真机验证用）
+        - 复用 s622_arm macro（xacro 版本体，与真机/仿真一致）
+        - ros2_control 用 mock_components/GenericSystem（无真实硬件）
+        - 命令/状态接口：position（与真机插件一致，可复用 real_controllers.yaml）
+        - 用途: s622_mock_motion_demo.launch.py 跑通 demo 全链路（规划+执行假轨迹）
+        ================================================================== -->
+    <xacro:arg name="prefix" default="" />
+    <xacro:arg name="attach_world" default="true" />
+
+    <xacro:include
+        filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
+    <xacro:s622_arm prefix="$(arg prefix)" attach_world="$(arg attach_world)" />
+
+    <!-- mock ros2_control（GenericSystem，position 接口） -->
+    <xacro:include filename="s622_moveit_descriptions.ros2_control.xacro" />
+    <xacro:s622_moveit_descriptions_ros2_control
+        name="MockSystem"
+        initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml" />
+
+</robot>

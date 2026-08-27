@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- ==================================================================
+        真机 ros2_control 块（2026-08-26，Phase B-1）
+        - 插件：fairino_hardware/FairinoHardwareInterface（SDK XML-RPC 直连控制器）
+        - <param name="ip">     控制器 IP。单臂传 192.168.58.3；双臂 left/right 各传各的
+        - <param name="prefix"> joint 名前缀。双臂 left_ / right_；单臂留空
+        - 命令接口：position（真机插件 on_init 强制要求 position；
+          与仿真 gz 块的 velocity 命令接口完全不同，互不干扰）
+        - 状态接口：position（真机插件只导出 position state，read() 从 SDK 读真实角）
+        ================================================================== -->
+    <xacro:macro name="s622_real_ros2_control" params="name prefix ip">
+        <ros2_control name="${name}" type="system">
+            <hardware>
+                <plugin>fairino_hardware/FairinoHardwareInterface</plugin>
+                <param name="ip">${ip}</param>
+                <param name="prefix">${prefix}</param>
+            </hardware>
+
+            <joint name="${prefix}j1">
+                <command_interface name="position" />
+                <state_interface name="position" />
+            </joint>
+            <joint name="${prefix}j2">
+                <command_interface name="position" />
+                <state_interface name="position" />
+            </joint>
+            <joint name="${prefix}j3">
+                <command_interface name="position" />
+                <state_interface name="position" />
+            </joint>
+            <joint name="${prefix}j4">
+                <command_interface name="position" />
+                <state_interface name="position" />
+            </joint>
+            <joint name="${prefix}j5">
+                <command_interface name="position" />
+                <state_interface name="position" />
+            </joint>
+            <joint name="${prefix}j6">
+                <command_interface name="position" />
+                <state_interface name="position" />
+            </joint>
+            <joint name="${prefix}finger1_joint">
+                <command_interface name="position" />
+                <state_interface name="position" />
+            </joint>
+            <joint name="${prefix}finger2_joint">
+                <command_interface name="position" />
+                <state_interface name="position" />
+            </joint>
+
+        </ros2_control>
+    </xacro:macro>
+</robot>

@@ -1,4 +1,11 @@
 # MoveIt uses this configuration for controller management
+# 2026-08-27 对齐 robotarm 58.2 真机验证配置：加 trajectory_execution 段，
+# 给执行超时留余量（真机 ServoJ 到位比 Gazebo 慢，默认值会把正常执行误判 TIMED_OUT）
+
+trajectory_execution:
+  allowed_execution_duration_scaling: 1.25
+  allowed_goal_duration_margin: 3.0
+  execution_duration_monitoring: true
 
 moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControllerManager
 

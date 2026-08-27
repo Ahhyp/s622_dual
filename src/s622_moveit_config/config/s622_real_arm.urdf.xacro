@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="s622">
+    <!-- ==================================================================
+        真机单臂 URDF（2026-08-26，Phase B-1）
+        - 复用 s622_moveit_descriptions 的 s622_arm macro（prefix 支持）
+        - ros2_control 用 fairino_hardware 插件 + ip/prefix 参数（position 命令接口）
+        - launch 传 ip（默认 192.168.58.3，先在 58.3 上验证；58.2 留给 robotarm 对照）
+        - 无 Gazebo 插件（真机不需要 gz 标签）
+        ================================================================== -->
+    <xacro:arg name="ip" default="192.168.58.3" />
+    <xacro:arg name="prefix" default="" />
+    <xacro:arg name="attach_world" default="true" />
+
+    <!-- 本体（xacro 版，s622_arm macro） -->
+    <xacro:include
+        filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
+    <xacro:s622_arm prefix="$(arg prefix)" attach_world="$(arg attach_world)" />
+
+    <!-- 真机 ros2_control（fairino_hardware 插件） -->
+    <xacro:include filename="s622_real_ros2_control.xacro" />
+    <xacro:s622_real_ros2_control name="RealSystem" prefix="$(arg prefix)" ip="$(arg ip)" />
+
+</robot>

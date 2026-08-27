@@ -462,6 +462,12 @@ private:
 
     out.joint_names = in.joint_names;
     out.header = in.header;
+    // [2026-08-27 真机修复] 清空 header.stamp：TOTG 输出的 time_from_start 是相对时间（从 0 起），
+    // header.stamp 保留"规划时刻"会让 JTC 以规划时刻为轨迹起点 —— 短轨迹（如 20mm，~0.8s）
+    // 在"规划→执行"的延迟（~1s）后到达 controller 时已过期，JTC 拒绝：
+    //   "Received trajectory with non-zero start time (...) that ends in the past"
+    // 清空后 JTC 以"收到时刻"为起点执行。robotarm 未遇到是因为其 demo 默认 50mm（轨迹长，掩盖）。
+    out.header.stamp = rclcpp::Time(0, 0, RCL_SYSTEM_TIME);
 
     // (11) 返回
     res->retimed = out;

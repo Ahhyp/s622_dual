@@ -78,7 +78,8 @@ private:
   GripperState _gripper_state{GripperState::UNKNOWN}; // [MOD]
 
   int _control_mode; //控制模式： 0-位置控制，1-扭矩控制 2-速度控制
-  std::string _controller_ip = CONTROLLER_IP_ADDRESS; //控制器 IP，默认用宏
+  std::string _controller_ip = CONTROLLER_IP_ADDRESS; //控制器 IP，默认用宏；[真机双臂] on_init() 可从 <hardware><param name="ip"> 覆盖
+  std::string _prefix; // [真机双臂] joint 名前缀（如 "left_" / "right_"），on_init() 从 <hardware><param name="prefix"> 读取；单臂为空（兼容）
   std::unique_ptr<FRRobot> _ptr_robot; //厂家 SDK 对象指针：on_activate() 创建，on_deactivate() 释放，read/write 里调用 SDK 方法
 
   // 给finger回填用的“名义位置”（与URDF group_state一致）

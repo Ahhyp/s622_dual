@@ -497,3 +497,60 @@ Gazebo Fortress 解析 SDF 时忽略值为 0 的 joint limit，`lower=0` 被当�
 `lower="0.0"` → `lower="-1e-6"`, `upper="0"` → `upper="1e-6"`（1 微米偏差，无物理影响）。
 文件：`src/s622_moveit_descriptions/urdf/s622_moveit_descriptions.urdf`
 构造函数初始化列表补 `jmg_(robot_model->getJointModelGroup(group))`。
+
+---
+
+# TODO（2026-08-26 双臂现代化收尾后遗留）
+
+> 来源：双臂现代化 S1-S5 + 回归验证完成（BT pick_place_dual SUCCESS）后的遗留项。
+> 相关记录：docs/2026-08-25_place位姿标定/、docs/2026-08-25_双臂现代化改造/
+
+## [双臂] 伺服 descend/lift 提速
+
+**状态：** 待办
+
+**背景：**
+BT 抓取全流程 SUCCESS，但伺服段（visual_align_server 的 descend/lift）实测
+**23-26mm/s**（目标 40-50mm/s），descend 13cm 花 32.9s、lift 10cm 花 24.4s，
+整条 BT 约一半时间耗在伺服段。
+
+**方向：**
+- visual_align_server 的 descend/lift 循环里伺服实际速度只有目标 60-70%，
+  可能与 servo 的 butterworth 平滑或 controller 限速有关
+- 可尝试提高 `descend_speed`/`lift_speed`（BT XML）或检查 servo 平滑参数
+
+## [双臂] fairino planner IK 多解碰撞重试
+
+**状态：** 待办
+
+**背景：**
+fairino 管线 `setFromIK` 只取一个候选解（连续性优先），选中解碰撞时直接
+BiRRT* fast-fail，不做多解碰撞重试。place 位姿曾因此失败（选中的解与桌面/场景碰撞）。
+
+**方向：**
+- setFromIK 后对选中解做碰撞检查，碰撞则尝试其他 raw candidates
+- 对齐 FairinoIKPlugin 的 selector_candidates 机制（当前只选一个）
+
+## [双臂] right 臂对称验证
+
+**状态：** 待办
+
+**背景：**
+place 位姿已对称标定（left→world (0.10,0.20) / right→world (-0.10,0.20)），
+但 BT 只跑过 `arm=left`。
+
+**方向：**
+- bt_executor 参数 `arm='right'` 跑一遍 pick_place_dual 验证对称性
+- 确认 right 的 IK（root→base 变换）与 place 位姿均正常
+
+## [双臂] 手递手交接（阶段 5）
+
+**状态：** 待办
+
+**背景：**
+place 位置已放到"另一只机械臂能舒适夹取的位置"（用户拍板），
+为递物交接做准备。`pick_handover_place.xml` 已存在但未验证。
+
+**方向：**
+- 验证 pick_handover_place.xml（left 抓 → right 接）
+- 依赖 TransferObjectNode（scene_nodes.cpp 已实现）
