@@ -391,6 +391,9 @@ namespace fairino_hardware
     // 把 _jnt_position_command[] 下发给硬件（ServoJ）
     hardware_interface::return_type FairinoHardwareInterface::write(const rclcpp::Time &time, const rclcpp::Duration &period) // 控制循环中被周期调用,controller 每周期更新 command 缓冲区，这里把它发送给机械臂
     {
+        // [ServoJ 统计] 控制周期起点（全模式统一计周期）
+        servo_stats_.begin_cycle();
+
         if (_control_mode == 0)
         { // 位置控制模式
             if (std::any_of(&_jnt_position_command[0], &_jnt_position_command[5],
@@ -407,7 +410,12 @@ namespace fairino_hardware
             }
             //RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "ServoJ下发位置:%f,%f,%f,%f,%f,%f",\
             cmd.jPos[0],cmd.jPos[1],cmd.jPos[2],cmd.jPos[3],cmd.jPos[4],cmd.jPos[5]);
+            // [ServoJ 统计] 计时 ServoJ 单次调用耗时（SDK+网络+上位机应答）
+            const auto _t_servoj0 = std::chrono::steady_clock::now();
             int returncode = _ptr_robot->ServoJ(&cmd, &extcmd, 0, 0, 0.0016, 0, 0); // 把关节目标以 ServoJ 方式发送给控制器
+            servo_stats_.record_call(
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - _t_servoj0).count());
             // 2026-08-27 真机修复: cmdT 0.004 -> 0.0016（对齐 robotarm 58.2 验证值）。
             // SDK 注释要求 cmdT 建议范围 [0.001~0.0016]；0.004 超出 2.5 倍，
             // 58.3 首测 ServoJ 报 ERR_EXECUTION_FAILED(14)，怀疑周期不匹配被控制器拒绝。
@@ -475,6 +483,24 @@ namespace fairino_hardware
         {
             RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "指令发送错误:未识别当前所处控制模式");
             return hardware_interface::return_type::ERROR;
+        }
+
+        // [ServoJ 统计] 每 500 周期（≈1s @500Hz）打印一次窗口统计。
+        // ⚠️ 正式采数时此日志应移出 write() 实时路径（打印本身会制造一个周期尖峰），
+        // 第一轮探索保留（1s 一次，开销 ~0.1-0.5ms）。
+        ServoStats::Report rep;
+        if (servo_stats_.maybe_report(500, rep))
+        {
+            RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"),
+                        "ServoJ call: n=%ld mean=%.3f P50=%.3f P95=%.3f P99=%.3f max=%.3f ms | "
+                        "write period: mean=%.3f sd=%.3f P99=%.3f max=%.3f ms >2.0ms=%.1f%% "
+                        ">2.5ms=%.2f%% >3.0ms=%.2f%%",
+                        static_cast<long>(rep.n_calls),
+                        rep.call_mean_ms, rep.call_p50_ms, rep.call_p95_ms,
+                        rep.call_p99_ms, rep.call_max_ms,
+                        rep.period_mean_ms, rep.period_stddev_ms,
+                        rep.period_p99_ms, rep.period_max_ms,
+                        rep.over_2ms_pct, rep.over_2p5ms_pct, rep.over_3ms_pct);
         }
 
         return hardware_interface::return_type::OK;

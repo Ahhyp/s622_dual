@@ -10,6 +10,7 @@
 #include "visibility_control.h" //通常用于导出/隐藏符号（Windows/Linux 下的 dll/so 可见性控制），给 pluginlib 用
 #include <vector> //使用 std::vector
 #include "libfairino/include/robot.h" //引入厂家 SDK 的头文件（FRRobot 类就在这里）
+#include "fairino_hardware/servo_stats.hpp" // [ServoJ 统计] ServoJ 调用耗时 + 控制周期统计（2026-08-28）
 
 
 #define CONTROLLER_IP_ADDRESS "192.168.58.2" //定义控制器默认 IP 地址字符串常量。.cpp 里会用它做 RPC 连接
@@ -81,6 +82,9 @@ private:
   std::string _controller_ip = CONTROLLER_IP_ADDRESS; //控制器 IP，默认用宏；[真机双臂] on_init() 可从 <hardware><param name="ip"> 覆盖
   std::string _prefix; // [真机双臂] joint 名前缀（如 "left_" / "right_"），on_init() 从 <hardware><param name="prefix"> 读取；单臂为空（兼容）
   std::unique_ptr<FRRobot> _ptr_robot; //厂家 SDK 对象指针：on_activate() 创建，on_deactivate() 释放，read/write 里调用 SDK 方法
+
+  // [ServoJ 统计] ServoJ 调用耗时 + 控制周期统计（2026-08-28）
+  ServoStats servo_stats_;
 
   // 给finger回填用的“名义位置”（与URDF group_state一致）
   double _f1_open{0.0305};   // [MOD]

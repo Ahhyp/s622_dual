@@ -37,10 +37,12 @@ SYMBOLIC)
 
 add_executable(ros2_cmd_server ${SRC_DIR})
 add_executable(srv_test_client ${EXP_SRC_DIR})
+add_executable(servoj_bare_test ./src/servoj_bare_test.cpp)
 add_library(
   fairino_hardware 
   SHARED 
   ./src/fairino_hardware_interface.cpp
+  ./src/servo_stats.cpp
 )
 
 #target_compile_definitions(ros2_cmd_server PRIVATE CHN_VERSION)
@@ -53,12 +55,14 @@ ${CMAKE_CURRENT_SOURCE_DIR}/include/
 ${CMAKE_CURRENT_SOURCE_DIR}/)
 
 target_include_directories(srv_test_client PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/examples/include)
+target_include_directories(servoj_bare_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/)
 target_include_directories(fairino_hardware PUBLIC 
 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
 $<INSTALL_INTERFACE:include/fairino_hardware>
 )
 target_link_libraries(ros2_cmd_server ${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so)
+target_link_libraries(servoj_bare_test ${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so)
 target_link_libraries(fairino_hardware ${CMAKE_CURRENT_SOURCE_DIR}/libfairino/lib/libfairino.so)
 
 #add dependencies
@@ -79,6 +83,10 @@ pluginlib_export_plugin_description_file(hardware_interface fairino_hardware.xml
 #install all files
 #command server
 install(TARGETS ros2_cmd_server
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(TARGETS servoj_bare_test
   DESTINATION lib/${PROJECT_NAME}
 )
 
