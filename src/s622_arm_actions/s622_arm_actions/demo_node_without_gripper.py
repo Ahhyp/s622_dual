@@ -67,6 +67,7 @@ import tf2_ros
 
 from manipulation_common.utils.params import param
 from manipulation_common.utils.pose_tools import PoseTools
+from manipulation_common.task.abort_manager import AbortManager  # [2026-08-28] robotarm 式：真实等待执行结果（query_state + motion_suceeded）
 from manipulation_common.planning.motion_executor import (
     MoveItMotion,
     PlanScoreConfig,
@@ -553,6 +554,12 @@ class DemoNodeWithoutGripper(Node):
             callback_group=self.callback_group,
         )
 
+        # [2026-08-28] robotarm 式修复：此前 abort=None → _wait 只 sleep 0.5s 返回 True
+        # （假成功：abort/TIMED_OUT 也报 "✓ done"）。配 AbortManager 后 _wait 走
+        # wait_idle_or_abort：轮询 query_state，动作进入 EXECUTING 后回到 IDLE 才算完成，
+        # 结果由 motion_suceeded 判定——SUCCESS 绑定真实执行结果。
+        self._abort_mgr = AbortManager(self, arm=self.moveit2_arm, gripper=None)
+
         self.motion = MoveItMotion(
             node=self,
             arm_clients={
@@ -561,7 +568,7 @@ class DemoNodeWithoutGripper(Node):
             default_client="fairino",
             gripper=None,
             pose_tools=self.pose_tools,
-            abort=None,
+            abort=self._abort_mgr,
             select_best_path=select_best_path,
             score_cfg=PlanScoreConfig(
                 num_candidates=self.num_candidate_plans,
