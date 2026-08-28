@@ -2,6 +2,18 @@
 
 namespace fairino_hardware
 {
+    // [2026-08-28 v2.2] 析构兜底：Humble shutdown 时 controller_manager 直接析构
+    // hardware（不走 on_deactivate），若 _io_thread 仍 joinable → std::terminate（首测实证）。
+    // 这里只做 join 回收线程资源，不在析构里调 FAIRINO SDK（SDK 收尾在 io_loop 内完成）。
+    FairinoHardwareInterface::~FairinoHardwareInterface()
+    {
+        if (_io_thread.joinable())
+        {
+            _shutdown_requested = true; // io_loop 会在当前周期末尾 StopMotion + ServoMoveEnd 后退出
+            _io_thread.join();
+        }
+    }
+
     // 上接 MoveIt/Controller 的标准指令，下接机器人 SDK 的实际通信
     hardware_interface::CallbackReturn FairinoHardwareInterface::on_init(const hardware_interface::HardwareInfo &sysinfo)
     {
@@ -495,7 +507,7 @@ namespace fairino_hardware
         const auto period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(_servoj_cmd_t));
         auto next_tick = std::chrono::steady_clock::now();
-        bool stalled = false; // 上次 ServoJ 慢调用 → 本次不发最新目标（防跳变）
+        bool was_clamped = false; // clamp 状态变化时才打日志（避免刷屏）
 
         while (_io_running)
         {
@@ -523,36 +535,53 @@ namespace fairino_hardware
                 }
             }
 
-            // ── 2. command-step velocity guard（唯一"是否允许发送"判据）──
-            //    v_cmd,i = |q_candidate - q_last_sent| / cmdT ≤ v_limit[i]
-            //    stall 后 / 超速 → 本次候选 = 上次成功位置（Δq=0，不发最新，防轴超限）
+            // ── 2. per-joint command rate limiter（最后一道防线，设计文档 v2.2）──
+            //    candidate = last_sent + clamp(latest - last_sent, ±v_safe·cmdT)
+            //    → 单步位移永远 ≤ v_safe·cmdT，任何跳变（含 stall 恢复、外部大指令）
+            //      都不会以超过安全速度的步长交给 ServoJ。
+            //    注意：这只是"位置步长限速"，不承诺机器人加速度/伺服滤波安全，
+            //    v_safe = 0.8×v_limit 起步，按实机跟踪误差调。
             std::array<double, 6> candidate;
-            bool send_latest = !stalled;
-            if (send_latest)
+            bool clamped = false;
+            for (int i = 0; i < 6; ++i)
             {
-                for (int i = 0; i < 6; ++i)
+                const double dq = command[i] - _last_sent[i];
+                const double dq_max = _v_limit[i] * _servoj_cmd_t;
+                if (dq > dq_max)
                 {
-                    if (std::fabs(command[i] - _last_sent[i]) / _servoj_cmd_t > _v_limit[i])
-                    {
-                        send_latest = false;
-                        RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"),
-                                    "[velocity guard] axis %d: |dq|/cmdT=%.3f rad/s > v_limit=%.3f, hold last_sent",
-                                    i, std::fabs(command[i] - _last_sent[i]) / _servoj_cmd_t, _v_limit[i]);
-                        break;
-                    }
+                    candidate[i] = _last_sent[i] + dq_max;
+                    clamped = true;
+                }
+                else if (dq < -dq_max)
+                {
+                    candidate[i] = _last_sent[i] - dq_max;
+                    clamped = true;
+                }
+                else
+                {
+                    candidate[i] = command[i];
                 }
             }
-            candidate = send_latest ? command : _last_sent;
+            if (clamped && !was_clamped)
+            {
+                RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"),
+                            "[rate limiter] command step clamped to v_safe×cmdT "
+                            "(dq1=%.4f rad, limit=%.4f rad) — 跟踪将滞后，等待恢复",
+                            command[0] - _last_sent[0], _v_limit[0] * _servoj_cmd_t);
+            }
+            was_clamped = clamped;
 
             // ── 3. send-interval health check（stream-health 指标，非超速判据）──
+            //    异常间隔是 stall 的另一种表现：只计数/警告，不 fault（设计文档 v2.2：
+            //    communication timing anomaly ≠ robot command rejection）
             const int64_t now_ns = steady_now_ns();
             const double dt_send_ms = (now_ns - _last_send_ns.load()) / 1e6;
-            if (dt_send_ms > _servo_stall_fault_ms * 2.0 && _last_send_ns.load() != 0)
+            if (dt_send_ms > _servo_stall_fault_ms && _last_send_ns.load() != 0)
             {
+                ++_stall_count;
                 RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"),
-                             "send interval %.1f ms > stall threshold, stream broken", dt_send_ms);
-                latch_fault("send-interval stall");
-                break;
+                             "send interval discontinuity: %.1f ms (stall_count=%lu)",
+                             dt_send_ms, (unsigned long)_stall_count.load());
             }
             else if (dt_send_ms > _servo_stall_warn_ms && _last_send_ns.load() != 0)
             {
@@ -572,7 +601,7 @@ namespace fairino_hardware
             const double call_ms = (steady_now_ns() - t0) / 1e6;
 
             if (rc != 0)
-            { // 第一次 rc!=0 即 fault，不再持续下发（不出现 14,14,14…）
+            { // rc!=0 → HARD FAULT（命令被机器人拒绝，如 14），不再持续下发
                 RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"),
                              "ServoJ failed: rc=%d, cmdT=%.3f ms, call=%.1f ms", rc, _servoj_cmd_t * 1000.0, call_ms);
                 ++_servo_failures;
@@ -581,25 +610,23 @@ namespace fairino_hardware
             }
             ++_servo_cycles;
             _last_send_ns = steady_now_ns();
-            if (send_latest)
-            {
-                _last_sent = candidate; // 只在实际发送最新目标时更新基准
-            }
+            _last_sent = candidate; // 已发送的就是新基准（clamp 保证单步位移 ≤ v_safe·cmdT）
 
-            // ── 5. stall watchdog（同步阻塞无法打断，只能检测已发生 stall 并阻止下一条危险指令）──
+            // ── 5. stall watchdog（设计文档 v2.2）──
+            //    同步阻塞无法打断，只能检测已发生的 stall；>20ms 视为 stream discontinuity，
+            //    不直接 fault（保持位 stall 无害，实测 Δq=0 也每 ~100 次卡 1s），
+            //    下一条指令已由 clamp 保证不跳跃。rc!=0 才是 hard fault。
             if (call_ms > _servo_stall_fault_ms)
             {
-                RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"),
-                             "ServoJ stall: call=%.1f ms > fault=%.1f ms, stream broken", call_ms, _servo_stall_fault_ms);
                 ++_stall_count;
-                latch_fault("ServoJ stall");
-                break;
+                RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"),
+                             "ServoJ stream discontinuity: call=%.1f ms (stall_count=%lu)",
+                             call_ms, (unsigned long)_stall_count.load());
             }
-            if (call_ms > _servo_stall_warn_ms)
+            else if (call_ms > _servo_stall_warn_ms)
             {
                 RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"), "ServoJ slow call: %.1f ms", call_ms);
             }
-            stalled = (call_ms > _servo_stall_warn_ms); // 慢调用后下一条不发最新，防止大跳变
 
             // ── 6. 反馈读取（io_loop 内，写 _latest_state）──
             JointPos feedback{};

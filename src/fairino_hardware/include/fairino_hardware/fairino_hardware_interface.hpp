@@ -35,6 +35,11 @@ public:
   FAIRINO_HARDWARE_PUBLIC
   hardware_interface::CallbackReturn on_init(const hardware_interface::HardwareInfo& info) override;
 
+  // [2026-08-28 v2.2] 析构兜底：任何退出路径（含 Humble shutdown 不走 on_deactivate 的情况）
+  // 都保证 _io_thread 被 join，避免 std::thread 析构 terminate。只 join 回收线程，不调 SDK。
+  FAIRINO_HARDWARE_PUBLIC
+  ~FairinoHardwareInterface() override;
+
   //FAIRINO_HARDWARE_PUBLIC
   //hardware_interface::CallbackReturn on_configure(const rclcpp_lifecycle::State &) override;
 

@@ -109,6 +109,77 @@ int main(int argc, char **argv)
     fflush(stdout);
   }
 
+  // ============================================================
+  // mode 8：保持位扫频（2026-08-28 v2.2 实验）
+  //   目的：钉死"每 ~100 次 ServoJ 卡 1s"的机制（调用计数 / 时间驱动 / 吞吐压力）
+  //   条件：固定保持位（Δq=0，排除运动因素），严格 start-to-start 发送
+  //   用法：servoj_bare_test <ip> <n> 8 0 <no_close> <cmdT>
+  //     cmdT: 0.020→50Hz  0.010→100Hz  0.008→125Hz  0.004→250Hz
+  //   记录：每次 >20ms stall 的 (cycle index, 绝对时间戳, duration, GetMotionQueueLength)
+  //   判读：
+  //     所有频率都是 99,199,299...       → 每 100 调用计数/队列机制
+  //     cycle 不固定但间隔固定秒数        → 时间驱动 housekeeping
+  //     250Hz 严重、50/100Hz 消失         → 吞吐/通信压力
+  //     queue 涨到某值后 stall 再下降      → 队列假设坐实
+  // ============================================================
+  if (mode == 8) {
+    printf("mode 8: 保持位扫频 freq=%.1f Hz (cmdT=%.4f s), n=%d, 严格 start-to-start\n",
+           1.0 / servoj_cmd_t, servoj_cmd_t, n);
+    fflush(stdout);
+    const auto period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        std::chrono::duration<double>(servoj_cmd_t));
+    auto next_tick = std::chrono::steady_clock::now();
+    int stall_cnt = 0;
+    std::vector<int> stall_cycles;
+    for (int i = 0; i < n; ++i) {
+      next_tick += period;
+      const auto t0 = std::chrono::steady_clock::now();
+      ExaxisPos ext{0, 0, 0, 0};
+      const int r = robot.ServoJ(&q, &ext, 0, 0, servoj_cmd_t, 0, 0);
+      const auto t1 = std::chrono::steady_clock::now();
+      const double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+      dur[i] = ms;
+      if (r != 0) nz_rc++;
+      if (ms > 5.0) slow_5++;
+      if (ms > 100.0) slow_100++;
+      if (ms > 500.0) slow_500++;
+      if (ms > 20.0) {
+        int qlen = -1;
+        robot.GetMotionQueueLength(&qlen); // V385 有 .so 实现；失败返回非 0，qlen 保持 -1
+        const auto ts = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        printf("  [STALL] cycle=%d ts_ms=%lld dur=%.1f rc=%d queue=%d\n",
+               i + 1, (long long)ts, ms, r, qlen);
+        stall_cnt++;
+        stall_cycles.push_back(i + 1);
+        fflush(stdout);
+      }
+      if ((i + 1) % 500 == 0) {
+        printf("  progress %d/%d (ServoJ %.3f ms)\n", i + 1, n, ms);
+        fflush(stdout);
+      }
+      std::this_thread::sleep_until(next_tick); // 严格 start-to-start（stall 后 next_tick 落后会立即补发）
+    }
+    printf("=== mode 8 保持位扫频: freq=%.1f Hz n=%d ===\n", 1.0 / servoj_cmd_t, n);
+    printf("stall(>20ms)=%d  slow>5ms=%ld >100ms=%ld >500ms=%ld  nonzero_rc=%ld\n",
+           stall_cnt, slow_5, slow_100, slow_500, nz_rc);
+    printf("stall cycles:");
+    for (int c : stall_cycles) printf(" %d", c);
+    printf("\n");
+    fflush(stdout);
+    if (no_close) {
+      printf("skipping CloseRPC (--no-close diagnostic)\n");
+      fflush(stdout);
+      std::_Exit(0);
+    }
+    printf("before CloseRPC\n");
+    fflush(stdout);
+    const int close_rc = robot.CloseRPC();
+    printf("after CloseRPC rc=%d\n", close_rc);
+    fflush(stdout);
+    return 0;
+  }
+
   // 诊断环形缓冲：记录最近 20 个周期的 (idx, dur_ms, j1 指令, rc)，
   // ServoJ 返回 14 时打印——钉住"14 前发生了什么"（1s 阻塞后？正常周期突然 14？）
   struct CycleInfo { int idx; double dur; double cmd_j1; int rc; };

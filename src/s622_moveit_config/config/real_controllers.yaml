@@ -34,6 +34,36 @@ robot_arm_controller:
       - position
     state_interfaces:
       - position
+    # [2026-08-28 v2.2] JTC 执行容差（设计文档 §10 基本功能验收线 6：SUCCESS 必须绑定真实关节状态）
+    # 背景：Phase 1 首测发现"机械臂 stall 没动但 JTC 报 success"——Humble JTC 对 hardware
+    #   read/write ERROR 的自动停止 NOT IMPLEMENTED，且无 constraints 时 trajectory/goal
+    #   tolerance 默认 0（不实施），goal_time=0（不限时）→ 假成功。
+    # 方案：配置真实的 trajectory/goal tolerance + 有限 goal_time，使 FollowJointTrajectory
+    #   的 SUCCESS 依赖 actual state；超过 trajectory tolerance → abort（上层真实感知失败）。
+    # 注：以下为宽松初始值（rad），clamp 慢追时机械臂会滞后，按实机跟踪误差收紧：
+    #   trajectory = 轨迹执行中允许偏差（过大→abort）；goal = 终点到位判定（≤此值才算成功）
+    #   goal_time = 到达 goal 允许的最大秒数（机械臂 clamp 慢追需要足够时间）
+    constraints:
+      goal_time: 5.0
+      stopped_velocity_tolerance: 0.01
+      j1:
+        trajectory: 0.05
+        goal: 0.02
+      j2:
+        trajectory: 0.05
+        goal: 0.02
+      j3:
+        trajectory: 0.05
+        goal: 0.02
+      j4:
+        trajectory: 0.05
+        goal: 0.02
+      j5:
+        trajectory: 0.05
+        goal: 0.02
+      j6:
+        trajectory: 0.05
+        goal: 0.02
 
 hand_controller:
   ros__parameters:
