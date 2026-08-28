@@ -1,6 +1,6 @@
 # 2026-08-28 fairino_hardware ServoJ I/O 分层重构设计文档（v2.2）
 
-> 状态：**v2.4（2026-08-28）——Phase 1 完成（20mm SUCCEEDED + 位移精确），进入 Phase 2（250Hz 性能对比）**
+> 状态：**v2.5（2026-08-28 定稿）——Phase 1 完成并定为最终配置（125Hz/cmdT=0.008）；Phase 2（250Hz）决定不跑；真机 20mm 全链路验证通过**
 > 关联：docs/2026-08-25_ServoJ动态跟踪与同步性能测试/、真机 ServoJ 14 排查（8/28）
 > 参照：robotarm 最新源码（`/home/yep/fairino_robotarm`，jasonlee0617，2026-08-28 main 分支）
 
@@ -289,7 +289,13 @@ ServoJ 返回，发现 duration > 20ms（或 dt_send 异常）:
 4. stall 时间间隔随频率变化（50Hz~2s vs 125/250Hz~1.3s）→ **排除固定时间驱动**
 5. **结论：调用计数/周期机制（每 ~100 次调用一次 1s 同步），非队列满、非时间驱动、非吞吐压力**。该机制下 stall 无法从 PC 侧消除，v2.2 的 clamp + 不 fault 策略正确；根因需问厂商（固件每 100 条 ServoJ 的内部同步/批处理机制）
 
-### Phase 2：性能（cmdT=0.004 / 250Hz）
+### Phase 2：性能（cmdT=0.004 / 250Hz）—— **已决定不跑（2026-08-28 用户决定）**
+
+**决策**：125Hz 已验证达标（20mm SUCCEEDED + 位移精确 + 无超限/14），
+直接定为**最终配置**（cmdT=0.008 默认值不变）。250Hz 理论劣势：
+stall 每 ~0.4s 一次（vs 125Hz ~0.8s）+ ServoJ P95≈3.3ms 对 4ms 周期余量仅 0.7ms——
+收益不确定，不值得为潜在更差的表现折腾。参数化已实现，日后想对比随时可切
+（`servoj_cmd_t:=0.004`）。
 
 **定义**（原 §9）：Phase 1（125Hz）稳定后，切换到 cmdT=0.004（250Hz），对比：
 
@@ -405,3 +411,4 @@ stall 的 feedback 冻结是"可预期现象"；真正的 GetActual 故障由 io
 | v2.2 | 2026-08-28 | Phase 1 首测后修订：保持位也 stall（F10）；clamp rate limiter 替代 guard；stall>20ms 不 fault 只计数；rc!=0/feedback stale 仍 HARD FAULT；析构 join 兜底；JTC constraints 绑定 SUCCESS 与 actual state；新增 Phase 1b 保持位扫频实验 |
 | v2.3 | 2026-08-28 | 机械臂不动根因修复（feedback stale 100→2000ms）；JTC tolerance 放宽（trajectory 0.15/goal_time 10s）；真机 20mm SUCCEEDED + 位移精确（-20mm） |
 | v2.4 | 2026-08-28 | Phase 2 参数化：servoj_cmd_t 透传（launch/xacro），0.008/0.004 A/B 切换；Phase 1 验收完成，进入 250Hz 性能对比 |
+| v2.5 | 2026-08-28 | **定稿**：Phase 2 决定不跑，125Hz（cmdT=0.008）定为最终配置；Phase 1 全链路验证通过（20mm SUCCEEDED + 精确 -20mm + 无超限/14） |
