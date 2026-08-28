@@ -24,8 +24,11 @@ def generate_launch_description():
                                        description="机械臂控制器 IP（真机单臂 58.3；双臂 left=58.2/right=58.3）")
     declare_prefix = DeclareLaunchArgument("prefix", default_value="",
                                            description="joint 名前缀（双臂 left_/right_；单臂留空）")
+    declare_servoj_cmd_t = DeclareLaunchArgument("servoj_cmd_t", default_value="0.008",
+                                                 description="[Phase 2] ServoJ cmdT：0.008=125Hz（Phase1）/ 0.004=250Hz（Phase2 对比）")
     ip = LaunchConfiguration("ip")
     prefix = LaunchConfiguration("prefix")
+    servoj_cmd_t = LaunchConfiguration("servoj_cmd_t")
 
     # ============ MoveIt 配置（真机 URDF + 保守 joint_limits） ============
     # 真机 URDF: fairino_hardware 插件 + ip/prefix 参数（s622_real_arm.urdf.xacro）
@@ -33,7 +36,7 @@ def generate_launch_description():
     moveit_config = MoveItConfigsBuilder("s622_moveit_descriptions", package_name="s622_moveit_config") \
         .robot_description(
             os.path.join(robot_moveit_pkg, "config", "s622_real_arm.urdf.xacro"),
-            mappings={"ip": ip, "prefix": prefix}) \
+            mappings={"ip": ip, "prefix": prefix, "servoj_cmd_t": servoj_cmd_t}) \
         .robot_description_semantic("config/s622_moveit_descriptions.srdf") \
         .robot_description_kinematics(robot_moveit_pkg + "/config/kinematics.yaml") \
         .joint_limits("config/real_joint_limits.yaml") \
@@ -172,7 +175,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        declare_ip, declare_prefix,
+        declare_ip, declare_prefix, declare_servoj_cmd_t,
         robot_state_pub,
         controller_manager_node,
         controller_spawner,

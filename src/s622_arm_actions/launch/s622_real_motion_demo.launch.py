@@ -44,6 +44,8 @@ def generate_launch_description():
                                        description="机械臂控制器 IP")
     declare_prefix = DeclareLaunchArgument("prefix", default_value="",
                                            description="joint 名前缀（双臂用）")
+    declare_servoj_cmd_t = DeclareLaunchArgument("servoj_cmd_t", default_value="0.008",
+                                                 description="[Phase 2] ServoJ cmdT：0.008=125Hz / 0.004=250Hz")
     declare_start_demo = DeclareLaunchArgument(
         "start_demo", default_value="false",
         description="true=节点 ready 后自动跑；false=等 ~/start 服务（推荐）")
@@ -77,6 +79,7 @@ def generate_launch_description():
         launch_arguments={
             "ip": LaunchConfiguration("ip"),
             "prefix": LaunchConfiguration("prefix"),
+            "servoj_cmd_t": LaunchConfiguration("servoj_cmd_t"),
         }.items(),
     )
 
@@ -105,7 +108,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        declare_ip, declare_prefix,
+        declare_ip, declare_prefix, declare_servoj_cmd_t,
         declare_start_demo, declare_execute,
         declare_move_distance, declare_return, declare_max_execute, declare_demo_speed,
         real_stack,

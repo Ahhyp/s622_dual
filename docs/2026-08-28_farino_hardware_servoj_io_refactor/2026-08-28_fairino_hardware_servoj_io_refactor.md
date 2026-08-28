@@ -1,6 +1,6 @@
 # 2026-08-28 fairino_hardware ServoJ I/O 分层重构设计文档（v2.2）
 
-> 状态：**v2.2（2026-08-28 首测后修订）——Phase 1 首测完成，进入"保持位扫频"实验 + 安全可用性补丁**
+> 状态：**v2.4（2026-08-28）——Phase 1 完成（20mm SUCCEEDED + 位移精确），进入 Phase 2（250Hz 性能对比）**
 > 关联：docs/2026-08-25_ServoJ动态跟踪与同步性能测试/、真机 ServoJ 14 排查（8/28）
 > 参照：robotarm 最新源码（`/home/yep/fairino_robotarm`，jasonlee0617，2026-08-28 main 分支）
 
@@ -291,6 +291,17 @@ ServoJ 返回，发现 duration > 20ms（或 dt_send 异常）:
 
 ### Phase 2：性能（cmdT=0.004 / 250Hz）
 
+**定义**（原 §9）：Phase 1（125Hz）稳定后，切换到 cmdT=0.004（250Hz），对比：
+
+- 伺服跟踪精度（20mm demo 是否仍 SUCCEEDED、位移是否精确）
+- ServoJ 调用 P50/P95/P99/max（250Hz 下调用耗时是否还有余量：cmdT=4ms vs P95≈3.3ms）
+- stall 频率/行为（250Hz 下每 100 次 = 0.4s 一次，是否更频繁打断）
+- 走走停停的"停顿感"是否更明显（stall 间隔缩短）
+
+**实现**：`servoj_cmd_t` 参数化（s622_real_arm.launch.py / demo launch / urdf.xacro 均已支持），
+真机对比命令：`ros2 launch s622_arm_actions s622_real_motion_demo.launch.py servoj_cmd_t:=0.004 start_demo:=true execute_motion:=true move_distance:=0.02 max_execute_distance:=0.02`
+（默认 0.008=125Hz 不变，A/B 可随时切回）
+
 #### v2.3 修复记录（2026-08-28，机械臂不动的根因）
 
 **现象**：分层后所有运动场景机械臂不动（保持位正常），move_group TIMED_OUT。
@@ -306,14 +317,12 @@ ServoJ 返回，发现 duration > 20ms（或 dt_send 异常）:
 stall 的 feedback 冻结是"可预期现象"；真正的 GetActual 故障由 io_loop 内连续失败 fault 保护。
 诊断日志：io_loop 每 100 周期打印 write 计数 + latest/candidate/last_sent 的 j1/j2/j3。
 
-**验证（22:40 真机）**：write 持续增长、latest j3 推进、机械臂动、
+**验证（22:40 真机，125Hz）**：write 持续增长、latest j3 推进、机械臂动、
 `Goal reached, success!` + move_group **SUCCEEDED**、demo 完成 ✓
 全程无超限/无 14。**核心安全 + 基本功能验收线全部达成**。
 
-**遗留观察**：上位机 TCP 显示 Z 254→334（+80mm），与 MoveIt 预期 -20mm 不符
-（方向反、幅度 4 倍）——疑似 base_link 坐标系/变换差异，待确认实际位移。
-
-- 稳定后切换，对比伺服跟踪与 P50/P95/P99/max
+**位移精度确认**：上位机 TCP Z **354→334 = -20mm**，与 MoveIt 预期完全一致
+（X/Y 不动、方向正确）——运动学/变换链路正确，无坐标系偏差。
 
 ---
 
@@ -394,3 +403,5 @@ stall 的 feedback 冻结是"可预期现象"；真正的 GetActual 故障由 io
 | v2 | 2026-08-28 | 用户评审修订：v_actual 改为 send-interval 健康指标；deactivate 清理顺序修正；V385 条件启用队列 API；验收拆分核心安全/基本功能/性能；"已测事实 vs 假设"章节 |
 | v2.1 | 2026-08-28 | 用户决定取消 Phase 0（满队列假设不验证）；文档移入 docs/2026-08-28_farino_hardware_servoj_io_refactor/；核实 GetMotionQueueLength 有 .so 实现 |
 | v2.2 | 2026-08-28 | Phase 1 首测后修订：保持位也 stall（F10）；clamp rate limiter 替代 guard；stall>20ms 不 fault 只计数；rc!=0/feedback stale 仍 HARD FAULT；析构 join 兜底；JTC constraints 绑定 SUCCESS 与 actual state；新增 Phase 1b 保持位扫频实验 |
+| v2.3 | 2026-08-28 | 机械臂不动根因修复（feedback stale 100→2000ms）；JTC tolerance 放宽（trajectory 0.15/goal_time 10s）；真机 20mm SUCCEEDED + 位移精确（-20mm） |
+| v2.4 | 2026-08-28 | Phase 2 参数化：servoj_cmd_t 透传（launch/xacro），0.008/0.004 A/B 切换；Phase 1 验收完成，进入 250Hz 性能对比 |
