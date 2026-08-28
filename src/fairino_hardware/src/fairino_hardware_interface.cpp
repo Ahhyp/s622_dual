@@ -474,7 +474,7 @@ namespace fairino_hardware
             {
                 std::lock_guard<std::mutex> lock(_io_mutex);
                 std::copy(std::begin(_jnt_position_command), std::end(_jnt_position_command), _latest_command.begin());
-                ++_write_calls; // [2026-08-28 诊断] 统计 write 拷贝次数
+                // ++_write_calls; // [2026-08-28 诊断，已注释] 统计 write 拷贝次数（配合 [diag] 日志，调试完成后停用）
                 // finger 命令由 io_loop 在锁内读取（SetDO 切换判定），这里不需要拷贝——框架直接写 _finger_position_command
             }
             // 注：SetDO（夹爪）切换已移到 io_loop（仅状态变化时调用一次，单独计时），
@@ -592,19 +592,17 @@ namespace fairino_hardware
             }
 
             // ── 4. ServoJ 下发（计时，watchdog）──
-            // [2026-08-28 v2.3 诊断] 每 100 周期打印目标链路，定位"机械臂不动"：
-            //   latest = JTC 写入的最新目标（j1 在垂直下降中不动，重点看 j2/j3）
-            //   candidate = clamp 后实际发送；last_sent = 上次成功发送
-            //   write_calls = write() 拷贝次数（区分 write 没被调 / JTC 没写 / SDK 不动）
-            if ((_servo_cycles.load() % 100) == 0)
-            {
-                RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"),
-                            "[diag] cycle=%lu write=%lu | latest j1/j2/j3=%.4f/%.4f/%.4f | cand=%.4f/%.4f/%.4f | sent=%.4f/%.4f/%.4f",
-                            (unsigned long)_servo_cycles.load(), (unsigned long)_write_calls.load(),
-                            command[0], command[1], command[2],
-                            candidate[0], candidate[1], candidate[2],
-                            _last_sent[0], _last_sent[1], _last_sent[2]);
-            }
+            // [2026-08-28 v2.3 诊断——已注释，调试完成（真机 20mm SUCCEEDED）后停用；
+            //  需要排查"机械臂不动/跟踪断链"时恢复：打印 write 计数 + latest/candidate/last_sent 的 j1/j2/j3]
+            // if ((_servo_cycles.load() % 100) == 0)
+            // {
+            //     RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"),
+            //                 "[diag] cycle=%lu write=%lu | latest j1/j2/j3=%.4f/%.4f/%.4f | cand=%.4f/%.4f/%.4f | sent=%.4f/%.4f/%.4f",
+            //                 (unsigned long)_servo_cycles.load(), (unsigned long)_write_calls.load(),
+            //                 command[0], command[1], command[2],
+            //                 candidate[0], candidate[1], candidate[2],
+            //                 _last_sent[0], _last_sent[1], _last_sent[2]);
+            // }
             JointPos sdk_cmd{};
             for (int i = 0; i < 6; ++i)
             {

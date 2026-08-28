@@ -120,7 +120,7 @@ private:
   std::atomic<uint64_t> _servo_cycles{0};          // ServoJ 成功次数（诊断）
   std::atomic<uint64_t> _servo_failures{0};        // ServoJ rc!=0 次数（诊断）
   std::atomic<uint64_t> _stall_count{0};           // stall 次数（诊断）
-  std::atomic<uint64_t> _write_calls{0};           // [2026-08-28 诊断] write() 调用次数（区分"write 没被调" vs "JTC 没写 command"）
+  std::atomic<uint64_t> _write_calls{0};           // [2026-08-28 诊断，已停用] write() 调用次数（配合 [diag] 日志；需恢复排查时启用 ++_write_calls）
 
   // [2026-08-28 分层] 内部方法
   void io_loop();                      // I/O 线程主循环（周期=cmdT，start-to-start）
