@@ -58,11 +58,18 @@ def generate_launch_description():
             "/camera/image@sensor_msgs/msg/Image@gz.msgs.Image",
             "/camera/depth_image@sensor_msgs/msg/Image@gz.msgs.Image",
             "/camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo",
+            # [M2 标定] 右腕相机（eye-in-hand）
+            "/wrist_camera/image@sensor_msgs/msg/Image@gz.msgs.Image",
+            "/wrist_camera/depth_image@sensor_msgs/msg/Image@gz.msgs.Image",
+            "/wrist_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo",
         ],
         remappings=[
             ("/camera/image", "/camera/color/image_raw"),
             ("/camera/depth_image", "/camera/depth/image_raw"),
             ("/camera/camera_info", "/camera/color/camera_info"),
+            ("/wrist_camera/image", "/wrist_camera/color/image_raw"),
+            ("/wrist_camera/depth_image", "/wrist_camera/depth/image_raw"),
+            ("/wrist_camera/camera_info", "/wrist_camera/color/camera_info"),
         ],
         parameters=[{"use_sim_time": True}],
         output="screen",
