@@ -9,14 +9,28 @@
           与仿真 gz 块的 velocity 命令接口完全不同，互不干扰）
         - 状态接口：position（真机插件只导出 position state，read() 从 SDK 读真实角）
         ================================================================== -->
-    <xacro:macro name="s622_real_ros2_control" params="name prefix ip servoj_cmd_t:=0.0016">
+    <xacro:macro name="s622_real_ros2_control" params="name prefix ip servoj_cmd_t:=0.008">
         <ros2_control name="${name}" type="system">
             <hardware>
                 <plugin>fairino_hardware/FairinoHardwareInterface</plugin>
                 <param name="ip">${ip}</param>
                 <param name="prefix">${prefix}</param>
-                <!-- 2026-08-28：cmdT 参数化（默认 0.0016 = robotarm/8/27 验证值） -->
+                <!-- 2026-08-28 分层重构（设计文档 v2.1 §8）：
+                     servoj_cmd_t           默认 0.008（125Hz，Phase1）；Phase2 测 0.004（250Hz）
+                     servo_v_limit_0..5     per-joint 等效速度上限（rad/s），建议 0.8×真机限速（J3 重点保护）
+                     servo_stall_warn_ms    10ms 慢调用警告
+                     servo_stall_fault_ms   20ms stall → fault
+                     feedback_stale_fault_ms 100ms 反馈过期 → fault -->
                 <param name="servoj_cmd_t">${servoj_cmd_t}</param>
+                <param name="servo_v_limit_0">2.5</param>
+                <param name="servo_v_limit_1">2.5</param>
+                <param name="servo_v_limit_2">2.5</param>
+                <param name="servo_v_limit_3">2.5</param>
+                <param name="servo_v_limit_4">2.5</param>
+                <param name="servo_v_limit_5">2.5</param>
+                <param name="servo_stall_warn_ms">10.0</param>
+                <param name="servo_stall_fault_ms">20.0</param>
+                <param name="feedback_stale_fault_ms">100.0</param>
             </hardware>
 
             <joint name="${prefix}j1">

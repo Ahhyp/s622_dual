@@ -26,9 +26,20 @@ namespace fairino_hardware
             };
             _controller_ip = hw_param("ip", CONTROLLER_IP_ADDRESS);
             _prefix = hw_param("prefix", "");
-            // [实验 2026-08-28] cmdT 参数化（默认 0.0016 = 8/27 值）。上位机按 cmdT 检查
-            // ServoJ 指令速度；1s 阻塞后位移虚高触发"轴3 超限"，增大 cmdT 可绕过（需实测）。
-            _servoj_cmd_t = std::stod(hw_param("servoj_cmd_t", "0.0016"));
+            // [2026-08-28 分层] 参数化（设计文档 v2.1 §8）：
+            //   servoj_cmd_t           默认 0.008（125Hz，Phase1）；Phase2 测 0.004（250Hz）
+            //   servo_v_limit_0..5     per-joint 等效速度上限（rad/s），建议 0.8×真机限速（J3 重点保护）
+            //   servo_stall_warn_ms    10ms 慢调用警告
+            //   servo_stall_fault_ms   20ms stall → fault
+            //   feedback_stale_fault_ms 100ms 反馈过期 → fault
+            _servoj_cmd_t = std::stod(hw_param("servoj_cmd_t", "0.008"));
+            for (int i = 0; i < 6; ++i)
+            {
+                _v_limit[i] = std::stod(hw_param("servo_v_limit_" + std::to_string(i), "2.5"));
+            }
+            _servo_stall_warn_ms = std::stod(hw_param("servo_stall_warn_ms", "10.0"));
+            _servo_stall_fault_ms = std::stod(hw_param("servo_stall_fault_ms", "20.0"));
+            _feedback_stale_fault_ms = std::stod(hw_param("feedback_stale_fault_ms", "100.0"));
         }
 
         // =========================
@@ -300,6 +311,10 @@ namespace fairino_hardware
             for (int j = 0; j < 6; j++)
             {
                 _jnt_position_command[j] = jntpos.jPos[j] / 180.0 * M_PI; // 把“度”转“弧度”，并把command 初始化为当前实际角度
+                // [2026-08-28 分层] 同步共享缓存：最新目标 = 上次发送 = 反馈状态 = 当前实际
+                _latest_command[j] = _jnt_position_command[j];
+                _last_sent[j] = _jnt_position_command[j];
+                _latest_state[j] = _jnt_position_command[j];
             }
 
             // =========================
@@ -315,12 +330,39 @@ namespace fairino_hardware
             RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "初始指令位置: %f,%f,%f,%f,%f,%f", _jnt_position_command[0],
                         _jnt_position_command[1], _jnt_position_command[2], _jnt_position_command[3], _jnt_position_command[4], _jnt_position_command[5]);
 
-            // 2026-08-27 真机排查记录：曾临时加过 ServoMoveStart/RobotEnable/Mode(0)
-            // 诊断 ServoJ ERR_EXECUTION_FAILED(14)，已全部移除：
-            //   - Mode(0) 会在 launch 启动时把机械臂切自动模式（用户确认不期望，启动不该改状态）
-            //   - RobotEnable/Mode 均 rc=0（使能/模式正常，非 14 原因）
-            //   - ServoMoveStart 对 14 无效（success 后仍速度超限），robotarm 裸 ServoJ 可动
-            // 最终对齐 robotarm 行为：裸 ServoJ + cmdT 0.0016，仅保留 ip/prefix 参数化。
+            // =========================
+            // [2026-08-28 分层] 会话级 ServoMoveStart（设计文档 v2.1 §5）
+            // 依据：FAIRINO frcobot_ros2 Issue #32（open，用户实测）——on_activate 不先
+            // ServoMoveStart 就 write() 调 ServoJ 会严重阻塞；补上后恢复。
+            // 注意：裸测 mode 3（会话级 Start→ServoJ×3000→End）证明它**只降低 stall 发生率**、
+            // 不消灭 1s stall（8/3000 次 >500ms，max 1034ms）——所以本插件另有 stall 检测/
+            // 速度保护（io_loop），不依赖 ServoMoveStart 根治阻塞。
+            // 失败 → 不允许 active（保持旧行为一致性：激活失败即 ERROR）。
+            // =========================
+            if (_ptr_robot->ServoMoveStart() != 0)
+            {
+                RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"),
+                             "ServoMoveStart 失败，不允许激活（会话级 ServoJ 前置条件未满足）");
+                _ptr_robot->CloseRPC();
+                _ptr_robot.release();
+                return hardware_interface::CallbackReturn::ERROR;
+            }
+
+            // [2026-08-28 分层] 初始化 fault/运行标志，启动独立 I/O 线程
+            _faulted = false;
+            _shutdown_requested = false;
+            _servo_cycles = 0;
+            _servo_failures = 0;
+            _stall_count = 0;
+            _last_feedback_ns = steady_now_ns();
+            _last_send_ns = steady_now_ns();
+            _io_running = true;
+            _io_thread = std::thread(&FairinoHardwareInterface::io_loop, this);
+            RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"),
+                        "ServoJ I/O started: cmdT=%.3f ms (%d Hz), stall_fault=%.1f ms, v_limit=%f/%f/%f/%f/%f/%f",
+                        _servoj_cmd_t * 1000.0, (int)(1.0 / _servoj_cmd_t),
+                        _servo_stall_fault_ms,
+                        _v_limit[0], _v_limit[1], _v_limit[2], _v_limit[3], _v_limit[4], _v_limit[5]);
 
             RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "机械臂%s硬件启动成功!", tag.c_str()); // 激活成功
             return hardware_interface::CallbackReturn::SUCCESS;
@@ -336,64 +378,78 @@ namespace fairino_hardware
     hardware_interface::CallbackReturn FairinoHardwareInterface::on_deactivate(const rclcpp_lifecycle::State &previous_state)
     {
         RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "Stopping ...please wait..."); // 提示停止
-        // 2026-08-27：曾临时加 ServoMoveEnd 配对，已移除（对齐 robotarm，避免关闭时状态副作用）
-        _ptr_robot->StopMotion();                                                                  // 停止机器人
-        _ptr_robot->CloseRPC();                                                                    // 销毁实例，连接断开
+        // [2026-08-28 分层] 清理顺序（设计文档 v2.1 §5）：
+        //   1) 置 shutdown_requested（不动 _io_running）
+        //   2) io_loop 在下个周期看到请求 → 自己 StopMotion + ServoMoveEnd + 退出
+        //   3) join 等 io_loop 彻底退出（无论正常关闭还是 fault 退出，joinable 就必须 join，
+        //      否则 std::thread 析构 terminate；fault 已退出时 shutdown_requested 无害）
+        //   4) CloseRPC（保证在 I/O 线程退出后；CloseRPC 自身 stack-smashing 为 KNOWN SDK ISSUE，见设计文档 §11）
+        // 运行期所有 FRRobot 运动类调用集中在 io_loop 单线程，无并发。
+        _shutdown_requested = true;
+        if (_io_thread.joinable())
+        {
+            _io_thread.join();
+        }
+        _ptr_robot->CloseRPC(); // 销毁实例，连接断开（KNOWN SDK ISSUE：stack corruption 风险，单独跟踪）
         _ptr_robot.release();
         RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "System successfully stopped!");
         return hardware_interface::CallbackReturn::SUCCESS; // 停止完成
     }
 
     // 从硬件读取状态，写入 _jnt_position_state[]
+    // [2026-08-28 分层] 不再直接调 SDK——反馈由 io_loop 线程读取并写入 _latest_state，这里只锁内拷贝缓存
     hardware_interface::return_type FairinoHardwareInterface::read(const rclcpp::Time &time, const rclcpp::Duration &period) // 控制循环中被 ros2_control 周期调用（与 controller 更新频率一致）
-    {                                                                                                                        // 从RTDE反馈数据中获取所需的位置，速度和扭矩信息
-        JointPos state_data;                                                                                                 // 存放读取的关节角（度）
-        error_t returncode = _ptr_robot->GetActualJointPosDegree(1, &state_data);                                            // 从 SDK 读取当前关节角（度）
-        if (returncode == 0)                                                                                                 // 成功读取
+    {
+        if (_faulted || !_io_running)
         {
-            for (int i = 0; i < 6; i++)
-            {
-                _jnt_position_state[i] = state_data.jPos[i] / 180.0 * M_PI; // 注意单位转换，moveit统一用弧度,度→弧度，写到状态缓冲区。MoveIt/controller 就靠它感知当前姿态
-                //_jnt_torque_state[i] = state_data.jt_cur_tor[i];//注意单位转换
-            }
+            return hardware_interface::return_type::ERROR; // fault/未运行：告诉 ros2_control 硬件已失败
         }
-        else
+        if (steady_now_ns() - _last_feedback_ns.load() >
+            static_cast<int64_t>(_feedback_stale_fault_ms * 1e6))
         {
-            return hardware_interface::return_type::ERROR;
+            return hardware_interface::return_type::ERROR; // 反馈过期（>100ms）→ 视为硬件失败
         }
-        //RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "System successfully read: %f,%f,%f,%f,%f,%f",_jnt_position_state[0],\
-    _jnt_position_state[1],_jnt_position_state[2],_jnt_position_state[3],_jnt_position_state[4],_jnt_position_state[5]);
+        {
+            std::lock_guard<std::mutex> lock(_io_mutex);
+            std::copy(_latest_state.begin(), _latest_state.end(), _jnt_position_state);
+            std::copy(_latest_velocity.begin(), _latest_velocity.end(), _jnt_velocity_state);
 
-        // =========================
-        // [MOD] finger 状态回填（用“最近一次状态”虚拟反馈）
-        // MoveIt/控制器会看这个 state 判断是否到位
-        // =========================
-        if (_has_finger1 && _has_finger2)
-        {
-            if (_gripper_state == GripperState::OPEN)
+            // =========================
+            // [MOD] finger 状态回填（用“最近一次状态”虚拟反馈）
+            // _gripper_state 由 io_loop 线程在锁内更新（SetDO 切换）
+            // MoveIt/控制器会看这个 state 判断是否到位
+            // =========================
+            if (_has_finger1 && _has_finger2)
             {
-                _finger_position_state[0] = _f1_open;
-                _finger_position_state[1] = _f2_open;
-            }
-            else if (_gripper_state == GripperState::CLOSE)
-            {
-                _finger_position_state[0] = _f1_close;
-                _finger_position_state[1] = _f2_close;
-            }
-            else
-            {
-                // UNKNOWN：先回填命令值，避免突变
-                _finger_position_state[0] = _finger_position_command[0];
-                _finger_position_state[1] = _finger_position_command[1];
+                if (_gripper_state == GripperState::OPEN)
+                {
+                    _finger_position_state[0] = _f1_open;
+                    _finger_position_state[1] = _f2_open;
+                }
+                else if (_gripper_state == GripperState::CLOSE)
+                {
+                    _finger_position_state[0] = _f1_close;
+                    _finger_position_state[1] = _f2_close;
+                }
+                else
+                {
+                    // UNKNOWN：先回填命令值，避免突变
+                    _finger_position_state[0] = _finger_position_command[0];
+                    _finger_position_state[1] = _finger_position_command[1];
+                }
             }
         }
-
         return hardware_interface::return_type::OK; // 向 ros2_control 表示读取成功
     }
 
     // 把 _jnt_position_command[] 下发给硬件（ServoJ）
+    // [2026-08-28 分层] 不再直接调 SDK——只把最新目标写入 _latest_command，由 io_loop 线程按 cmdT 周期发送
     hardware_interface::return_type FairinoHardwareInterface::write(const rclcpp::Time &time, const rclcpp::Duration &period) // 控制循环中被周期调用,controller 每周期更新 command 缓冲区，这里把它发送给机械臂
     {
+        if (_faulted || !_io_running)
+        {
+            return hardware_interface::return_type::ERROR; // fault/未运行：告诉 ros2_control 硬件已失败，不继续接受指令
+        }
         if (_control_mode == 0)
         { // 位置控制模式
             if (std::any_of(&_jnt_position_command[0], &_jnt_position_command[5],
@@ -402,67 +458,13 @@ namespace fairino_hardware
             {
                 return hardware_interface::return_type::ERROR; // 如果发现 NaN/inf，返回错误，不下发指令
             }
-            JointPos cmd;                 // 构造要发送到 SDK 的关节角结构体（单位度）
-            ExaxisPos extcmd{0, 0, 0, 0}; // 外部轴命令（4 轴）初始化为 0
-            for (auto j = 0; j < 6; j++)
             {
-                cmd.jPos[j] = _jnt_position_command[j] / M_PI * 180; // 注意单位转换,弧度→度（与 read 相反），因为 SDK 接口要度
+                std::lock_guard<std::mutex> lock(_io_mutex);
+                std::copy(std::begin(_jnt_position_command), std::end(_jnt_position_command), _latest_command.begin());
+                // finger 命令由 io_loop 在锁内读取（SetDO 切换判定），这里不需要拷贝——框架直接写 _finger_position_command
             }
-            //RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "ServoJ下发位置:%f,%f,%f,%f,%f,%f",\
-            cmd.jPos[0],cmd.jPos[1],cmd.jPos[2],cmd.jPos[3],cmd.jPos[4],cmd.jPos[5]);
-            int returncode = _ptr_robot->ServoJ(&cmd, &extcmd, 0, 0, _servoj_cmd_t, 0, 0); // 把关节目标以 ServoJ 方式发送给控制器
-            // 2026-08-27 真机修复: cmdT 0.004 -> 0.0016（对齐 robotarm 58.2 验证值）。
-            // SDK 注释要求 cmdT 建议范围 [0.001~0.0016]；0.004 超出 2.5 倍，
-            // 58.3 首测 ServoJ 报 ERR_EXECUTION_FAILED(14)，怀疑周期不匹配被控制器拒绝。
-            if (returncode != 0)
-            {
-                RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "ServoJ指令下发错误,错误码:%d", returncode);
-            }
-            // =========================
-            // [MOD] 夹爪：把 finger position command -> SetDO
-            // 核心：position是“语义接口”，真实硬件是DO两态，所以在这里做适配
-            // =========================
-            if (_has_finger1 && _has_finger2)
-            {
-                const double f1 = _finger_position_command[0];
-                const double f2 = _finger_position_command[1];
-
-                // opening：用绝对值估计“张开量”
-                const double opening = 0.5 * (std::fabs(f1) + std::fabs(f2));
-
-                // 带滞回判断，避免轨迹插值抖动导致DO频繁翻转
-                auto target = _gripper_state;
-
-                if (_gripper_state == GripperState::CLOSE || _gripper_state == GripperState::UNKNOWN)
-                {
-                    if (opening > GRIPPER_OPEN_THRESHOLD)
-                        target = GripperState::OPEN;
-                }
-                else if (_gripper_state == GripperState::OPEN)
-                {
-                    if (opening < GRIPPER_CLOSE_THRESHOLD)
-                        target = GripperState::CLOSE;
-                }
-
-                if (target != _gripper_state)
-                {
-                    const uint8_t level = (target == GripperState::OPEN) ? GRIPPER_OPEN_LEVEL : GRIPPER_CLOSE_LEVEL;
-
-                    // 这里就进入你要的链路：hardware_interface -> SetDO -> 控制器IO -> 电磁阀 -> 气缸动作
-                    const int io_rc = _ptr_robot->SetDO(GRIPPER_DO_SINGLE_ID, level, 0, 1);
-
-                    if (io_rc != 0)
-                    {
-                        RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"),
-                                    "SetDO failed. do_id=%d level=%d rc=%d",
-                                    GRIPPER_DO_SINGLE_ID, (int)level, io_rc);
-                    }
-                    else
-                    {
-                        _gripper_state = target;
-                    }
-                }
-            }
+            // 注：SetDO（夹爪）切换已移到 io_loop（仅状态变化时调用一次，单独计时），
+            //     避免低频 IO 调用打乱 ServoJ 关键周期（设计文档 v2.1 §7/§8）。
         }
         else if (_control_mode == 1)
         { // 扭矩控制模式,预留扭矩模式
@@ -481,6 +483,219 @@ namespace fairino_hardware
         }
 
         return hardware_interface::return_type::OK;
+    }
+
+    // =========================
+    // [2026-08-28 分层] 独立 ServoJ I/O 线程主循环（设计文档 v2.1 §3/§6/§7）
+    // 唯一 FRRobot 运动类调用者：ServoJ / GetActualJointPosDegree / SetDO / StopMotion / ServoMoveEnd
+    // 周期 = cmdT（start-to-start，sleep_until 而非 "调用耗时 + sleep"）
+    // =========================
+    void FairinoHardwareInterface::io_loop()
+    {
+        const auto period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(_servoj_cmd_t));
+        auto next_tick = std::chrono::steady_clock::now();
+        bool stalled = false; // 上次 ServoJ 慢调用 → 本次不发最新目标（防跳变）
+
+        while (_io_running)
+        {
+            next_tick += period;
+
+            // ── 1. 取最新目标（锁内）+ finger 滞回判定 ──
+            std::array<double, 6> command;
+            GripperState desired_gripper = _gripper_state;
+            {
+                std::lock_guard<std::mutex> lock(_io_mutex);
+                command = _latest_command;
+                if (_has_finger1 && _has_finger2)
+                {
+                    const double opening = 0.5 * (std::fabs(_finger_position_command[0]) +
+                                                  std::fabs(_finger_position_command[1]));
+                    if ((_gripper_state == GripperState::CLOSE || _gripper_state == GripperState::UNKNOWN) &&
+                        opening > GRIPPER_OPEN_THRESHOLD)
+                    {
+                        desired_gripper = GripperState::OPEN;
+                    }
+                    else if (_gripper_state == GripperState::OPEN && opening < GRIPPER_CLOSE_THRESHOLD)
+                    {
+                        desired_gripper = GripperState::CLOSE;
+                    }
+                }
+            }
+
+            // ── 2. command-step velocity guard（唯一"是否允许发送"判据）──
+            //    v_cmd,i = |q_candidate - q_last_sent| / cmdT ≤ v_limit[i]
+            //    stall 后 / 超速 → 本次候选 = 上次成功位置（Δq=0，不发最新，防轴超限）
+            std::array<double, 6> candidate;
+            bool send_latest = !stalled;
+            if (send_latest)
+            {
+                for (int i = 0; i < 6; ++i)
+                {
+                    if (std::fabs(command[i] - _last_sent[i]) / _servoj_cmd_t > _v_limit[i])
+                    {
+                        send_latest = false;
+                        RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"),
+                                    "[velocity guard] axis %d: |dq|/cmdT=%.3f rad/s > v_limit=%.3f, hold last_sent",
+                                    i, std::fabs(command[i] - _last_sent[i]) / _servoj_cmd_t, _v_limit[i]);
+                        break;
+                    }
+                }
+            }
+            candidate = send_latest ? command : _last_sent;
+
+            // ── 3. send-interval health check（stream-health 指标，非超速判据）──
+            const int64_t now_ns = steady_now_ns();
+            const double dt_send_ms = (now_ns - _last_send_ns.load()) / 1e6;
+            if (dt_send_ms > _servo_stall_fault_ms * 2.0 && _last_send_ns.load() != 0)
+            {
+                RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"),
+                             "send interval %.1f ms > stall threshold, stream broken", dt_send_ms);
+                latch_fault("send-interval stall");
+                break;
+            }
+            else if (dt_send_ms > _servo_stall_warn_ms && _last_send_ns.load() != 0)
+            {
+                RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"),
+                            "send interval drift: %.1f ms (cmdT=%.3f ms)", dt_send_ms, _servoj_cmd_t * 1000.0);
+            }
+
+            // ── 4. ServoJ 下发（计时，watchdog）──
+            JointPos sdk_cmd{};
+            for (int i = 0; i < 6; ++i)
+            {
+                sdk_cmd.jPos[i] = candidate[i] * 180.0 / M_PI; // 弧度 → 度
+            }
+            ExaxisPos extcmd{0, 0, 0, 0};
+            const int64_t t0 = steady_now_ns();
+            const int rc = _ptr_robot->ServoJ(&sdk_cmd, &extcmd, 0, 0, _servoj_cmd_t, 0, 0);
+            const double call_ms = (steady_now_ns() - t0) / 1e6;
+
+            if (rc != 0)
+            { // 第一次 rc!=0 即 fault，不再持续下发（不出现 14,14,14…）
+                RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"),
+                             "ServoJ failed: rc=%d, cmdT=%.3f ms, call=%.1f ms", rc, _servoj_cmd_t * 1000.0, call_ms);
+                ++_servo_failures;
+                latch_fault("ServoJ failed");
+                break;
+            }
+            ++_servo_cycles;
+            _last_send_ns = steady_now_ns();
+            if (send_latest)
+            {
+                _last_sent = candidate; // 只在实际发送最新目标时更新基准
+            }
+
+            // ── 5. stall watchdog（同步阻塞无法打断，只能检测已发生 stall 并阻止下一条危险指令）──
+            if (call_ms > _servo_stall_fault_ms)
+            {
+                RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"),
+                             "ServoJ stall: call=%.1f ms > fault=%.1f ms, stream broken", call_ms, _servo_stall_fault_ms);
+                ++_stall_count;
+                latch_fault("ServoJ stall");
+                break;
+            }
+            if (call_ms > _servo_stall_warn_ms)
+            {
+                RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"), "ServoJ slow call: %.1f ms", call_ms);
+            }
+            stalled = (call_ms > _servo_stall_warn_ms); // 慢调用后下一条不发最新，防止大跳变
+
+            // ── 6. 反馈读取（io_loop 内，写 _latest_state）──
+            JointPos feedback{};
+            if (_ptr_robot->GetActualJointPosDegree(1, &feedback) == 0)
+            {
+                bool finite = true;
+                std::array<double, 6> state;
+                for (int i = 0; i < 6; ++i)
+                {
+                    state[i] = feedback.jPos[i] * M_PI / 180.0;
+                    finite = finite && std::isfinite(state[i]);
+                }
+                if (!finite)
+                {
+                    latch_fault("non-finite feedback");
+                    break;
+                }
+                {
+                    std::lock_guard<std::mutex> lock(_io_mutex);
+                    _latest_state = state;
+                    // finger SetDO：仅状态变化时调用一次（不进 ServoJ 关键路径），单独计时
+                    if (_has_finger1 && desired_gripper != _gripper_state)
+                    {
+                        const uint8_t level = (desired_gripper == GripperState::OPEN) ? GRIPPER_OPEN_LEVEL : GRIPPER_CLOSE_LEVEL;
+                        const int64_t tg0 = steady_now_ns();
+                        const int io_rc = _ptr_robot->SetDO(GRIPPER_DO_SINGLE_ID, level, 0, 1);
+                        const double io_ms = (steady_now_ns() - tg0) / 1e6;
+                        if (io_rc == 0)
+                        {
+                            _gripper_state = desired_gripper;
+                        }
+                        else
+                        {
+                            RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"),
+                                        "SetDO failed: rc=%d (%.1f ms)", io_rc, io_ms);
+                        }
+                        if (io_ms > 10.0)
+                        {
+                            RCLCPP_WARN(rclcpp::get_logger("FairinoHardwareInterface"), "SetDO slow: %.1f ms", io_ms);
+                        }
+                    }
+                }
+                _last_feedback_ns = steady_now_ns();
+            }
+            else if (steady_now_ns() - _last_feedback_ns.load() >
+                     static_cast<int64_t>(_feedback_stale_fault_ms * 1e6))
+            {
+                latch_fault("joint feedback stale");
+                break;
+            }
+
+            // ── 7. 周期调度 / 关闭检查 ──
+            const auto now2 = std::chrono::steady_clock::now();
+            if (now2 >= next_tick)
+            {
+                next_tick = now2; // 周期超时（overrun），重新锚定，避免连锁漂移
+            }
+            if (_shutdown_requested)
+            {
+                RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"),
+                            "io_loop: shutdown requested, StopMotion + ServoMoveEnd");
+                _ptr_robot->StopMotion();
+                _ptr_robot->ServoMoveEnd();
+                break;
+            }
+            std::this_thread::sleep_until(next_tick);
+        }
+
+        // ── 线程退出收尾：fault 时安全停止（SDK 调用仍在 io_loop 线程内）──
+        if (_faulted)
+        {
+            RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"),
+                         "io_loop exited with fault: %s — StopMotion", _fault_reason.c_str());
+            _ptr_robot->StopMotion();
+        }
+    }
+
+    // [2026-08-28 分层] fault latch：只置位原子标志 + reason，不直接调 SDK
+    // （SDK 收尾由 io_loop 线程自己执行，保证 FRRobot 单线程访问）
+    void FairinoHardwareInterface::latch_fault(const char *reason)
+    {
+        bool expected = false;
+        if (!_faulted.compare_exchange_strong(expected, true))
+        {
+            return; // 已 fault，忽略后续
+        }
+        _fault_reason = reason;
+        _io_running = false;
+        RCLCPP_ERROR(rclcpp::get_logger("FairinoHardwareInterface"), "Hardware fault latched: %s", reason);
+    }
+
+    int64_t FairinoHardwareInterface::steady_now_ns()
+    {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   std::chrono::steady_clock::now().time_since_epoch())
+            .count();
     }
 
 } // end namesapce

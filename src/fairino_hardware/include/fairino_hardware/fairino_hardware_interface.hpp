@@ -9,6 +9,11 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp" //HW_IF_POSITION / VELOCITY / EFFORT 等接口名常量
 #include "visibility_control.h" //通常用于导出/隐藏符号（Windows/Linux 下的 dll/so 可见性控制），给 pluginlib 用
 #include <vector> //使用 std::vector
+#include <array>  //[2026-08-28 分层] io_loop 与 read/write 之间的共享缓存
+#include <thread> //[2026-08-28 分层] 独立 ServoJ I/O 线程
+#include <mutex>  //[2026-08-28 分层] 共享缓存互斥锁
+#include <atomic> //[2026-08-28 分层] 跨线程状态标志
+#include <chrono> //[2026-08-28 分层] 周期调度 / stall watchdog 计时
 #include "libfairino/include/robot.h" //引入厂家 SDK 的头文件（FRRobot 类就在这里）
 
 
@@ -82,7 +87,35 @@ private:
   std::string _prefix; // [真机双臂] joint 名前缀（如 "left_" / "right_"），on_init() 从 <hardware><param name="prefix"> 读取；单臂为空（兼容）
   std::unique_ptr<FRRobot> _ptr_robot; //厂家 SDK 对象指针：on_activate() 创建，on_deactivate() 释放，read/write 里调用 SDK 方法
 
-  double _servoj_cmd_t{0.0016}; // [实验 2026-08-28] ServoJ cmdT（on_init 从 <param name="servoj_cmd_t"> 读取）
+  double _servoj_cmd_t{0.008}; // [2026-08-28 分层] ServoJ cmdT + io_loop 发送周期（on_init 从 <param name="servoj_cmd_t"> 读取；Phase1 默认 0.008=125Hz，Phase2 测 0.004=250Hz）
+
+  // [2026-08-28 分层] watchdog / 速度保护阈值（on_init 参数化，见设计文档 v2.1 §8）
+  double _servo_stall_warn_ms{10.0};     // ServoJ 慢调用警告阈值
+  double _servo_stall_fault_ms{20.0};    // ServoJ stall → stream_broken → fault
+  double _feedback_stale_fault_ms{100.0};// 反馈过期 → fault
+  std::array<double, 6> _v_limit{};      // per-joint 等效速度上限（rad/s，建议 0.8×真机限速）
+
+  // [2026-08-28 分层] I/O 线程与共享缓存
+  std::thread _io_thread;                          // 独立 ServoJ I/O 线程（唯一 FRRobot 运动类调用者）
+  std::mutex _io_mutex;                            // 保护 _latest_command/_latest_state/_gripper_state
+  std::atomic<bool> _io_running{false};            // io_loop 运行标志
+  std::atomic<bool> _faulted{false};               // latch fault（只置位，不自动恢复）
+  std::atomic<bool> _shutdown_requested{false};    // on_deactivate 请求正常关闭
+  std::string _fault_reason;                       // 诊断：最近一次 fault 原因（仅日志）
+  std::array<double, 6> _latest_command{};         // write() 写入、io_loop 读取的最新目标（弧度）
+  std::array<double, 6> _latest_state{};           // io_loop 写入、read() 读取的反馈状态（弧度）
+  std::array<double, 6> _latest_velocity{};        // io_loop 写入的反馈速度（弧度/s，预留）
+  std::array<double, 6> _last_sent{};              // 上次真正发送给机器人的位置（防跳变基准）
+  std::atomic<int64_t> _last_send_ns{0};           // 上次 ServoJ 发送时刻（send-interval 健康检查）
+  std::atomic<int64_t> _last_feedback_ns{0};       // 上次反馈成功时刻（stale 检查）
+  std::atomic<uint64_t> _servo_cycles{0};          // ServoJ 成功次数（诊断）
+  std::atomic<uint64_t> _servo_failures{0};        // ServoJ rc!=0 次数（诊断）
+  std::atomic<uint64_t> _stall_count{0};           // stall 次数（诊断）
+
+  // [2026-08-28 分层] 内部方法
+  void io_loop();                      // I/O 线程主循环（周期=cmdT，start-to-start）
+  void latch_fault(const char *reason); // 只置位 fault 原子标志 + reason；SDK 收尾由 io_loop 执行
+  static int64_t steady_now_ns();      // 单调时钟（ns）
 
   // 给finger回填用的“名义位置”（与URDF group_state一致）
   double _f1_open{0.0305};   // [MOD]

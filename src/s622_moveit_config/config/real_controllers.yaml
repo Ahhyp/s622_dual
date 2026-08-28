@@ -1,16 +1,16 @@
-# 真机控制器配置（2026-08-27 修订）
+# 真机控制器配置（2026-08-28 修订，第 5 版）
 # 与仿真 ros2_controllers.yaml（velocity 命令接口 + gains PID）不同：
 #   真机 fairino_hardware 插件 on_init 强制 position command interface，
 #   JTC 直接把参考位置点写给插件（ServoJ 下发），不需要 gains(PID) 段。
 #
-# 2026-08-27 修订（第 3 版）：对齐 robotarm **生效配置**。
-# robotarm ros2_controllers.yaml 实际生效 update_rate: 500（注释"实机100"只是建议，
-# 真机验证跑 demo.launch.py 加载的就是 500）。500Hz(2ms) 与插件 ServoJ cmdT=0.0016(1.6ms)
-# 接近匹配（速度虚高 1.25 倍）；100Hz(10ms) 虚高 6.25 倍 → 上位机报
-# "轴3 关节空间内指令速度超限"、ServoJ ERR_EXECUTION_FAILED(14)。
+# 2026-08-28 第 5 版（分层重构，设计文档 v2.1 §8）：
+#   update_rate 恢复 500（JTC 高频采样）；ServoJ 发送频率由插件 io_loop 独立控制
+#   （cmdT=0.008 → 125Hz，Phase1），两者解耦——500Hz 只负责轨迹采样与 command 缓存更新。
+#   期间曾试 update_rate=100（对齐 robotarm fairino3_v6 真机包，8/28 早段），
+#   已在分层架构下废弃（低频虚高 6.25 倍理论更糟，且分层后无需降频）。
 controller_manager:
   ros__parameters:
-    update_rate: 500  # Hz（robotarm 生效值，真机验证过）
+    update_rate: 500  # Hz（JTC 采样；ServoJ 发送频率见插件 servoj_cmd_t）
 
     robot_arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
