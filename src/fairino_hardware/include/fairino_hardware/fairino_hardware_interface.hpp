@@ -97,7 +97,11 @@ private:
   // [2026-08-28 分层] watchdog / 速度保护阈值（on_init 参数化，见设计文档 v2.1 §8）
   double _servo_stall_warn_ms{10.0};     // ServoJ 慢调用警告阈值
   double _servo_stall_fault_ms{20.0};    // ServoJ stall → stream_broken → fault
-  double _feedback_stale_fault_ms{100.0};// 反馈过期 → fault
+  // [2026-08-28 v2.3] feedback stale 阈值 100ms → 2000ms：
+  //   实测发现 1s stall 期间 io_loop 卡在 ServoJ 里、GetActual 停执行 → feedback 冻结 1s，
+  //   read() 的 100ms stale 检查误触发 ERROR → RT loop 跳过 write → JTC 目标进不了硬件 → 机械臂不动。
+  //   stall 的 feedback 冻结是"可预期现象"；真正的 GetActual 故障由 io_loop 内连续失败 fault 保护。
+  double _feedback_stale_fault_ms{2000.0};// 反馈过期 → fault（需覆盖 1s stall 窗口）
   std::array<double, 6> _v_limit{};      // per-joint 等效速度上限（rad/s，建议 0.8×真机限速）
 
   // [2026-08-28 分层] I/O 线程与共享缓存
@@ -116,6 +120,7 @@ private:
   std::atomic<uint64_t> _servo_cycles{0};          // ServoJ 成功次数（诊断）
   std::atomic<uint64_t> _servo_failures{0};        // ServoJ rc!=0 次数（诊断）
   std::atomic<uint64_t> _stall_count{0};           // stall 次数（诊断）
+  std::atomic<uint64_t> _write_calls{0};           // [2026-08-28 诊断] write() 调用次数（区分"write 没被调" vs "JTC 没写 command"）
 
   // [2026-08-28 分层] 内部方法
   void io_loop();                      // I/O 线程主循环（周期=cmdT，start-to-start）

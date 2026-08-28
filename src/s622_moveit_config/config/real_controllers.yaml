@@ -34,35 +34,40 @@ robot_arm_controller:
       - position
     state_interfaces:
       - position
-    # [2026-08-28 v2.2] JTC 执行容差（设计文档 §10 基本功能验收线 6：SUCCESS 必须绑定真实关节状态）
+    # [2026-08-28 v2.3] JTC 执行容差（设计文档 §10 基本功能验收线 6：SUCCESS 必须绑定真实关节状态）
     # 背景：Phase 1 首测发现"机械臂 stall 没动但 JTC 报 success"——Humble JTC 对 hardware
     #   read/write ERROR 的自动停止 NOT IMPLEMENTED，且无 constraints 时 trajectory/goal
     #   tolerance 默认 0（不实施），goal_time=0（不限时）→ 假成功。
     # 方案：配置真实的 trajectory/goal tolerance + 有限 goal_time，使 FollowJointTrajectory
     #   的 SUCCESS 依赖 actual state；超过 trajectory tolerance → abort（上层真实感知失败）。
-    # 注：以下为宽松初始值（rad），clamp 慢追时机械臂会滞后，按实机跟踪误差收紧：
-    #   trajectory = 轨迹执行中允许偏差（过大→abort）；goal = 终点到位判定（≤此值才算成功）
-    #   goal_time = 到达 goal 允许的最大秒数（机械臂 clamp 慢追需要足够时间）
+    # [2026-08-28 v2.3 修订] 实测（22:28 真机）：运动中撞上 1s stall（每 ~100 次一次，
+    #   125Hz 下 ~1-1.8s 一次）→ JTC 推进 0.4s 误差 0.05 rad → 0.05 tolerance abort。
+    #   20mm 轨迹 ~1-2s 必撞 stall → 轨迹必然被打断。
+    # 修订：trajectory 放宽到 0.15 rad（容忍 1s stall 位移 ~0.125 rad），goal_time 10s
+    #   （走走停停需要时间）→ 机械臂 stall 时停 1s、恢复后 clamp 快速追上，最终到达；
+    #   防假成功由 goal_time 兜底（一直不到 → 失败）。goal 0.02 保持到位精度。
+    # 注：trajectory 是"允许的最大跟踪误差"（非安全参数）；机械臂实际位置始终由
+    #   io_loop 的 clamp（v_safe=2.5 rad/s）限制，安全。
     constraints:
-      goal_time: 5.0
+      goal_time: 10.0
       stopped_velocity_tolerance: 0.01
       j1:
-        trajectory: 0.05
+        trajectory: 0.15
         goal: 0.02
       j2:
-        trajectory: 0.05
+        trajectory: 0.15
         goal: 0.02
       j3:
-        trajectory: 0.05
+        trajectory: 0.15
         goal: 0.02
       j4:
-        trajectory: 0.05
+        trajectory: 0.15
         goal: 0.02
       j5:
-        trajectory: 0.05
+        trajectory: 0.15
         goal: 0.02
       j6:
-        trajectory: 0.05
+        trajectory: 0.15
         goal: 0.02
 
 hand_controller:

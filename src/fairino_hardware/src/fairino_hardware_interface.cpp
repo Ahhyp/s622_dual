@@ -51,7 +51,8 @@ namespace fairino_hardware
             }
             _servo_stall_warn_ms = std::stod(hw_param("servo_stall_warn_ms", "10.0"));
             _servo_stall_fault_ms = std::stod(hw_param("servo_stall_fault_ms", "20.0"));
-            _feedback_stale_fault_ms = std::stod(hw_param("feedback_stale_fault_ms", "100.0"));
+            // [2026-08-28 v2.3] 默认 2000ms：覆盖 1s stall 期间的 feedback 冻结（见 hpp 注释）
+            _feedback_stale_fault_ms = std::stod(hw_param("feedback_stale_fault_ms", "2000.0"));
         }
 
         // =========================
@@ -473,6 +474,7 @@ namespace fairino_hardware
             {
                 std::lock_guard<std::mutex> lock(_io_mutex);
                 std::copy(std::begin(_jnt_position_command), std::end(_jnt_position_command), _latest_command.begin());
+                ++_write_calls; // [2026-08-28 诊断] 统计 write 拷贝次数
                 // finger 命令由 io_loop 在锁内读取（SetDO 切换判定），这里不需要拷贝——框架直接写 _finger_position_command
             }
             // 注：SetDO（夹爪）切换已移到 io_loop（仅状态变化时调用一次，单独计时），
@@ -590,6 +592,19 @@ namespace fairino_hardware
             }
 
             // ── 4. ServoJ 下发（计时，watchdog）──
+            // [2026-08-28 v2.3 诊断] 每 100 周期打印目标链路，定位"机械臂不动"：
+            //   latest = JTC 写入的最新目标（j1 在垂直下降中不动，重点看 j2/j3）
+            //   candidate = clamp 后实际发送；last_sent = 上次成功发送
+            //   write_calls = write() 拷贝次数（区分 write 没被调 / JTC 没写 / SDK 不动）
+            if ((_servo_cycles.load() % 100) == 0)
+            {
+                RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"),
+                            "[diag] cycle=%lu write=%lu | latest j1/j2/j3=%.4f/%.4f/%.4f | cand=%.4f/%.4f/%.4f | sent=%.4f/%.4f/%.4f",
+                            (unsigned long)_servo_cycles.load(), (unsigned long)_write_calls.load(),
+                            command[0], command[1], command[2],
+                            candidate[0], candidate[1], candidate[2],
+                            _last_sent[0], _last_sent[1], _last_sent[2]);
+            }
             JointPos sdk_cmd{};
             for (int i = 0; i < 6; ++i)
             {

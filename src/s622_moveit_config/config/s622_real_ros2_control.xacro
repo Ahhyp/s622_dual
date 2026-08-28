@@ -30,7 +30,8 @@
                 <param name="servo_v_limit_5">2.5</param>
                 <param name="servo_stall_warn_ms">10.0</param>
                 <param name="servo_stall_fault_ms">20.0</param>
-                <param name="feedback_stale_fault_ms">100.0</param>
+                <!-- 2000ms：覆盖 1s stall 期间的 feedback 冻结（v2.3 修复 read ERROR 误触发） -->
+                <param name="feedback_stale_fault_ms">2000.0</param>
             </hardware>
 
             <joint name="${prefix}j1">

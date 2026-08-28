@@ -291,6 +291,28 @@ ServoJ 返回，发现 duration > 20ms（或 dt_send 异常）:
 
 ### Phase 2：性能（cmdT=0.004 / 250Hz）
 
+#### v2.3 修复记录（2026-08-28，机械臂不动的根因）
+
+**现象**：分层后所有运动场景机械臂不动（保持位正常），move_group TIMED_OUT。
+
+**根因（诊断日志实锤）**：
+- 1s stall 期间 io_loop 卡在 ServoJ 里 → GetActual 停执行 → `_last_feedback_ns` 冻结
+- read() 的 feedback stale 检查（100ms）误触发 ERROR
+- Humble RT loop：read ERROR → 跳过 controller update + write → **write 永久冻结**
+  （实测 `write=421` 后不再增长）→ JTC 新目标进不了硬件 → 机械臂保持位
+- 保持位看不出问题（值不变），一运动就暴露
+
+**修复**：`feedback_stale_fault_ms` 100ms → **2000ms**（覆盖 1s stall 窗口）。
+stall 的 feedback 冻结是"可预期现象"；真正的 GetActual 故障由 io_loop 内连续失败 fault 保护。
+诊断日志：io_loop 每 100 周期打印 write 计数 + latest/candidate/last_sent 的 j1/j2/j3。
+
+**验证（22:40 真机）**：write 持续增长、latest j3 推进、机械臂动、
+`Goal reached, success!` + move_group **SUCCEEDED**、demo 完成 ✓
+全程无超限/无 14。**核心安全 + 基本功能验收线全部达成**。
+
+**遗留观察**：上位机 TCP 显示 Z 254→334（+80mm），与 MoveIt 预期 -20mm 不符
+（方向反、幅度 4 倍）——疑似 base_link 坐标系/变换差异，待确认实际位移。
+
 - 稳定后切换，对比伺服跟踪与 P50/P95/P99/max
 
 ---
