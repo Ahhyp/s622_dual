@@ -2,5 +2,6 @@
   ros__parameters:
     marker_size: 0.07
     aruco_dictionary_id: DICT_5X5_250
-    image_topic: /camera/camera/color/image_raw
-    camera_info_topic: /camera/camera/color/camera_info
+    # [M2 双臂] 右腕相机
+    image_topic: /wrist_camera/color/image_raw
+    camera_info_topic: /wrist_camera/color/camera_info

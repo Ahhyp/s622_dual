@@ -25,21 +25,21 @@ auto_calibration_collector:
       # ============================================================
       # 标定类型；自动路点入口默认眼在手上，launch 可覆盖为 eye_on_base。
       calibration_type: eye_in_hand
-      # 机器人基坐标系（通常为 base_link）
-      base_frame: base_link
-      # 末端执行器坐标系（夹爪/法兰中心，用于计算 base_T_ee）
-      ee_frame: tool0
-      # 视觉追踪的基准坐标系（相机光学光心坐标系，通常是 camera_color_optical_frame）
-      tracking_base_frame: camera_color_optical_frame
+      # [M2 双臂] 机器人基坐标系（右臂）
+      base_frame: right_base_link
+      # 末端执行器坐标系（右臂 TCP = grasp_frame，与下游 MoveIt ee 一致）
+      ee_frame: right_grasp_frame
+      # 视觉追踪的基准坐标系（右腕相机光学光心坐标系）
+      tracking_base_frame: wrist_camera_color_optical_frame
       # 追踪标记的坐标系（ArUco 码的虚拟坐标系，固定于标定板）
       tracking_marker_frame: calibration_aruco
       # 需要识别的 ArUco 标签 ID (solver.py 中仅匹配此 ID)
       marker_id: 1
 
-      # 彩色图像话题 (订阅 sensor_msgs/Image)
-      image_topic: /camera/camera/color/image_raw
+      # 彩色图像话题 (订阅 sensor_msgs/Image) [M2] 右腕相机
+      image_topic: /wrist_camera/color/image_raw
       # 相机内参话题 (订阅 sensor_msgs/CameraInfo，用于解算 P 矩阵)
-      camera_info_topic: /camera/camera/color/camera_info
+      camera_info_topic: /wrist_camera/color/camera_info
       # ArUco 字典类型 (vision.py 中通过 cv2.aruco.getPredefinedDictionary 加载)
       aruco_dictionary_id: DICT_5X5_250
       # 内参来源：固定使用相机信息中的 P 矩阵 (projection matrix)
@@ -50,8 +50,8 @@ auto_calibration_collector:
     motion:
       # 2. MoveIt 运动规划与执行参数 (对应 motion_config)
       # ============================================================
-      # MoveIt 规划组名称（Fairino 机械臂）
-      move_group_name: robot_arm
+      # MoveIt 规划组名称（[M2] 双臂 SRDF 右臂组）
+      move_group_name: right_arm
       # 仿真与实机均使用 Fairino 专用 MoveIt 服务。
       move_group_ns_fairino: /move_group_fairino
       # 自动采集 launch 的默认 IK 服务端；fairino 或 kdl。
@@ -60,8 +60,8 @@ auto_calibration_collector:
       planning_pipeline_id: fairino
       # 规划器 ID (此处使用 tube_birrt*，适合高维路径规划)
       planner_id: tube_birrt*
-      # 关节名称列表 (必须与 joint_state 中的名称一致，顺序固定)
-      joint_names: [j1, j2, j3, j4, j5, j6]
+      # 关节名称列表（[M2] 右臂前缀；必须与 joint_state 中的名称一致，顺序固定）
+      joint_names: [right_j1, right_j2, right_j3, right_j4, right_j5, right_j6]
 
       # 运动速度与加速度缩放因子 (0.0 ~ 1.0)
       max_velocity: 0.2
@@ -186,8 +186,8 @@ auto_calibration_collector:
 
     # output 参数组
     output:
-      # 标定结果存储路径与文件前缀 (支持 $HOME 展开)
-      calibration_output_directory: $HOME/fairino_robotarm/src/calibration_ws/hand_eye_calibration/calib/sim
+      # 标定结果存储路径与文件前缀 (支持 $HOME 展开) [M2] 本项目工程内
+      calibration_output_directory: $HOME/my_S622/src/hand_eye_calibration/calib/sim
       calibration_file_prefix: robot_calibration
 
       # ============================================================
