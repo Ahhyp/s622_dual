@@ -363,6 +363,7 @@ stall 的 feedback 冻结是"可预期现象"；真正的 GetActual 故障由 io
 |---|---|---|
 | `CloseRPC()` / `RobotStateRoutineThread` stack corruption | 裸测 stack smashing；shutdown stack trace → robot.cpp:135 | 单独跟踪：SDK/固件版本匹配、升级 SDK、厂商确认；本次只保证 CloseRPC 在 io_loop 彻底退出后调用 |
 | Issue #32（无 ServoMoveStart → write 阻塞） | open issue 用户报告 | 本次采用会话级 ServoMoveStart 规避；不视为已确认根因 |
+| **Ctrl-C 时 move_group/ros2_control_node/rviz2 segfault（exit -11）** | 8/25（60 次）、8/27（215+32+78 次）、8/28（60+12+36 次）全部存在——**非本项目代码引入**；栈：MoveItCpp/TrajectoryExecutionManager/Node 析构、Executor 析构 | **MoveIt2 上游 open bug**：[#3268](https://github.com/moveit/moveit2/issues/3268)（SIGINT segfault）、[#1597](https://github.com/moveit/moveit2/issues/1597)（trajectory_execution_manager 析构），Humble/Jazzy 均存在，无补丁。**安全无影响**：崩溃发生在进程析构阶段，机械臂已由 io_loop StopMotion + ServoMoveEnd 安全停止（日志确认在崩溃前）。缓解：接受崩溃式退出（功能正常），或不用 Ctrl-C 改用 `kill` 整个 launch 组；根治需上游修复/升级 MoveIt |
 
 ---
 
