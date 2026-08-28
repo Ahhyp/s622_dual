@@ -101,4 +101,14 @@
     </xacro:camera_v0>
     <xacro:camera_gazebo_v0 />
 
+    <!-- ============ [M2 标定] 右腕相机 (eye-in-hand GT) ============
+         2026-08-28：实验室仅 1 个腕部相机，装右臂 grasp_frame。
+         GT = URDF 固定 right_grasp_frame → wrist_camera 变换（origin 照 robotarm
+         tool0 安装值），标定后与求解结果比较（ground_truth_check_enabled=true）。 -->
+    <xacro:camera_v0 parent="right_grasp_frame" name="wrist_camera"
+                     use_camera_visual="$(arg include_camera_visual)">
+        <origin xyz="0 -0.05 -0.09" rpy="0 -1.57079632679 -1.57079632679" />
+    </xacro:camera_v0>
+    <xacro:camera_gazebo_v0 name="wrist_camera" />
+
 </robot>
