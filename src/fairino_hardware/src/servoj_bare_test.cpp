@@ -10,8 +10,13 @@
 //   0 = 只 ServoJ（发当前姿态，机械臂不动）
 //   1 = GetActualJointPosDegree(flag=0) + ServoJ   （模拟 read()+write()）
 //   2 = GetActualJointPosDegree(flag=1) + ServoJ   （flag 0/1 是否不同路径）
-//   3 = ServoMoveStart + ServoJ + ServoMoveEnd     （servo 生命周期 A/B：验证
-//       ServoMoveEnd 是否是 CloseRPC stack smashing 的修复）
+//   3 = ServoMoveStart + ServoJ + ServoMoveEnd     （servo 生命周期 A/B）
+//   4 = Mode(0)+RobotEnable(1) 后 ServoJ           （诊断：断电重启后机械臂可能回手动模式，
+//       ServoJ 报 14；切自动模式+使能后验证是否消除）
+//   5 = 只 Mode(0) 后 ServoJ                       （区分是 Mode 还是 RobotEnable 的功劳）
+//   6 = 只 RobotEnable(1) 后 ServoJ
+//   7 = 模拟"运动后保持"：ServoJ 发 j1 偏移 2° ×100 次（运动），再发回原位 ×100 次
+//       （运动结束后的保持位）——复现插件"运动后 ServoJ 14"于裸环境
 // 额外: 记录 >10ms 的 (cycle, ms, rc)、GetActual 耗时、CloseRPC 前后标记。
 //   no_close=1 时跳过 CloseRPC + _Exit（诊断，绕过 SDK cleanup 崩溃）
 //
@@ -48,6 +53,11 @@ int main(int argc, char **argv)
   const int mode = (argc > 3) ? std::atoi(argv[3]) : 0;  // 0/1/2
   const int gap_ms = (argc > 4) ? std::atoi(argv[4]) : 0;
   const bool no_close = (argc > 5) && (std::atoi(argv[5]) == 1);  // 1=跳过 CloseRPC
+  // 2026-08-28 诊断：cmdT 参数（默认 0.0016）。怀疑上位机检查 ServoJ 到达周期 ≤ cmdT，
+  // 实际周期 ~3ms > 1.6ms → 连续 ServoJ 第二次起被拒（14）。试 0.003 匹配实际周期。
+  const double servoj_cmd_t = (argc > 6) ? std::atof(argv[6]) : 0.0016;
+  printf("servoj_cmd_t=%.4f\n", servoj_cmd_t);
+  fflush(stdout);
 
   FRRobot robot;
   const int rc = robot.RPC(ip);
@@ -74,8 +84,40 @@ int main(int argc, char **argv)
     printf("ServoMoveStart rc=%d\n", rs);
     fflush(stdout);
   }
+  if (mode == 4) {
+    const int re = robot.RobotEnable(1);
+    const int rm = robot.Mode(0);
+    printf("RobotEnable(1) rc=%d, Mode(0) rc=%d (诊断：切自动模式+使能)\n", re, rm);
+    fflush(stdout);
+  }
+  if (mode == 5) {
+    const int rm = robot.Mode(0);
+    printf("Mode(0) only rc=%d (诊断：只切自动模式)\n", rm);
+    fflush(stdout);
+  }
+  if (mode == 6) {
+    const int re = robot.RobotEnable(1);
+    printf("RobotEnable(1) only rc=%d (诊断：只使能)\n", re);
+    fflush(stdout);
+  }
+
+  // mode 7：前半段发 j1 偏移 2°（运动），后半段发回原位（运动结束后的保持位）
+  JointPos q_move = q;
+  if (mode == 7) {
+    q_move.jPos[0] += 2.0;
+    printf("mode 7: 前 %d 次发 j1 偏移 +2°，后 %d 次发回原位（保持位）\n", n / 2, n - n / 2);
+    fflush(stdout);
+  }
+
+  // 诊断环形缓冲：记录最近 20 个周期的 (idx, dur_ms, j1 指令, rc)，
+  // ServoJ 返回 14 时打印——钉住"14 前发生了什么"（1s 阻塞后？正常周期突然 14？）
+  struct CycleInfo { int idx; double dur; double cmd_j1; int rc; };
+  std::vector<CycleInfo> ring;
+  ring.reserve(20);
 
   for (int i = 0; i < n; ++i) {
+    JointPos *target = &q;
+    if (mode == 7) target = (i < n / 2) ? &q_move : &q;
     if (mode == 1 || mode == 2) {
       const auto tr0 = std::chrono::steady_clock::now();
       const int rr = robot.GetActualJointPosDegree(mode == 2 ? 1 : 0, &q);
@@ -85,7 +127,7 @@ int main(int argc, char **argv)
     }
     ExaxisPos ext{0, 0, 0, 0};
     const auto t0 = std::chrono::steady_clock::now();
-    const int r = robot.ServoJ(&q, &ext, 0, 0, 0.0016, 0, 0);
+    const int r = robot.ServoJ(target, &ext, 0, 0, servoj_cmd_t, 0, 0);
     const auto t1 = std::chrono::steady_clock::now();
 
     dur[i] = std::chrono::duration<double, std::milli>(t1 - t0).count();
@@ -95,6 +137,21 @@ int main(int argc, char **argv)
     if (dur[i] > 100.0) slow_100++;
     if (dur[i] > 500.0) slow_500++;
 
+    // 更新环形缓冲
+    ring.push_back({i + 1, dur[i], target->jPos[0], r});
+    if (ring.size() > 20) ring.erase(ring.begin());
+    if (r != 0) {
+      printf("  [DIAG] rc=%d at cycle=%d, 前 %zu 个周期:\n", r, i + 1, ring.size());
+      for (const auto &c : ring) {
+        printf("    cycle=%d dur=%.1f ms cmd_j1=%.3f rc=%d\n", c.idx, c.dur, c.cmd_j1, c.rc);
+      }
+      fflush(stdout);
+    }
+
+    if (mode == 7 && i == n / 2 - 1) {
+      printf("  [mode7] 运动段结束 rc_last=%d（后半段开始发保持位）\n", r);
+      fflush(stdout);
+    }
     if (gap_ms > 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(gap_ms));
     }

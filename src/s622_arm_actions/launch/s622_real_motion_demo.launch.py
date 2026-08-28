@@ -60,6 +60,11 @@ def generate_launch_description():
         "max_execute_distance", default_value="0.020",
         description="执行保护上限（米）。move_distance 超过它会被安全机制拒绝执行。"
                     "默认 0.020（20mm）；要跑 0.05 需同时传 max_execute_distance:=0.06")
+    # 2026-08-28：demo 限速参数化——SDK 1s 阻塞下，运动速度越高阻塞后位移越大，
+    # 越容易触发上位机"速度超限"（ServoJ 14）。慢速（~0.002）可避免。
+    declare_demo_speed = DeclareLaunchArgument(
+        "demo_max_velocity", default_value="0.05",
+        description="MoveIt velocity scaling（0-1）。真机 1s 阻塞下建议 ≤0.002 避免 14")
 
     # ===== 真机控制栈（RSP + CM + move_group + RViz + retime） =====
     real_stack = IncludeLaunchDescription(
@@ -92,6 +97,7 @@ def generate_launch_description():
                         "move_distance": LaunchConfiguration("move_distance"),
                         "return_to_origin": LaunchConfiguration("return_to_origin"),
                         "max_execute_distance": LaunchConfiguration("max_execute_distance"),
+                        "demo_max_velocity": LaunchConfiguration("demo_max_velocity"),
                     },
                 ],
             )
@@ -101,7 +107,7 @@ def generate_launch_description():
     return LaunchDescription([
         declare_ip, declare_prefix,
         declare_start_demo, declare_execute,
-        declare_move_distance, declare_return, declare_max_execute,
+        declare_move_distance, declare_return, declare_max_execute, declare_demo_speed,
         real_stack,
         demo_node,
     ])

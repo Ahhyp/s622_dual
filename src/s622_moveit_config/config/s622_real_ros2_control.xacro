@@ -9,12 +9,14 @@
           与仿真 gz 块的 velocity 命令接口完全不同，互不干扰）
         - 状态接口：position（真机插件只导出 position state，read() 从 SDK 读真实角）
         ================================================================== -->
-    <xacro:macro name="s622_real_ros2_control" params="name prefix ip">
+    <xacro:macro name="s622_real_ros2_control" params="name prefix ip servoj_cmd_t:=0.0016">
         <ros2_control name="${name}" type="system">
             <hardware>
                 <plugin>fairino_hardware/FairinoHardwareInterface</plugin>
                 <param name="ip">${ip}</param>
                 <param name="prefix">${prefix}</param>
+                <!-- 2026-08-28：cmdT 参数化（默认 0.0016 = robotarm/8/27 验证值） -->
+                <param name="servoj_cmd_t">${servoj_cmd_t}</param>
             </hardware>
 
             <joint name="${prefix}j1">
