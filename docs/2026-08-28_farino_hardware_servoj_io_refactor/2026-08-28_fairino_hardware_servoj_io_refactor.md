@@ -1,6 +1,6 @@
 # 2026-08-28 fairino_hardware ServoJ I/O 分层重构设计文档（v2）
 
-> 状态：**设计冻结，待实施**（Phase 0 裸测观测先行）
+> 状态：**设计冻结，Phase 0 已取消（2026-08-28 决定），直接进入 Phase 1 实施**
 > 关联：docs/2026-08-25_ServoJ动态跟踪与同步性能测试/、真机 ServoJ 14 排查（8/28）
 > 参照：robotarm 最新源码（`/home/yep/fairino_robotarm`，jasonlee0617，2026-08-28 main 分支）
 
@@ -211,19 +211,14 @@ ServoJ 返回，发现 duration > 20ms（或 dt_send 异常）:
 
 ## 9. Phase 计划
 
-### Phase 0：裸测队列观测（先于架构改造）
+### Phase 0：裸测队列观测 —— **已取消（2026-08-28 用户决定）**
 
-**目的**：回答"每 ~100 次 stall 是否是控制器 motion queue 行为"
+满队列假设不做验证。保留的核实结论（2026-08-28）：
 
-- 在 `servoj_bare_test` 增加观测（**按 V385 SDK 实际能力条件启用**）：
-  - ✅ 可用：`GetMotionQueueLength(int *len)`（V385 robot.h 已有）
-  - ❌ V385 无：`servoJCmdNum` / `lastServoTarget`（新版 SDK realtime struct 字段）、`MotionQueueClear()` → 不启用，标注"需升级 SDK 才能观测"
-- 记录点：cycle 95~105、195~205，以及每次 >100ms stall 前后
-- 观测目标：
-  - `queue 98→99→100 → 卡 1s → queue 骤降` → 支持"满队列"假设
-  - `queue 一直很低但仍 99 次卡` → 排除"满队列"
-- **先观察，不在正式轨迹执行中自动调用 MotionQueueClear()**
+- `GetMotionQueueLength(int *len)` 在 V385 SDK **有真实实现**（.so 导出符号 `_ZN7FRRobot20GetMotionQueueLengthEPi`，非空壳），真机调用行为未实测
+- `servoJCmdNum` / `lastServoTarget` / `MotionQueueClear()` V385 无（需升级 SDK）
 - 不升级 SDK（避免实验变量改变；SDK 与固件版本配套发布）
+- 若日后想验证：在 bare test 中 cycle 95~105、195~205 及每次 >100ms stall 前后记录 queue 长度；**先观察，不自动 Clear**
 
 ### Phase 1：稳定性验证（cmdT=0.008 / 125Hz）
 
@@ -287,7 +282,7 @@ ServoJ 返回，发现 duration > 20ms（或 dt_send 异常）:
 
 ### 尚未证实的假设
 
-- 1s stall 是否由 motion queue 导致（Phase 0 验证）
+- 1s stall 是否由 motion queue 导致（**已决定不验证**，Phase 0 取消；GetMotionQueueLength 有 .so 实现但真机行为未实测）
 - 1s stall 是否直接导致轴3 超限（已有强相关性，因果未隔离验证）
 - 降到 125/250Hz 是否能消除/降低 stall
 - ServoMoveStart 在正式 hardware 路径中是否显著降低 stall 率
@@ -309,3 +304,4 @@ ServoJ 返回，发现 duration > 20ms（或 dt_send 异常）:
 |---|---|---|
 | v1 | 2026-08-28 | DeepSeek 初版方案（分层 + ServoMoveStart 会话级 + watchdog + last_sent） |
 | v2 | 2026-08-28 | 用户评审修订：v_actual 改为 send-interval 健康指标；deactivate 清理顺序修正；V385 条件启用队列 API；验收拆分核心安全/基本功能/性能；"已测事实 vs 假设"章节 |
+| v2.1 | 2026-08-28 | 用户决定取消 Phase 0（满队列假设不验证）；文档移入 docs/2026-08-28_farino_hardware_servoj_io_refactor/；核实 GetMotionQueueLength 有 .so 实现 |
