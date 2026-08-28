@@ -318,6 +318,12 @@ namespace fairino_hardware
             //   - RobotEnable/Mode 均 rc=0（使能/模式正常，非 14 原因）
             //   - ServoMoveStart 对 14 无效（success 后仍速度超限），robotarm 裸 ServoJ 可动
             // 最终对齐 robotarm 行为：裸 ServoJ + cmdT 0.0016，仅保留 ip/prefix 参数化。
+            //
+            // 2026-08-28 曾恢复 ServoMoveStart（裸测 mode 3 显示减阻塞 ~75%），真机实测**无效且有害**：
+            //   - 1s 阻塞不消失（>3.0ms=20-21% 照旧，max≈1034ms）
+            //   - 运动结束后（Goal reached）ServoJ 连续报 14（上位机认为伺服会话状态变化）
+            // 已再次移除。裸测 mode 3 减阻塞仅在"机械臂不动"场景成立，不可迁移真实运动。
+            // 1s 阻塞 = SDK/上位机固有（每 100 次 ServoJ 一次 ~1030ms，rc=0），暂无法软件绕过。
 
             RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "机械臂%s硬件启动成功!", tag.c_str()); // 激活成功
             return hardware_interface::CallbackReturn::SUCCESS;
@@ -333,7 +339,8 @@ namespace fairino_hardware
     hardware_interface::CallbackReturn FairinoHardwareInterface::on_deactivate(const rclcpp_lifecycle::State &previous_state)
     {
         RCLCPP_INFO(rclcpp::get_logger("FairinoHardwareInterface"), "Stopping ...please wait..."); // 提示停止
-        // 2026-08-27：曾临时加 ServoMoveEnd 配对，已移除（对齐 robotarm，避免关闭时状态副作用）
+        // 2026-08-28：ServoMoveEnd 曾与 on_activate 的 ServoMoveStart 配对，因 ServoMoveStart
+        // 在真实运动下触发 ServoJ 14 已一并移除（见 on_activate 注释）
         _ptr_robot->StopMotion();                                                                  // 停止机器人
         _ptr_robot->CloseRPC();                                                                    // 销毁实例，连接断开
         _ptr_robot.release();
