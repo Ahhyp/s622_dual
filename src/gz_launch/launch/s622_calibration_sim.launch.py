@@ -36,18 +36,20 @@ def generate_launch_description():
     handeye_pkg = get_package_share_directory("hand_eye_calibration")
     aruco_pkg = get_package_share_directory("ros2_aruco")
 
-    # ---- 标定板位姿（右臂前方）----
-    board_x = DeclareLaunchArgument("board_x", default_value="0.30",
+    # ---- 标定板位姿（右臂前方桌面，平放 marker 朝上）----
+    # 板模型：9cm×9cm×2mm，板面法线沿 y（marker 格子 y=±0.0016）。
+    # 平放朝上 = roll=-90°（绕 x 转 -90°：y→z），z≈0.01（板厚 2mm，贴桌面）。
+    # 右臂 base 在 (-0.35,0,0) 朝 +x → 板放右臂前方：x=-0.1（前方 0.25m）、y=0.2 偏一侧。
+    board_x = DeclareLaunchArgument("board_x", default_value="-0.10",
                                     description="标定板 X（world，右臂前方）")
-    board_y = DeclareLaunchArgument("board_y", default_value="0.30",
-                                    description="标定板 Y")
-    board_z = DeclareLaunchArgument("board_z", default_value="0.55",
-                                    description="标定板 Z（桌面上方）")
-    board_roll = DeclareLaunchArgument("board_roll", default_value="0.0")
-    board_pitch = DeclareLaunchArgument("board_pitch", default_value="-1.5708",
-                                        description="绕 X 转 -90°：板面朝 +X 立起")
-    board_yaw = DeclareLaunchArgument("board_yaw", default_value="3.14159",
-                                      description="绕 Z 转 180°：板面朝 -X（右臂方向）")
+    board_y = DeclareLaunchArgument("board_y", default_value="0.20",
+                                    description="标定板 Y（偏一侧避开机械臂正投影）")
+    board_z = DeclareLaunchArgument("board_z", default_value="0.01",
+                                    description="标定板 Z（桌面顶面 z=0，板厚 2mm → 0.01）")
+    board_roll = DeclareLaunchArgument("board_roll", default_value="-1.5708",
+                                       description="绕 X 转 -90°：板面法线 y→z，marker 朝上")
+    board_pitch = DeclareLaunchArgument("board_pitch", default_value="0.0")
+    board_yaw = DeclareLaunchArgument("board_yaw", default_value="0.0")
 
     # ---- 1. 双臂仿真（含右腕相机桥接）----
     dual_sim = IncludeLaunchDescription(
