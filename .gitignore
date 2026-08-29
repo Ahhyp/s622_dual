@@ -16,3 +16,4 @@ compile_commands.json
 *.tar.gz
 .codegraph/
 tmp/
+src/hand_eye_calibration/calib/
