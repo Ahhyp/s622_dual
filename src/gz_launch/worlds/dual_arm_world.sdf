@@ -11,10 +11,10 @@
       <direction>-0.5 -0.5 -1.0</direction>
     </light>
 
-    <!-- 桌子: 顶面在 z=0, 中心在原点 -->
+    <!-- [M2 标定] 去掉桌子（2026-08-29：板直接放地面，位置由 launch board_x/y/z 微调）。
+         注意：robotarm 参考场景是有桌子的（calibration_world.sdf），本场景按用户要求去桌。 -->
     <include>
-      <uri>model://table</uri>
-      <pose>0 0 -1.015 0 0 0</pose>
+      <uri>model://ground_plane</uri>
     </include>
 
   </world>
