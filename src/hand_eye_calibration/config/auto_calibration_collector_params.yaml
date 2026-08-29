@@ -62,6 +62,8 @@ auto_calibration_collector:
       planner_id: tube_birrt*
       # 关节名称列表（[M2] 右臂前缀；必须与 joint_state 中的名称一致，顺序固定）
       joint_names: [right_j1, right_j2, right_j3, right_j4, right_j5, right_j6]
+      # [M2 双臂] FollowJointTrajectory 控制器 action 名（双臂 right_arm_controller；单臂为 robot_arm_controller）
+      execution_controller: right_arm_controller
 
       # 运动速度与加速度缩放因子 (0.0 ~ 1.0)
       max_velocity: 0.2

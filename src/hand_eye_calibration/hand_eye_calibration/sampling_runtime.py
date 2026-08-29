@@ -118,8 +118,10 @@ class SamplingRuntime:
         if not self._motion.set_planner(self.motion_config.planning_pipeline_id, self.motion_config.planner_id):
             raise RuntimeError("unsupported Fairino planner configuration")
         self._arm = arm
+        # [M2 双臂] 控制器 action 名参数化（config motion.execution_controller；单臂默认 robot_arm_controller，双臂 right_arm_controller）
+        self._controller_action_topic = f"/{self.motion_config.execution_controller}/follow_joint_trajectory"
         self._controller_action_client = ActionClient(
-            self, FollowJointTrajectory, "/robot_arm_controller/follow_joint_trajectory"
+            self, FollowJointTrajectory, self._controller_action_topic
         )
 
     def _wait_for_moveit(self) -> bool:
@@ -147,8 +149,8 @@ class SamplingRuntime:
                 return True
             time.sleep(self.sampling_config.moveit_ready_poll_interval)
         self.get_logger().error(
-            "PRECHECK: /robot_arm_controller/follow_joint_trajectory has no action server. "
-            "Run: ros2 action info /robot_arm_controller/follow_joint_trajectory"
+            f"PRECHECK: {self._controller_action_topic} has no action server. "
+            f"Run: ros2 action info {self._controller_action_topic}"
         )
         return False
 

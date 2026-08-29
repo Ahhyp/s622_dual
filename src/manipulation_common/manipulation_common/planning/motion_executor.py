@@ -354,12 +354,26 @@ class MoveItMotion:
         action_name: str = "move_joints",
         planning_client: Optional[str] = None,
         timeout_sec: float = 30.0,
+        # [M2 标定] 对齐 robotarm 签名：可选运动参数（collector 传入，应用到 arm）
+        *,
+        max_velocity: Optional[float] = None,
+        max_acceleration: Optional[float] = None,
+        allowed_planning_time: Optional[float] = None,
+        allowed_start_tolerance: Optional[float] = None,
     ) -> bool:
         arm = self._select_arm(planning_client)
         if self._aborted():
             self.node.get_logger().warn(f"{action_name}: motion control is blocked")
             return False
         try:
+            if max_velocity is not None:
+                arm.max_velocity = float(max_velocity)
+            if max_acceleration is not None:
+                arm.max_acceleration = float(max_acceleration)
+            if allowed_planning_time is not None:
+                arm.allowed_planning_time = float(allowed_planning_time)
+            if allowed_start_tolerance is not None:
+                arm.allowed_start_tolerance = float(allowed_start_tolerance)
             self.node.get_logger().info(action_name)
             ok = self._plan_and_execute_configuration(
                 arm, joint_positions, action_name, timeout_sec

@@ -98,6 +98,7 @@ class CollectorMotionConfig:
     position_tolerance: float
     orientation_tolerance: float
     allowed_start_tolerance: float
+    execution_controller: str  # [M2 双臂] FollowJointTrajectory 控制器 action 名（单臂 robot_arm_controller / 双臂 right_arm_controller）
     action_delay: float
     settle_time_sec: float
     keyboard_poll_period: float
@@ -301,6 +302,7 @@ def _load_config(node, filename: str, node_name: str, *, with_waypoints: bool):
         position_tolerance=_param(node, "position_tolerance", d("position_tolerance", 0.005), float),
         orientation_tolerance=_param(node, "orientation_tolerance", d("orientation_tolerance", 0.005), float),
         allowed_start_tolerance=_param(node, "allowed_start_tolerance", d("allowed_start_tolerance", 0.1), float),
+        execution_controller=_param(node, "execution_controller", d("execution_controller", "robot_arm_controller"), str),
         action_delay=_param(node, "action_delay", d("action_delay", 0.2), float),
         settle_time_sec=_param(node, "settle_time_sec", d("settle_time_sec", 1.0), float),
         keyboard_poll_period=_param(node, "keyboard_poll_period", d("keyboard_poll_period", 0.1), float),
