@@ -12,10 +12,41 @@
     </light>
 
     <!-- [M2 标定] 去掉桌子（2026-08-29：板直接放地面，位置由 launch board_x/y/z 微调）。
-         注意：robotarm 参考场景是有桌子的（calibration_world.sdf），本场景按用户要求去桌。 -->
-    <include>
-      <uri>model://ground_plane</uri>
-    </include>
+         注意：robotarm 参考场景是有桌子的（calibration_world.sdf），本场景按用户要求去桌。
+         内联 ground_plane（不依赖 model:// 模型库/fuel 下载）。 -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>100</mu>
+                <mu2>100</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
 
   </world>
 </sdf>
