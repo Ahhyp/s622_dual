@@ -93,13 +93,19 @@
         initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
         prefix="right_" />
 
-    <!-- ============ Camera 挂 world, 俯视 (0, 0, 0.75) ============ -->
+    <!-- ============ [M2] 全局俯视相机（默认关） ============
+         world 相机（0,0.5,0.9 俯视）是旧视觉伺服用；M2 标定用腕部 wrist_camera，
+         全局 eye-to-hand（M2.7）才需要它。默认关掉省一个 RGBD 渲染（Gazebo 卡因之一）。
+         需要时：include_global_camera:=true -->
+    <xacro:arg name="include_global_camera" default="false" />
     <xacro:include filename="$(find s622_moveit_descriptions)/urdf/camera/camera.xacro" />
-    <xacro:camera_v0 parent="world"
-                     use_camera_visual="$(arg include_camera_visual)">
-        <origin xyz="0 0.5 0.9" rpy="0 ${58*M_PI/180} ${-M_PI/2}" />
-    </xacro:camera_v0>
-    <xacro:camera_gazebo_v0 />
+    <xacro:if value="$(arg include_global_camera)">
+        <xacro:camera_v0 parent="world"
+                         use_camera_visual="$(arg include_camera_visual)">
+            <origin xyz="0 0.5 0.9" rpy="0 ${58*M_PI/180} ${-M_PI/2}" />
+        </xacro:camera_v0>
+        <xacro:camera_gazebo_v0 />
+    </xacro:if>
 
     <!-- ============ [M2 标定] 右腕相机 (eye-in-hand GT) ============
          2026-08-28：实验室仅 1 个腕部相机，装右臂 grasp_frame。
