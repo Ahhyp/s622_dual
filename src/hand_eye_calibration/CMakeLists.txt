@@ -16,6 +16,7 @@ install(DIRECTORY launch config rviz docs
 install (PROGRAMS
   scripts/aruco_marker_pose_publisher.py
   scripts/calibration_aruco_publisher.py
+  scripts/derive_dual_base_from_camera.py
   scripts/evaluate_calibration.py
   scripts/evaluate_calibration_offline.py
   scripts/follow_aruco_marker.py

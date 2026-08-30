@@ -5,9 +5,10 @@
 # 不含: obb_node(M2.7 改造), servo(M2.5)
 import os
 import yaml
+import launch
 from launch import LaunchDescription
 from launch.actions import (
-    IncludeLaunchDescription, TimerAction, SetEnvironmentVariable,
+    IncludeLaunchDescription, TimerAction, SetEnvironmentVariable, OpaqueFunction,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
@@ -43,6 +44,20 @@ def generate_launch_description():
     )
 
     # ============ 2. Bridges ============
+    # [M2.7] 相机/标定板开关参数（先声明，bridge 条件与 xacro mappings 都要用）
+    include_global_camera_arg = DeclareLaunchArgument(
+        'include_global_camera', default_value='false',
+        description='打开 world 全局俯视相机（M2.7 eye-to-hand 标定用）')
+    include_wrist_camera_arg = DeclareLaunchArgument(
+        'include_wrist_camera', default_value='true',
+        description='关闭右腕相机（M2.7 全局标定期间省渲染）')
+    calibration_arm_arg = DeclareLaunchArgument(
+        'calibration_arm', default_value='none', choices=['left', 'right', 'none'],
+        description='M2.7 大号 ArUco 标定板固定到哪只臂（一次只一块）')
+    inc_global_cam = LaunchConfiguration('include_global_camera')
+    inc_wrist_cam = LaunchConfiguration('include_wrist_camera')
+    calib_arm = LaunchConfiguration('calibration_arm')
+
     clock_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
@@ -58,21 +73,33 @@ def generate_launch_description():
             "/camera/image@sensor_msgs/msg/Image@gz.msgs.Image",
             "/camera/depth_image@sensor_msgs/msg/Image@gz.msgs.Image",
             "/camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo",
-            # [M2 标定] 右腕相机（eye-in-hand）
-            "/wrist_camera/image@sensor_msgs/msg/Image@gz.msgs.Image",
-            "/wrist_camera/depth_image@sensor_msgs/msg/Image@gz.msgs.Image",
-            "/wrist_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo",
         ],
         remappings=[
             ("/camera/image", "/camera/color/image_raw"),
             ("/camera/depth_image", "/camera/depth/image_raw"),
             ("/camera/camera_info", "/camera/color/camera_info"),
+        ],
+        parameters=[{"use_sim_time": True}],
+        output="screen",
+    )
+
+    # [M2.7] 右腕相机桥接（仅当 include_wrist_camera:=true，否则无传感器会报 bridge 错）
+    wrist_camera_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[
+            "/wrist_camera/image@sensor_msgs/msg/Image@gz.msgs.Image",
+            "/wrist_camera/depth_image@sensor_msgs/msg/Image@gz.msgs.Image",
+            "/wrist_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo",
+        ],
+        remappings=[
             ("/wrist_camera/image", "/wrist_camera/color/image_raw"),
             ("/wrist_camera/depth_image", "/wrist_camera/depth/image_raw"),
             ("/wrist_camera/camera_info", "/wrist_camera/color/camera_info"),
         ],
         parameters=[{"use_sim_time": True}],
         output="screen",
+        condition=launch.conditions.IfCondition(inc_wrist_cam),
     )
 
     # ============ 3. MoveIt config (双臂 URDF+SRDF) ============
@@ -89,6 +116,10 @@ def generate_launch_description():
     rv_spawn_delay = LaunchConfiguration('robot_spawn_delay')
     ctrl_spawn_delay = LaunchConfiguration('controller_spawn_delay')
 
+    # [M2.7] 全局相机 / 右腕相机开关，透传给 xacro：
+    #   - include_global_camera:=true  打开 world 全局俯视相机（eye-to-hand 用）
+    #   - include_wrist_camera:=false  关闭右腕相机（M2.7 标定期间省渲染 → 提帧率）
+
     dual_arm_gazebo_xacro = os.path.join(
         this_pkg, "config", "s622_dual_arm_gazebo.urdf.xacro"
     )
@@ -100,6 +131,10 @@ def generate_launch_description():
                 "instantiate": "false",
                 # 2026-08-25：相机简化几何体（对齐单臂 include_camera_visual=false）
                 "include_camera_visual": "false",
+                # [M2.7] 相机开关 + 标定板
+                "include_global_camera": inc_global_cam,
+                "include_wrist_camera": inc_wrist_cam,
+                "calibration_arm": calib_arm,
             },
         )
         .robot_description_semantic(file_path="config/s622_dual_arm.srdf")
@@ -133,13 +168,14 @@ def generate_launch_description():
         "s622_moveit_config", "config/dual_arm_kinematics_kdl.yaml")
 
     # ============ 4. Spawn robot（2026-08-25：延迟参数化，对齐 robotarm） ============
-    # 把 package:// URI 替换成绝对路径, 让 gz sim 能找到 mesh
-    gz_urdf = moveit_config.robot_description["robot_description"].replace(
-        "package://s622_moveit_descriptions", robot_desc_pkg
-    )
-    spawn_robot = TimerAction(
-        period=rv_spawn_delay,
-        actions=[
+    # 把 package:// URI 替换成绝对路径, 让 gz sim 能找到 mesh。
+    # [M2.7] robot_description 可能是运行时 Xacro substitution（含相机/标定板参数），
+    # 必须用 OpaqueFunction 在运行时 perform_substitution 求值。
+    def _spawn_robot_action(context, *_args, **_kwargs):
+        raw = context.perform_substitution(
+            moveit_config.robot_description["robot_description"])
+        gz_urdf = raw.replace("package://s622_moveit_descriptions", robot_desc_pkg)
+        return [
             Node(
                 package="ros_gz_sim",
                 executable="create",
@@ -151,7 +187,11 @@ def generate_launch_description():
                 ],
                 output="screen",
             )
-        ],
+        ]
+
+    spawn_robot = TimerAction(
+        period=rv_spawn_delay,
+        actions=[OpaqueFunction(function=_spawn_robot_action)],
     )
 
     # ============ 5. Spawn target cube（默认 robot_spawn_delay=5 + 2 = 7s，晚于 robot） ============
@@ -528,7 +568,8 @@ def generate_launch_description():
     return LaunchDescription([
         set_model_path, tree_file_arg, tree_id_arg,
         robot_spawn_delay, controller_spawn_delay,
-        gazebo, clock_bridge, camera_bridge,
+        include_global_camera_arg, include_wrist_camera_arg, calibration_arm_arg,
+        gazebo, clock_bridge, camera_bridge, wrist_camera_bridge,
         spawn_robot, spawn_box,
         robot_state_pub,
         jsb_spawner, arm_hand_spawner,

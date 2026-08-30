@@ -1,0 +1,91 @@
+# [M2.7] 全局相机 Eye-on-Base 标定助手参数 —— 左臂
+# 相机固定 world、ArUco 固定在左臂 grasp_frame（M2.7-B 标定板）
+# 手动标定助手（manual_calibration_assistant）加载本文件
+manual_calibration_assistant:
+  ros__parameters:
+    # runtime：Gazebo=true，实机=false
+    runtime:
+      use_sim_time: true
+
+    # frames_topics：左臂 + 全局相机
+    frames_topics:
+      calibration_type: eye_on_base             # 相机固定、板随末端
+      base_frame: left_base_link
+      ee_frame: left_grasp_frame
+      tracking_base_frame: camera_color_optical_frame   # 全局相机（name=camera）
+      tracking_marker_frame: calibration_aruco
+      marker_id: 1
+      image_topic: /camera/color/image_raw
+      camera_info_topic: /camera/color/camera_info
+      aruco_dictionary_id: DICT_5X5_250
+      camera_intrinsics_source: p
+
+    # motion：左臂 MoveIt
+    motion:
+      move_group_name: left_arm
+      move_group_ns_fairino: /move_group_fairino
+      planning_pipeline_id: fairino
+      planner_id: tube_birrt*
+      joint_names: [left_j1, left_j2, left_j3, left_j4, left_j5, left_j6]
+      max_velocity: 0.2
+      max_acceleration: 0.2
+      allowed_planning_time: 5.0
+      max_step_size: 0.05
+      position_tolerance: 0.005
+      orientation_tolerance: 0.005
+      allowed_start_tolerance: 0.1
+      action_delay: 0.2
+      settle_time_sec: 1.0
+      keyboard_poll_period: 0.1
+      start_wait_poll_period: 0.1
+      moveit_ready_timeout: 30.0
+      moveit_ready_poll_interval: 0.2
+
+    # vision_quality：大号标定板（板 240mm / 纹理 marker 200mm）→ marker_size_m 0.20
+    # 全局相机距离远（0.7~1.0m），130mm marker 在 0.9m 处约 110px，过 90px 门
+    vision_quality:
+      marker_size_m: 0.20
+      marker_distance_min_m: 0.30
+      marker_distance_max_m: 1.20
+      stable_frames: 6
+      stable_marker_timeout_sec: 8.0
+      minimum_corner_margin_px: 60.0
+      minimum_marker_side_px: 90.0
+      maximum_center_std_px: 4.0
+      maximum_marker_depth_std_m: 0.003
+      maximum_marker_angle_std_deg: 0.8
+
+    # sampling_gates
+    sampling_gates:
+      joint_stationary_max_position_delta_rad: 0.0001
+      joint_stationary_window_sec: 0.30
+      joint_stationary_timeout_sec: 5.0
+      stable_tf_settle_sec: 0.15
+      minimum_samples: 15
+      minimum_solution_samples: 14
+      minimum_translation_delta_m: 0.006
+      minimum_rotation_delta_deg: 3.0
+      minimum_translation_span_m: 0.04
+      minimum_rotation_span_deg: 20.0
+
+    # solver_validation：eye-on-base 安装范数 3m 足够；GT 校验开（仿真）
+    solver_validation:
+      algorithm_names: [OpenCV/Park, OpenCV/Horaud]
+      maximum_algorithm_translation_delta_m: 0.003
+      maximum_algorithm_rotation_delta_deg: 1.0
+      maximum_camera_translation_norm_m: 0.30
+      maximum_eye_on_base_camera_translation_norm_m: 3.0
+      maximum_marker_position_rms_m: 0.002
+      maximum_marker_rotation_rms_deg: 1.50
+      fixed_marker_refinement_translation_sigma_m: 0.0005
+      fixed_marker_refinement_rotation_sigma_deg: 0.30
+      fixed_marker_refinement_max_iterations: 25
+      ground_truth_check_enabled: true
+      ground_truth_max_translation_error_m: 0.003
+      ground_truth_max_axis_error_m: 0.002
+      ground_truth_max_rotation_error_deg: 1.0
+
+    # output：左臂全局标定结果
+    output:
+      calibration_output_directory: $HOME/my_S622/src/hand_eye_calibration/calib/global_eye_on_base/left
+      calibration_file_prefix: robot_calibration

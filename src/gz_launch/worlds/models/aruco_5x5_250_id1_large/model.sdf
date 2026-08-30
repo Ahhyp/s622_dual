@@ -1,0 +1,175 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="aruco_5x5_250_id1_large">
+    <static>true</static>
+    <self_collide>false</self_collide>
+    <link name="board">
+      <pose>0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.0002</ixx><iyy>0.0002</iyy><izz>0.0002</izz>
+        </inertia>
+      </inertial>
+      <visual name="white_backing">
+        <geometry>
+          <box><size>0.16 0.002 0.16</size></box>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r0_c0">
+        <pose>-0.055714 -0.001100 0.055714 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r0_c1">
+        <pose>-0.037143 -0.001100 0.055714 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r0_c2">
+        <pose>-0.018571 -0.001100 0.055714 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r0_c3">
+        <pose>0.000000 -0.001100 0.055714 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r1_c2">
+        <pose>-0.018571 -0.001100 0.037143 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r1_c3">
+        <pose>0.000000 -0.001100 0.037143 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r1_c4">
+        <pose>0.018571 -0.001100 0.037143 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r2_c0">
+        <pose>-0.055714 -0.001100 0.018571 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r2_c1">
+        <pose>-0.037143 -0.001100 0.018571 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r2_c2">
+        <pose>-0.018571 -0.001100 0.018571 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r2_c3">
+        <pose>0.000000 -0.001100 0.018571 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r3_c1">
+        <pose>-0.037143 -0.001100 0.000000 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r4_c0">
+        <pose>-0.055714 -0.001100 -0.018571 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r4_c1">
+        <pose>-0.037143 -0.001100 -0.018571 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+      <visual name="front_r4_c4">
+        <pose>0.018571 -0.001100 -0.018571 0 0 0</pose>
+        <geometry>
+          <box><size>0.018200 0.0004 0.018200</size></box>
+        </geometry>
+        <material>
+          <ambient>0 0 0 1</ambient><diffuse>0 0 0 1</diffuse><specular>0 0 0 1</specular>
+        </material>
+      </visual>
+
+    </link>
+  </model>
+</sdf>

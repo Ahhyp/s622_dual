@@ -96,7 +96,8 @@
     <!-- ============ [M2] 全局俯视相机（默认关） ============
          world 相机（0,0.5,0.9 俯视）是旧视觉伺服用；M2 标定用腕部 wrist_camera，
          全局 eye-to-hand（M2.7）才需要它。默认关掉省一个 RGBD 渲染（Gazebo 卡因之一）。
-         需要时：include_global_camera:=true -->
+         需要时：include_global_camera:=true
+         [M2.7] 标定只用 RGB → enable_depth=false 减半渲染负载 -->
     <xacro:arg name="include_global_camera" default="false" />
     <xacro:include filename="$(find s622_moveit_descriptions)/urdf/camera/camera.xacro" />
     <xacro:if value="$(arg include_global_camera)">
@@ -104,19 +105,99 @@
                          use_camera_visual="$(arg include_camera_visual)">
             <origin xyz="0 0.5 0.9" rpy="0 ${58*M_PI/180} ${-M_PI/2}" />
         </xacro:camera_v0>
-        <xacro:camera_gazebo_v0 />
+        <xacro:camera_gazebo_v0 enable_depth="false" />
+    </xacro:if>
+
+    <!-- ============ [M2.7] 全局 eye-to-hand 标定板（默认关） ============
+         大号 ArUco（板 160mm / marker 130mm，DICT_5X5_250 id=1，纹理 aruco_id1.png），
+         固定在指定臂的 grasp_frame 前方、板面朝 +x（全局相机在 (0,0.5,0.9) 俯视）。
+         一次只出现一块（calibration_arm:=left|right|none），避免两块同 ID 板同帧。
+         GT = 固定 joint 的 origin（可精确知道，但只用于最后 GT 验证，绝不喂 solver）。 -->
+    <xacro:arg name="calibration_arm" default="none" />
+    <xacro:property name="calib_arm" value="$(arg calibration_arm)" />
+    <xacro:if value="${calib_arm == 'left'}">
+        <link name="left_calibration_aruco">
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 0" />
+                <geometry>
+                    <box size="0.24 0.24 0.002" />
+                </geometry>
+            </visual>
+        </link>
+        <gazebo reference="left_calibration_aruco">
+            <visual>
+                <material>
+                    <ambient>1 1 1 1</ambient>
+                    <diffuse>1 1 1 1</diffuse>
+                    <specular>0 0 0 1</specular>
+                    <emissive>1 1 1 1</emissive>
+                    <pbr>
+                        <metal>
+                            <albedo_map>model://aruco_marker_1/materials/textures/aruco_id1.png</albedo_map>
+                            <emissive_map>model://aruco_marker_1/materials/textures/aruco_id1.png</emissive_map>
+                            <metalness>0.0</metalness>
+                            <roughness>1.0</roughness>
+                        </metal>
+                    </pbr>
+                </material>
+            </visual>
+        </gazebo>
+        <joint name="left_grasp_to_calibration_aruco" type="fixed">
+            <parent link="left_grasp_frame" />
+            <child link="left_calibration_aruco" />
+            <!-- 板面 +x：纹理正面朝全局相机方向（grasp_frame +x 朝前） -->
+            <origin xyz="0.05 0 0.08" rpy="1.5708 0 0" />
+        </joint>
+    </xacro:if>
+    <xacro:if value="${calib_arm == 'right'}">
+        <link name="right_calibration_aruco">
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 0" />
+                <geometry>
+                    <box size="0.24 0.24 0.002" />
+                </geometry>
+            </visual>
+        </link>
+        <gazebo reference="right_calibration_aruco">
+            <visual>
+                <material>
+                    <ambient>1 1 1 1</ambient>
+                    <diffuse>1 1 1 1</diffuse>
+                    <specular>0 0 0 1</specular>
+                    <emissive>1 1 1 1</emissive>
+                    <pbr>
+                        <metal>
+                            <albedo_map>model://aruco_marker_1/materials/textures/aruco_id1.png</albedo_map>
+                            <emissive_map>model://aruco_marker_1/materials/textures/aruco_id1.png</emissive_map>
+                            <metalness>0.0</metalness>
+                            <roughness>1.0</roughness>
+                        </metal>
+                    </pbr>
+                </material>
+            </visual>
+        </gazebo>
+        <joint name="right_grasp_to_calibration_aruco" type="fixed">
+            <parent link="right_grasp_frame" />
+            <child link="right_calibration_aruco" />
+            <origin xyz="0.05 0 0.08" rpy="1.5708 0 0" />
+        </joint>
     </xacro:if>
 
     <!-- ============ [M2 标定] 右腕相机 (eye-in-hand GT) ============
          2026-08-28：实验室仅 1 个腕部相机，装右臂 grasp_frame。
          GT = URDF 固定 right_grasp_frame → wrist_camera 变换（origin 照 robotarm
-         tool0 安装值），标定后与求解结果比较（ground_truth_check_enabled=true）。 -->
-    <xacro:camera_v0 parent="right_grasp_frame" name="wrist_camera"
-                     use_camera_visual="$(arg include_camera_visual)">
-        <origin xyz="0 -0.05 -0.09" rpy="0 -1.57079632679 -1.57079632679" />
-    </xacro:camera_v0>
-    <!-- [M2 标定] wrist_camera 只渲染 RGB（enable_depth=false）：标定只用 RGB，
-         关 depth 渲染减半 → 提升帧率（实测 1280×720 双传感器仅 2.3Hz → 稳定帧不足） -->
-    <xacro:camera_gazebo_v0 name="wrist_camera" enable_depth="false" />
+         tool0 安装值），标定后与求解结果比较（ground_truth_check_enabled=true）。
+         [M2.7] 全局 eye-to-hand 标定期间用 include_wrist_camera:=false 关掉它，
+         省一个 RGB 渲染 → 提升 Gazebo 帧率。 -->
+    <xacro:arg name="include_wrist_camera" default="true" />
+    <xacro:if value="$(arg include_wrist_camera)">
+        <xacro:camera_v0 parent="right_grasp_frame" name="wrist_camera"
+                         use_camera_visual="$(arg include_camera_visual)">
+            <origin xyz="0 -0.05 -0.09" rpy="0 -1.57079632679 -1.57079632679" />
+        </xacro:camera_v0>
+        <!-- [M2 标定] wrist_camera 只渲染 RGB（enable_depth=false）：标定只用 RGB，
+             关 depth 渲染减半 → 提升帧率（实测 1280×720 双传感器仅 2.3Hz → 稳定帧不足） -->
+        <xacro:camera_gazebo_v0 name="wrist_camera" enable_depth="false" />
+    </xacro:if>
 
 </robot>
