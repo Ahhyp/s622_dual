@@ -11,7 +11,8 @@
   h_fov
   v_fov
   min_depth:=0.05
-  max_depth:=10.0">
+  max_depth:=10.0
+  enable_depth:=true">  <!-- [M2 标定] enable_depth=false 只渲染 RGB（标定只用 RGB，关 depth 渲染减半 → 帧率提升） -->
 
     <xacro:property name="fx" value="${image_width * 0.5 / tan(h_fov * 0.5)}" />
     <xacro:property name="fy" value="${image_height * 0.5 / tan(v_fov * 0.5)}" />
@@ -59,7 +60,8 @@
       </sensor>
     </gazebo>
 
-    <!-- ===== Depth Sensor ===== -->
+    <!-- ===== Depth Sensor（[M2 标定] enable_depth=false 时关闭，减渲染负载） ===== -->
+    <xacro:if value="${enable_depth}">
     <gazebo reference="${name}_color_frame">
       <sensor name="${name}_depth" type="depth_camera">
         <topic>${gz_topic_name}/depth_image</topic>
@@ -99,6 +101,7 @@
         </camera>
       </sensor>
     </gazebo>
+    </xacro:if>
 
   </xacro:macro>
 </robot>

@@ -115,6 +115,8 @@
                      use_camera_visual="$(arg include_camera_visual)">
         <origin xyz="0 -0.05 -0.09" rpy="0 -1.57079632679 -1.57079632679" />
     </xacro:camera_v0>
-    <xacro:camera_gazebo_v0 name="wrist_camera" />
+    <!-- [M2 标定] wrist_camera 只渲染 RGB（enable_depth=false）：标定只用 RGB，
+         关 depth 渲染减半 → 提升帧率（实测 1280×720 双传感器仅 2.3Hz → 稳定帧不足） -->
+    <xacro:camera_gazebo_v0 name="wrist_camera" enable_depth="false" />
 
 </robot>
