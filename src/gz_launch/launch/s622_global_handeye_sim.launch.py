@@ -37,25 +37,26 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+# [M2.7] 标定板挂哪只臂：由 M2_ARM 环境变量决定（构造期生效，s622_dual_arm 读取）。
+# 用法：M2_ARM=right ros2 launch gz_launch s622_global_handeye_sim.launch.py
+#       M2_ARM=left  ros2 launch gz_launch s622_global_handeye_sim.launch.py
+_M2_ARM = os.environ.get("M2_ARM", "right")
+os.environ["M2_MODE"] = _M2_ARM  # 通知 s622_dual_arm 使用 M2.7 场景参数
+
 
 def generate_launch_description():
     gz_pkg = get_package_share_directory("gz_launch")
     handeye_pkg = get_package_share_directory("hand_eye_calibration")
 
     arm_arg = DeclareLaunchArgument(
-        "arm", default_value="right", choices=["left", "right"],
-        description="标定板固定到哪只臂（左/右）")
+        "arm", default_value=_M2_ARM, choices=["left", "right"],
+        description="标定板固定到哪只臂（建议用 M2_ARM 环境变量）")
 
-    # ---- 1. 双臂仿真：全局相机开 + 腕部关 + 标定板挂 arm ----
+    # ---- 1. 双臂仿真：M2_MODE 已设 → 全局相机开 + 腕部关 + 标定板挂 M2_ARM ----
     dual_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(gz_pkg, "launch", "s622_dual_arm.launch.py"),
         ),
-        launch_arguments={
-            "include_global_camera": "true",
-            "include_wrist_camera": "false",
-            "calibration_arm": LaunchConfiguration("arm"),
-        }.items(),
     )
 
     aruco_params = os.path.join(handeye_pkg, "config", "aruco_parameters.yaml")

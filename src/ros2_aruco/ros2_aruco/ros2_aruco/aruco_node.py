@@ -253,7 +253,6 @@ class ArucoNode(rclpy.node.Node):
         self.distortion = None
 
         # [M2.7] 兼容 OpenCV 新旧 Aruco API（cv2>=4.7 用 ArucoDetector/solvePnP）
-        import cv2
         (self._get_dictionary, self._make_detector,
          self._detect, self._estimate_pose) = _cv2_aruco_compat(cv2)
         self.aruco_dictionary = self._get_dictionary(dictionary_id)
