@@ -105,9 +105,10 @@ auto_calibration_collector:
       marker_distance_min_m: 0.20
       marker_distance_max_m: 0.80
       # 稳定帧数：需要连续 N 帧高质量观测才能认为稳定
-      stable_frames: 10
-      # 获取稳定观测的超时时间 (秒)
-      stable_marker_timeout_sec: 5.0
+      # [M2 标定] 10→6：软件渲染帧率低（960×540 ~3-4Hz），10 帧窗口难凑齐
+      stable_frames: 6
+      # 获取稳定观测的超时时间 (秒) [M2] 5→8：低帧率下 6 帧窗口需要更长时间
+      stable_marker_timeout_sec: 8.0
 
       # 最小角点距图像边缘距离 (像素)：防止边缘截断影响角点精度
       minimum_corner_margin_px: 60.0
