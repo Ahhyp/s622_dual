@@ -4,6 +4,7 @@
 #       + move_group + RViz + planning_scene_service(双臂 touch_links) + camera_bridge
 # 不含: obb_node(M2.7 改造), servo(M2.5)
 import os
+from pathlib import Path
 import yaml
 import launch
 from launch import LaunchDescription
@@ -14,6 +15,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from moveit_configs_utils import MoveItConfigsBuilder
+from launch_param_builder import load_xacro  # noqa: E402
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.actions import DeclareLaunchArgument
@@ -546,9 +548,16 @@ def generate_launch_description():
     # 2026-08-27 S4：必须传双臂 URDF/SRDF/kinematics——retime_server.launch.py 默认加载
     # 单臂模型（robot_gazebo.urdf.xacro，group=robot_arm）；双臂轨迹（left_j1.. / dual_arm 组）
     # 的 joint 集合/group 在单臂模型上不存在 → retime（TOTG）失败。双臂 launch 覆盖三参数。
+    # [M2.7] robot_description 用基础 xacro（mappings 全 str）重新生成一份纯字符串，
+    # 不依赖 moveit_config.robot_description（后者在含相机/标定板运行时参数时是
+    # ParameterValue，不能直接放进 launch_arguments）。
     with open(os.path.join(robot_moveit_pkg, "config", "s622_dual_arm.srdf"),
               "r", encoding="utf-8") as f:
         dual_arm_srdf_str = f.read()
+    retime_robot_description_xml = load_xacro(
+        Path(dual_arm_gazebo_xacro),
+        mappings={"instantiate": "false", "include_camera_visual": "false"},
+    )
     retime_server_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -559,7 +568,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             "use_sim_time": "true",
-            "robot_description": moveit_config.robot_description["robot_description"],
+            "robot_description": retime_robot_description_xml,
             "robot_description_semantic": dual_arm_srdf_str,
             "robot_description_kinematics": yaml.safe_dump(dual_arm_kinematics_fairino),
         }.items(),

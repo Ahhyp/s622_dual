@@ -61,15 +61,17 @@ def generate_launch_description():
     aruco_params = os.path.join(handeye_pkg, "config", "aruco_parameters.yaml")
 
     # ---- 2. ros2_aruco 检测（全局相机；大号标定板 marker 0.20m（240mm 板，纹理 marker 占 5/6 区域））----
+    # 注意：parameters 列表后者覆盖前者 → aruco_parameters.yaml 在前，
+    # 后面的显式 image/camera_info/marker_size 覆盖掉腕部默认值
     aruco_node = Node(
         package="ros2_aruco",
         executable="aruco_node",
         output="screen",
         parameters=[
+            aruco_params,
             {"image_topic": "/camera/color/image_raw"},
             {"camera_info_topic": "/camera/color/camera_info"},
             {"marker_size": 0.20},
-            aruco_params,
         ],
     )
 

@@ -45,6 +45,65 @@ from ros2_aruco_interfaces.msg import ArucoMarkers
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 
+def _cv2_aruco_compat(cv2):
+    """OpenCV 新旧 Aruco API 兼容层（cv2>=4.7 移除 Dictionary_get / detectMarkers /
+    estimatePoseSingleMarkers 旧接口，改用 ArucoDetector / solvePnP）。
+
+    返回 (get_dictionary, make_detector, detect, estimate_pose)：
+      - get_dictionary(dict_id) -> dictionary
+      - make_detector(dictionary, params) -> detector
+      - detect(detector, image) -> (corners, ids, rejected)
+      - estimate_pose(corners, size_m, K, dist) -> (rvecs, tvecs)
+    """
+    import numpy as _np
+
+    if hasattr(cv2.aruco, "ArucoDetector"):
+        # ---- 新 API（cv2 >= 4.7）----
+        def get_dictionary(dict_id):
+            return cv2.aruco.getPredefinedDictionary(dict_id)
+
+        def make_detector(dictionary, parameters):
+            return cv2.aruco.ArucoDetector(dictionary, parameters)
+
+        def detect(detector, image):
+            corners, ids, rejected = detector.detectMarkers(image)
+            return corners, ids, rejected
+
+        def estimate_pose(corners, size_m, K, dist):
+            rvecs, tvecs = [], []
+            obj = _np.array(
+                [[-size_m / 2, -size_m / 2, 0],
+                 [size_m / 2, -size_m / 2, 0],
+                 [size_m / 2, size_m / 2, 0],
+                 [-size_m / 2, size_m / 2, 0]],
+                dtype=_np.float64,
+            )
+            for corner in corners:
+                ok, rvec, tvec = cv2.solvePnP(
+                    obj, corner.reshape(4, 2).astype(_np.float64),
+                    K, dist, flags=cv2.SOLVEPNP_IPPE_SQUARE,
+                )
+                rvecs.append(rvec.reshape(1, 3) if ok else _np.zeros((1, 3)))
+                tvecs.append(tvec.reshape(1, 3) if ok else _np.zeros((1, 3)))
+            # 保持旧 API 的 (N,1,3) 形状，下游 tvecs[i][0] 兼容
+            return _np.array(rvecs), _np.array(tvecs)
+    else:
+        # ---- 旧 API（cv2 < 4.7）----
+        def get_dictionary(dict_id):
+            return cv2.aruco.Dictionary_get(dict_id)
+
+        def make_detector(_dictionary, _parameters):
+            return None  # 旧 API 无 detector 对象
+
+        def detect(dictionary, _detector, image, parameters):
+            return cv2.aruco.detectMarkers(image, dictionary, parameters=parameters)
+
+        def estimate_pose(corners, size_m, K, dist):
+            return cv2.aruco.estimatePoseSingleMarkers(corners, size_m, K, dist)[:2]
+
+    return get_dictionary, make_detector, detect, estimate_pose
+
+
 class ArucoNode(rclpy.node.Node):
     def __init__(self):
         super().__init__("aruco_node")
@@ -193,9 +252,15 @@ class ArucoNode(rclpy.node.Node):
         self.intrinsic_mat = None
         self.distortion = None
 
-        self.aruco_dictionary = cv2.aruco.Dictionary_get(dictionary_id)
-        self.aruco_parameters = cv2.aruco.DetectorParameters_create()
+        # [M2.7] 兼容 OpenCV 新旧 Aruco API（cv2>=4.7 用 ArucoDetector/solvePnP）
+        import cv2
+        (self._get_dictionary, self._make_detector,
+         self._detect, self._estimate_pose) = _cv2_aruco_compat(cv2)
+        self.aruco_dictionary = self._get_dictionary(dictionary_id)
+        self.aruco_parameters = cv2.aruco.DetectorParameters() \
+            if hasattr(cv2.aruco, "DetectorParameters") else cv2.aruco.DetectorParameters_create()
         self._configure_detector_parameters()
+        self._aruco_detector = self._make_detector(self.aruco_dictionary, self.aruco_parameters)
         self.bridge = CvBridge()
 
     def _configure_detector_parameters(self):
@@ -271,20 +336,17 @@ class ArucoNode(rclpy.node.Node):
         markers.header.stamp = img_msg.header.stamp
         pose_array.header.stamp = img_msg.header.stamp
 
-        corners, marker_ids, rejected = cv2.aruco.detectMarkers(
-            cv_image, self.aruco_dictionary, parameters=self.aruco_parameters
-        )
+        if self._aruco_detector is not None:
+            corners, marker_ids, rejected = self._detect(self._aruco_detector, cv_image)
+        else:
+            corners, marker_ids, rejected = self._detect(
+                self.aruco_dictionary, None, cv_image, self.aruco_parameters)
         rvecs = None
         tvecs = None
         if marker_ids is not None:
-            if cv2.__version__ > "4.0.0":
-                rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
-                    corners, self.marker_size, self.intrinsic_mat, self.distortion
-                )
-            else:
-                rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(
-                    corners, self.marker_size, self.intrinsic_mat, self.distortion
-                )
+            rvecs, tvecs = self._estimate_pose(
+                corners, self.marker_size, self.intrinsic_mat, self.distortion
+            )
             for i, marker_id in enumerate(marker_ids):
                 pose = Pose()
                 pose.position.x = tvecs[i][0][0]
