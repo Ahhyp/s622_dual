@@ -223,20 +223,38 @@ def _paired_noise(
     trials: int,
     rng: np.random.Generator,
     truth: np.ndarray,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray]:
     """Pre-generate per-point measurement noise so every N can reuse it.
 
-    Returns (left_meas_all, right_meas_all, trial_indices) where the arrays
-    have shape (trials, n_fixture, 3).  Each trial has ONE TCP draw shared by
-    all fixture points (systematic), plus per-point touch/FK draws.
+    Returns (left_meas_all, right_meas_all) with shape (trials, n_fixture, 3).
+
+    TCP bias per trial:
+      - fixed_probe_orientation=True  → ONE constant 3D offset in base frame
+        shared by all points (valid when every touch uses the same probe
+        orientation);
+      - fixed_probe_orientation=False → the bias lives in the TOOL frame and is
+        rotated into base by each touch's probe orientation R_B_tool,i, so its
+        base-frame direction varies per point (realistic when the probe is
+        tilted differently per point).
     """
     n = len(fixture)
     left_true_all = np.repeat(fixture[None, :, :], trials, axis=0)
     right_true_all = apply_transform(fixture, np.linalg.inv(truth))
     right_true_all = np.repeat(right_true_all[None, :, :], trials, axis=0)
 
-    left_tcp = rng.normal(0.0, noise.tcp_axis_sigma_m, size=(trials, 1, 3))
-    right_tcp = rng.normal(0.0, noise.tcp_axis_sigma_m, size=(trials, 1, 3))
+    left_tcp_tool = rng.normal(0.0, noise.tcp_axis_sigma_m, size=(trials, 3))
+    right_tcp_tool = rng.normal(0.0, noise.tcp_axis_sigma_m, size=(trials, 3))
+    if noise.fixed_probe_orientation:
+        left_tcp = left_tcp_tool[:, None, :]
+        right_tcp = right_tcp_tool[:, None, :]
+    else:
+        # per-point random probe orientations (same across trials for pairing,
+        # but different per fixture point so the base-frame TCP direction varies)
+        left_rots = _random_probe_rotations(n, rng)
+        right_rots = _random_probe_rotations(n, rng)
+        left_tcp = np.einsum("pij,tj->tpi", left_rots, left_tcp_tool)
+        right_tcp = np.einsum("pij,tj->tpi", right_rots, right_tcp_tool)
+
     left_rand = rng.normal(0.0, noise.touch_axis_sigma_m, size=(trials, n, 3))
     right_rand = rng.normal(0.0, noise.touch_axis_sigma_m, size=(trials, n, 3))
     left_fk = rng.normal(0.0, noise.fk_axis_sigma_m, size=(trials, n, 3))
@@ -245,6 +263,17 @@ def _paired_noise(
     left_meas_all = left_true_all + left_tcp + left_rand + left_fk
     right_meas_all = right_true_all + right_tcp + right_rand + right_fk
     return left_meas_all, right_meas_all
+
+
+def _random_probe_rotations(n: int, rng: np.random.Generator) -> np.ndarray:
+    """Random (n, 3, 3) rotation matrices simulating varied probe orientations.
+
+    Scipy's ``Rotation.random`` is imported lazily to keep the module
+    dependency-light.
+    """
+    from scipy.spatial.transform import Rotation as R
+
+    return R.random(n, random_state=rng).as_matrix()
 
 
 def _summarize_matrix(

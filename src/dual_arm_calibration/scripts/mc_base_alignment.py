@@ -51,6 +51,9 @@ def _main(argv=None) -> int:
     parser.add_argument("--seed", type=int, default=0, help="RNG seed")
     parser.add_argument("--outdir", default="/tmp/m2_6", help="output directory for plots/JSON")
     parser.add_argument("--plot", action="store_true", help="save matplotlib PNG plots")
+    parser.add_argument("--tool-frame-tcp", action="store_true",
+                        help="model TCP bias in the tool frame (rotated per touch pose) "
+                             "instead of a constant base-frame offset")
     args = parser.parse_args(argv)
 
     counts = tuple(int(v) for v in args.counts.split(",") if v.strip())
@@ -62,9 +65,11 @@ def _main(argv=None) -> int:
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    noise = mc.NoiseModel()
+    noise = mc.NoiseModel(fixed_probe_orientation=not args.tool_frame_tcp)
     print("=" * 88)
     print(f"M2.6 dual-base Monte Carlo (v2 nested/paired) — trials={args.trials} seed={args.seed}")
+    tcp_mode = "tool-frame (rotated per touch pose)" if args.tool_frame_tcp else "base-frame constant"
+    print(f"  TCP model: {tcp_mode}")
     print(f"  noise (per-axis σ, 3D RMS = σ·√3):")
     print(f"    touch={noise.touch_axis_sigma_m*1000:.2f} mm/axis "
           f"tcp={noise.tcp_axis_sigma_m*1000:.2f} mm/axis "

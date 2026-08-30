@@ -214,6 +214,41 @@ class MonteCarloTests(unittest.TestCase):
         errs = np.linalg.norm(mapped - expected, axis=1)
         self.assertGreater(np.max(errs), 0.003)  # > 3 mm induced at ~0.5 m
 
+    def test_tool_frame_tcp_varies_per_point(self):
+        """With fixed_probe_orientation=False, TCP offsets rotate per point."""
+        from scipy.spatial.transform import Rotation as R
+        noise = mc.NoiseModel(touch_axis_sigma_m=0.0, tcp_axis_sigma_m=0.001,
+                              fk_axis_sigma_m=0.0, fixed_probe_orientation=False)
+        rng = np.random.default_rng(9)
+        left_true = rng.uniform(-0.3, 0.3, size=(10, 3))
+        right_true = rng.uniform(-0.3, 0.3, size=(10, 3))
+        rots = R.random(10, random_state=rng).as_matrix()
+        left_meas, right_meas = noise.measure(
+            left_true, right_true, rng,
+            probe_rotations_left=rots, probe_rotations_right=rots,
+        )
+        left_offsets = left_meas - left_true
+        right_offsets = right_meas - right_true
+        # offsets are the SAME tool-frame bias rotated by different per-point
+        # orientations → different base-frame vectors, but equal norm
+        left_norms = np.linalg.norm(left_offsets, axis=1)
+        right_norms = np.linalg.norm(right_offsets, axis=1)
+        self.assertGreater(np.max(np.linalg.norm(left_offsets - left_offsets[0], axis=1)), 1e-9)
+        self.assertGreater(np.max(np.linalg.norm(right_offsets - right_offsets[0], axis=1)), 1e-9)
+        np.testing.assert_allclose(left_norms, left_norms[0], rtol=1e-6)
+        np.testing.assert_allclose(right_norms, right_norms[0], rtol=1e-6)
+
+    def test_tool_frame_rotation_degrades_rotation_more(self):
+        """Tool-frame TCP should produce worse rotation P95 than base-frame constant."""
+        fixture = mc.design_wide_fixture(20, seed=0)
+        base_noise = mc.NoiseModel()
+        tool_noise = mc.NoiseModel(fixed_probe_orientation=False)
+        base_res = mc.nested_scan(fixture, (20,), trials=400, noise=base_noise, seed=5)
+        tool_res = mc.nested_scan(fixture, (20,), trials=400, noise=tool_noise, seed=5)
+        base_rot = base_res["rows"][0]["rotation_p95_deg"]
+        tool_rot = tool_res["rows"][0]["rotation_p95_deg"]
+        self.assertGreater(tool_rot, base_rot)
+
     def test_gt_consistency_with_urdf(self):
         truth = mc.dual_base_ground_truth()
         origin_right = np.array([0.0, 0.0, 0.0])
