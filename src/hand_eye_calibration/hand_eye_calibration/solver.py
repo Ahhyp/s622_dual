@@ -349,6 +349,51 @@ def _solve_once(records: Sequence[CalibrationSample], config, *, maximum_transla
     return valid, refined, algorithm, translation_delta, rotation_delta, metrics, details
 
 
+def solve_handeye_dataset(
+    records: Sequence[CalibrationSample],
+    config,
+    *,
+    calibration_type=None,
+    allow_pruning: bool = False,
+):
+    """公共求解入口：完整生产质量门控的 single-shot 求解。
+
+    与 ``finalize_calibration`` 共用同一 ``_solve_once`` 管道（安装范数校验、
+    Park/Horaud 一致性门控、Tsai 诊断、fixed-marker 精修、internal RMS 门控、
+    有限性检查），因此 collector / evaluator / offline evaluator 三处得到的
+    估计与生产环境完全一致。
+
+    - ``calibration_type`` 决定 EIH/EOB 的安装范数上限（0.30 m / 2.0 m）；
+    - ``allow_pruning=True`` 时在内部门控失败且样本数 > 3 的前提下，
+      按 fixed-marker 残差剔除最差样本重解（与 collector 行为一致）。
+      注意：pruning 只作用于传入的 records（evaluator 中即 solve 子集），
+      绝不触碰 hold-out 样本。
+
+    返回 ``(valid, refined, algorithm, translation_delta, rotation_delta,
+    metrics, details, retained_count)``。
+    """
+    kind = (
+        normalize_calibration_type(calibration_type)
+        if calibration_type is not None
+        else CalibrationType.EYE_IN_HAND
+    )
+    maximum_norm = (
+        config.maximum_camera_translation_norm_m
+        if kind is CalibrationType.EYE_IN_HAND
+        else config.maximum_eye_on_base_camera_translation_norm_m
+    )
+    retained = list(records)
+    while True:
+        valid, refined, algorithm, translation_delta, rotation_delta, metrics, details = _solve_once(
+            retained, config, maximum_translation_norm_m=maximum_norm,
+        )
+        if valid or not allow_pruning or len(retained) <= 3:
+            break
+        worst = _worst_sample(metrics, config)
+        retained.pop(worst)
+    return valid, refined, algorithm, translation_delta, rotation_delta, metrics, details, len(retained)
+
+
 def _worst_sample(metrics: dict, config) -> int:
     """根据固定标定板残差找出最差的样本（用于迭代剔除）。
 

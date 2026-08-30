@@ -17,11 +17,13 @@ Workflow:
      the robot FK and the ArUco marker pose in the camera (from TF).
   3) Evaluation:
        - if ``calibration_file`` is set: score the freshly collected samples
-         against that saved hand-eye (constant-frame self-consistency);
-       - otherwise: split the collected samples into solve / hold-out
-         subsets, solve the hand-eye on the solve subset only, and score the
-         hold-out subset against the solve-set reference frame.
-  4) Report metrics + M2.3-B hold-out acceptance gates.
+         against that saved hand-eye (fresh-data constant-frame
+         self-consistency — NOT a strict hold-out score, because the reference
+         frame is derived from these very samples);
+       - otherwise: split the collected samples into solve / hold-out subsets,
+         solve the hand-eye on the solve subset only (full production gates),
+         and score the hold-out subset against the solve-set reference frame.
+  4) Report metrics + solver gate + M2.3-B hold-out acceptance gates.
 
 Run (real hardware / simulation with TF):
   ros2 run hand_eye_calibration evaluate_calibration.py --ros-args \
@@ -31,15 +33,13 @@ Run (real hardware / simulation with TF):
   ros2 run hand_eye_calibration evaluate_calibration.py --ros-args \
     -p calibration_file:=$HOME/my_S622/src/hand_eye_calibration/calib/sim/robot_calibration_XXXX.calib
 """
-import math
 import sys
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import rclpy
 import tf2_ros
-from geometry_msgs.msg import TransformStamped
 from rclpy.node import Node
 from rclpy.time import Time
 from scipy.spatial.transform import Rotation as R
@@ -55,16 +55,21 @@ except ImportError as exc:  # pragma: no cover
 
 
 def _matrix_from_tf(transform) -> np.ndarray:
-    """Convert geometry_msgs/Transform (or TransformStamped.transform) to 4x4 matrix."""
-    t = np.array([transform.translation.x,
-                  transform.translation.y,
-                  transform.translation.z], dtype=float)
-    q = np.array([transform.rotation.w, transform.rotation.x,
-                  transform.rotation.y, transform.rotation.z], dtype=float)
-    m = np.eye(4)
-    m[:3, :3] = R.from_quat(q).as_matrix()
-    m[:3, 3] = t
-    return m
+    """Convert geometry_msgs/Transform (or TransformStamped.transform) to 4x4 matrix.
+
+    Quaternion order: geometry_msgs/Quaternion and SciPy ``R.from_quat`` are
+    both (x, y, z, w) — see ``evaluator.quat_xyzw_to_matrix``.
+    """
+    matrix = evaluator.quat_xyzw_to_matrix(
+        transform.rotation.x,
+        transform.rotation.y,
+        transform.rotation.z,
+        transform.rotation.w,
+    )
+    matrix[0, 3] = transform.translation.x
+    matrix[1, 3] = transform.translation.y
+    matrix[2, 3] = transform.translation.z
+    return matrix
 
 
 def _transform_from_matrix(matrix: np.ndarray) -> TransformMatrix:
@@ -109,15 +114,29 @@ class EvaluateCalibration(Node):
         )
         if self.sample_count < 4:
             raise RuntimeError("sample_count must be at least 4")
+        if self.solve_count < 3:
+            raise RuntimeError("solve_count must be at least 3")
+        if self.solve_count >= self.sample_count:
+            raise RuntimeError(
+                f"solve_count ({self.solve_count}) must be < sample_count ({self.sample_count}) "
+                "so at least one hold-out sample remains"
+            )
 
         self.saved_handeye: Optional[TransformMatrix] = None
         if self.calibration_file:
             path = Path(self.calibration_file)
             if not path.exists():
                 raise RuntimeError(f"calibration_file not found: {path}")
-            self.saved_handeye = evaluator.load_calibration_yaml(path)
+            calib = evaluator.load_calibration_yaml(path)
+            if calib.calibration_type is not self.calibration_type:
+                raise RuntimeError(
+                    f"calibration_file type {calib.calibration_type.value} does not match "
+                    f"calibration_type {self.calibration_type.value}"
+                )
+            self.saved_handeye = calib.transform
             self.get_logger().info(
-                f"Loaded saved calibration from {path} (will score fresh samples against it)"
+                f"Loaded saved calibration from {path} "
+                "(fresh-data self-consistency check, not strict hold-out)"
             )
 
         self.tf_buffer = tf2_ros.Buffer()
@@ -128,15 +147,25 @@ class EvaluateCalibration(Node):
         self.samples: list[CalibrationSample] = []
         self._sample_idx = 0
 
-        self.get_logger().info(
-            "=" * 60 + "\n"
-            "  独立标定评估（constant-frame hold-out）\n"
-            f"  模式: {self.calibration_type.value}\n"
-            f"  采样点数: {self.sample_count}" +
-            (f"（前 {self.solve_count} 个求解，其余 hold-out）" if self.saved_handeye is None else "（对已存标定打分）") +
-            "\n  操作: 移动机械臂到不同位姿 → 终端输入 's' 采集 → 输入 'q' 退出\n" +
-            "=" * 60
-        )
+        if self.saved_handeye is None:
+            self.get_logger().info(
+                "=" * 60 + "\n"
+                "  独立标定评估（constant-frame hold-out）\n"
+                f"  模式: {self.calibration_type.value}\n"
+                f"  采样点数: {self.sample_count}  solve_count: {self.solve_count}\n"
+                "  split strategy: deterministic_spread（按采集序列均匀散布 hold-out）\n"
+                "  操作: 移动机械臂到不同位姿 → 终端输入 's' 采集 → 输入 'q' 退出\n" +
+                "=" * 60
+            )
+        else:
+            self.get_logger().info(
+                "=" * 60 + "\n"
+                "  独立标定评估（fresh-data constant-frame self-consistency）\n"
+                f"  模式: {self.calibration_type.value}  对已存标定打分\n"
+                f"  采样点数: {self.sample_count}\n"
+                "  操作: 移动机械臂到不同位姿 → 终端输入 's' 采集 → 输入 'q' 退出\n" +
+                "=" * 60
+            )
 
         self.create_timer(0.5, self._prompt_loop)
 
@@ -180,23 +209,24 @@ class EvaluateCalibration(Node):
         if ch != "s":
             return
 
-        self._collect_sample()
-        self._sample_idx += 1
+        if self._collect_sample():
+            self._sample_idx += 1
 
-    def _collect_sample(self):
+    def _collect_sample(self) -> bool:
+        """Record one sample.  Returns True only if the sample was recorded."""
         try:
             eff_tf = self.tf_buffer.lookup_transform(
                 self.robot_base_frame, self.robot_effector_frame, Time())
         except Exception as exc:
             self.get_logger().error(f"Failed to get robot FK: {exc}")
-            return
+            return False
 
         try:
             mrk_tf = self.tf_buffer.lookup_transform(
                 self.tracking_base_frame, self.tracking_marker_frame, Time())
         except Exception as exc:
             self.get_logger().error(f"Failed to get marker TF: {exc}")
-            return
+            return False
 
         base_T_ee = _matrix_from_tf(eff_tf.transform)
         cam_T_mrk = _matrix_from_tf(mrk_tf.transform)
@@ -218,6 +248,7 @@ class EvaluateCalibration(Node):
             f"ee=({base_T_ee[0, 3]:.3f}, {base_T_ee[1, 3]:.3f}, {base_T_ee[2, 3]:.3f}) "
             f"marker_in_cam=({cam_T_mrk[0, 3]:.3f}, {cam_T_mrk[1, 3]:.3f}, {cam_T_mrk[2, 3]:.3f})"
         )
+        return True
 
     def _print_summary(self):
         if not self.samples:
@@ -228,12 +259,13 @@ class EvaluateCalibration(Node):
             metrics = evaluator.constant_frame_metrics(self.samples, self.saved_handeye)
             self.get_logger().info(
                 "\n" + "=" * 60 + "\n"
-                "  对已存标定的评估（constant-frame 自洽性）\n"
+                "  对已存标定的评估（fresh-data constant-frame self-consistency）\n"
                 f"  样本数: {len(self.samples)}\n"
                 f"  位置 RMS/P95/MAX = {metrics['position_rms_m']*1000:.2f} / "
                 f"{metrics['position_p95_m']*1000:.2f} / {metrics['position_max_m']*1000:.2f} mm\n"
                 f"  旋转 RMS/P95/MAX = {metrics['rotation_rms_deg']:.3f} / "
-                f"{metrics['rotation_p95_deg']:.3f} / {metrics['rotation_max_deg']:.3f} deg\n" +
+                f"{metrics['rotation_p95_deg']:.3f} / {metrics['rotation_max_deg']:.3f} deg\n"
+                "  注：参考帧由本次采集样本自身导出，属自洽性检查（非严格 hold-out）\n" +
                 "=" * 60
             )
             return

@@ -24,6 +24,12 @@ be disjoint**.  Samples used to estimate the hand-eye must never be used to
 score it.  ``evaluate_samples`` splits the dataset, solves on the solve subset
 and reports hold-out metrics against the reference frame established by the
 solve subset alone.
+
+Note on ``constant_frame_metrics`` without an explicit ``reference``: it is a
+*fresh-data self-consistency* check (the reference is derived from the very
+samples being scored).  Only ``evaluate_samples`` provides a strict hold-out
+score (reference from the solve subset).  Scripts using the saved-calibration
+mode must not describe it as strict hold-out.
 """
 
 from __future__ import annotations
@@ -42,11 +48,20 @@ from .config import CalibrationType, normalize_calibration_type
 from .solver import (
     CalibrationSample,
     TransformMatrix,
-    consensus,
-    refine_handeye_fixed_marker,
     rotation_delta_deg,
-    solve_algorithms,
+    solve_handeye_dataset,
 )
+
+
+def quat_xyzw_to_matrix(x, y, z, w) -> np.ndarray:
+    """Build a 4x4 rotation matrix from an (x, y, z, w) quaternion.
+
+    SciPy's ``R.from_quat`` default order is (x, y, z, w) — matching both
+    ``geometry_msgs/Quaternion`` and this package's YAML rotation blocks.
+    """
+    matrix = np.eye(4, dtype=float)
+    matrix[:3, :3] = R.from_quat([float(x), float(y), float(z), float(w)]).as_matrix()
+    return matrix
 
 
 def _transform_from_yaml(doc: dict) -> TransformMatrix:
@@ -75,10 +90,25 @@ def load_samples_yaml(path) -> Tuple[CalibrationType, List[CalibrationSample]]:
     return kind, samples
 
 
-def load_calibration_yaml(path) -> TransformMatrix:
-    """Load the collector's ``.calib`` YAML file (``transform`` block)."""
+@dataclass(frozen=True)
+class CalibrationFile:
+    """Parsed ``.calib`` file: type + transform (+ raw parameters)."""
+
+    calibration_type: CalibrationType
+    transform: TransformMatrix
+    parameters: dict
+
+
+def load_calibration_yaml(path) -> CalibrationFile:
+    """Load the collector's ``.calib`` YAML file (type + ``transform`` block)."""
     data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-    return _transform_from_yaml(data["transform"])
+    parameters = data.get("parameters", {}) or {}
+    kind = normalize_calibration_type(parameters.get("calibration_type", "eye_in_hand"))
+    return CalibrationFile(
+        calibration_type=kind,
+        transform=_transform_from_yaml(data["transform"]),
+        parameters=parameters,
+    )
 
 
 def _transform_to_yaml(transform: TransformMatrix) -> dict:
@@ -111,10 +141,19 @@ def save_samples_yaml(path, samples, calibration_type, *, status: str = "saved")
     return path
 
 
-def save_calibration_yaml(path, transform: TransformMatrix, *, name: str = "calibration") -> Path:
+def save_calibration_yaml(
+    path,
+    transform: TransformMatrix,
+    calibration_type=CalibrationType.EYE_IN_HAND,
+    *,
+    name: str = "calibration",
+) -> Path:
     """Write a hand-eye in the collector ``.calib`` format (for round-trip tests / archiving)."""
     data = {
-        "parameters": {"name": name, "calibration_type": "eye_in_hand"},
+        "parameters": {
+            "name": name,
+            "calibration_type": normalize_calibration_type(calibration_type).value,
+        },
         "transform": _transform_to_yaml(transform),
     }
     path = Path(path)
@@ -154,6 +193,8 @@ def constant_frame_pose(sample: CalibrationSample, handeye: TransformMatrix) -> 
 
 def reference_pose(poses: Sequence[np.ndarray]) -> np.ndarray:
     """Robust reference (median translation + medoid rotation) of implied fixed poses."""
+    if len(poses) == 0:
+        raise ValueError("reference_pose requires at least one pose")
     translations = np.asarray([pose[:3, 3] for pose in poses])
     reference_translation = np.median(translations, axis=0)
     rotations = [R.from_matrix(pose[:3, :3]) for pose in poses]
@@ -178,9 +219,11 @@ def constant_frame_metrics(
     ``reference`` should be computed from the *solve* set (see
     ``evaluate_samples``) so hold-out samples are never used to define the
     frame they are scored against.  When ``None`` the reference is derived
-    from the samples themselves (self-consistency — only meaningful for the
-    solve set).
+    from the samples themselves — a *self-consistency* metric, only meaningful
+    as a fresh-data consistency check (not a strict hold-out score).
     """
+    if len(samples) == 0:
+        raise ValueError("constant_frame_metrics requires at least one sample")
     poses = [constant_frame_pose(sample, handeye) for sample in samples]
     ref = reference_pose(poses) if reference is None else np.asarray(reference, dtype=float)
     positions = [float(np.linalg.norm(pose[:3, 3] - ref[:3, 3])) for pose in poses]
@@ -210,8 +253,8 @@ def split_solve_holdout(
     """Split samples into disjoint solve / hold-out subsets.
 
     Deterministic by default: hold-out indices are spread evenly across the
-    collected sequence so the hold-out set covers the workspace.  Pass an RNG
-    for a random split instead.
+    acquisition sequence (a heuristic that usually improves spatial diversity;
+    it is not a strict SE(3) stratification).  Pass an RNG for a random split.
     """
     total = len(samples)
     if solve_count <= 0:
@@ -237,37 +280,40 @@ def split_solve_holdout(
 
 def solve_handeye(
     solve_samples: Sequence[CalibrationSample],
+    calibration_type=CalibrationType.EYE_IN_HAND,
     config: Optional[SimpleNamespace] = None,
-) -> Tuple[TransformMatrix, str, dict]:
-    """Solve the hand-eye on the given samples (Park/Horaud + consensus + fixed-marker refine).
+    *,
+    allow_pruning: bool = False,
+):
+    """Solve the hand-eye on the given samples via the full production pipeline.
 
-    Returns ``(handeye, algorithm, details)``.  Mirrors ``solver._solve_once``
-    but never raises for quality gates — the estimate is returned regardless so
-    hold-out evaluation can proceed.
+    Delegates to ``solver.solve_handeye_dataset`` so the same quality gates as
+    the collector apply (installation norm, Park/Horaud agreement, finite
+    check, internal marker RMS).  ``allow_pruning`` may only remove samples
+    from this solve subset — never from hold-out data.
+
+    Returns ``(valid, handeye, algorithm, details)``; ``valid`` is the
+    production solver gate (not the hold-out gate).
     """
     if config is None:
         config = solver_config_from_yaml()
     if len(solve_samples) < 3:
         raise ValueError("at least three solve samples are required")
-    results = solve_algorithms(solve_samples, config.algorithm_names)
-    algorithm, seed, spread_translation, spread_rotation = consensus(results)
-    refined, refine_details = refine_handeye_fixed_marker(
-        solve_samples,
-        seed,
-        translation_sigma_m=config.fixed_marker_refinement_translation_sigma_m,
-        rotation_sigma_deg=config.fixed_marker_refinement_rotation_sigma_deg,
-        max_iterations=config.fixed_marker_refinement_max_iterations,
+    valid, refined, algorithm, spread_t, spread_r, metrics, details, retained = solve_handeye_dataset(
+        solve_samples, config,
+        calibration_type=calibration_type,
+        allow_pruning=allow_pruning,
     )
-    internal = constant_frame_metrics(solve_samples, refined)
     details = {
-        **refine_details,
+        **details,
         "algorithm": algorithm,
-        "spread_translation_m": spread_translation,
-        "spread_rotation_deg": spread_rotation,
-        "marker_position_rms_m": internal["position_rms_m"],
-        "marker_rotation_rms_deg": internal["rotation_rms_deg"],
+        "spread_translation_m": spread_t,
+        "spread_rotation_deg": spread_r,
+        "marker_position_rms_m": metrics["position_rms_m"],
+        "marker_rotation_rms_deg": metrics["rotation_rms_deg"],
+        "retained_samples": retained,
     }
-    return refined, algorithm, details
+    return bool(valid), refined, algorithm, details
 
 
 @dataclass
@@ -282,16 +328,18 @@ class EvaluationResult:
     internal_metrics: dict
     holdout_metrics: dict
     solve_details: dict
+    solver_valid: bool
 
     def passed_gates(self) -> bool:
-        """M2.3-B stage-1 hold-out acceptance:
+        """Overall acceptance = production solver gate AND M2.3-B hold-out gate:
         position RMS <= 3 mm, position MAX <= 5 mm, rotation RMS <= 1 deg."""
         m = self.holdout_metrics
-        return (
+        holdout_ok = bool(
             m["position_rms_m"] <= 0.003
             and m["position_max_m"] <= 0.005
             and m["rotation_rms_deg"] <= 1.0
         )
+        return bool(self.solver_valid and holdout_ok)
 
     def format_report(self) -> str:
         lines = [
@@ -318,9 +366,10 @@ class EvaluationResult:
             f"{self.holdout_metrics['rotation_p95_deg']:.3f} / "
             f"{self.holdout_metrics['rotation_max_deg']:.3f} deg",
             "-" * 62,
+            f"  solver quality gate: {'PASS' if self.solver_valid else 'FAIL'}",
             "  M2.3-B hold-out gates: position RMS <= 3 mm, position MAX <= 5 mm,"
             " rotation RMS <= 1 deg",
-            f"    PASS = {self.passed_gates()!s}",
+            f"    OVERALL PASS = {self.passed_gates()!s}",
             "=" * 62,
         ]
         return "\n".join(lines)
@@ -334,17 +383,20 @@ def evaluate_samples(
     holdout_count: Optional[int] = None,
     config: Optional[SimpleNamespace] = None,
     rng: Optional[np.random.Generator] = None,
+    allow_pruning: bool = False,
 ) -> EvaluationResult:
     """Complete hold-out evaluation:
 
     1. split the dataset into solve / hold-out subsets (disjoint);
-    2. solve the hand-eye on the solve subset only;
+    2. solve the hand-eye on the solve subset only (full production gates);
     3. internal metrics: constant-frame consistency of the solve subset;
     4. hold-out metrics: deviation of hold-out samples from the reference
        frame established by the solve subset alone.
     """
     solve, holdout = split_solve_holdout(samples, solve_count, holdout_count, rng=rng)
-    handeye, algorithm, details = solve_handeye(solve, config)
+    solver_valid, handeye, algorithm, details = solve_handeye(
+        solve, calibration_type, config, allow_pruning=allow_pruning,
+    )
     reference = reference_pose([constant_frame_pose(sample, handeye) for sample in solve])
     internal_metrics = constant_frame_metrics(solve, handeye, reference=reference)
     holdout_metrics = constant_frame_metrics(holdout, handeye, reference=reference)
@@ -357,4 +409,5 @@ def evaluate_samples(
         internal_metrics=internal_metrics,
         holdout_metrics=holdout_metrics,
         solve_details=details,
+        solver_valid=solver_valid,
     )
