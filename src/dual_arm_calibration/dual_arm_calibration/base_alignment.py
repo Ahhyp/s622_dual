@@ -11,6 +11,9 @@ Notes
 -----
 - Uses the Umeyama/Kabsch closed-form (centroid + SVD), guaranteeing an
   optimal rigid (rotation + translation) least-squares fit.
+- Production code is **SE(3) only** (det R = +1); a reflection is rejected by
+  geometry conditioning rather than being silently allowed, because a
+  physical base-to-base transform must be a proper rotation.
 - Mirrors what M2.5 will run on the real robot; this module is pure numpy so
   the same code drives both the simulator (M2.6 Monte Carlo) and, later, the
   real-hardware offline solver.
@@ -23,12 +26,46 @@ from typing import Tuple
 
 import numpy as np
 
+# Below this ratio σ2/σ1 the point set is (near-)collinear and the rotation
+# about the line is unobservable → refuse to solve.
+_MIN_CONDITION_RATIO = 1e-6
+
+
+def _validate_points(points: np.ndarray, name: str, *, min_count: int = 3) -> np.ndarray:
+    array = np.asarray(points, dtype=float)
+    if array.ndim != 2 or array.shape[1] != 3:
+        raise ValueError(f"{name} must be an (N, 3) array, got shape {array.shape}")
+    if len(array) < min_count:
+        raise ValueError(f"{name} needs at least {min_count} correspondences")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} contains non-finite values")
+    return array
+
+
+def geometry_condition(points: np.ndarray) -> dict:
+    """Singular-value conditioning of a point set.
+
+    Ratios σ2/σ1 and σ3/σ1 quantify how far the points are from collinear /
+    coplanar.  Collinear → σ2/σ1 ≈ 0 (rotation about the line unobservable).
+    Coplanar-but-not-collinear still has rank 2 and is solvable; the third
+    ratio only reflects how much out-of-plane spread exists.
+    """
+    points = _validate_points(points, "points")
+    centered = points - points.mean(axis=0)
+    singular = np.linalg.svd(centered, compute_uv=False)
+    s1 = max(singular[0], 1e-30)
+    return {
+        "singular_values": tuple(float(s) for s in singular),
+        "sigma2_over_sigma1": float(singular[1] / s1),
+        "sigma3_over_sigma1": float(singular[2] / s1),
+    }
+
 
 def kabsch_align(
     left_points: np.ndarray,
     right_points: np.ndarray,
     *,
-    allow_reflection: bool = False,
+    min_condition_ratio: float = _MIN_CONDITION_RATIO,
 ) -> np.ndarray:
     """Align right-base points onto left-base points.
 
@@ -36,19 +73,25 @@ def kabsch_align(
     ----------
     left_points : (N, 3) array — p_i^{B_L}
     right_points : (N, 3) array — p_i^{B_R}
-    allow_reflection : if False (default) enforce det(R) = +1 so the result
-        is a proper rigid transform (a physical base-to-base must be rigid).
+    min_condition_ratio : reject point sets whose σ2/σ1 is below this value
+        (near-collinear).  Default 1e-6.
 
     Returns
     -------
-    T : (4, 4) array — {}^{B_L}T_{B_R}
+    T : (4, 4) array — {}^{B_L}T_{B_R}, a proper rigid transform (det R = +1).
     """
-    left = np.asarray(left_points, dtype=float)
-    right = np.asarray(right_points, dtype=float)
-    if left.shape != right.shape or left.ndim != 2 or left.shape[1] != 3:
-        raise ValueError(f"points must be (N,3) arrays, got {left.shape} vs {right.shape}")
-    if len(left) < 3:
-        raise ValueError("at least three non-collinear correspondences are required")
+    left = _validate_points(left_points, "left_points")
+    right = _validate_points(right_points, "right_points")
+    if left.shape != right.shape:
+        raise ValueError(f"left/right shapes differ: {left.shape} vs {right.shape}")
+
+    condition = geometry_condition(left)
+    if condition["sigma2_over_sigma1"] < min_condition_ratio:
+        raise ValueError(
+            "point set is (near-)collinear: σ2/σ1 = "
+            f"{condition['sigma2_over_sigma1']:.3e} — the rotation about the "
+            "line is unobservable; spread the fixture in a second dimension"
+        )
 
     left_centroid = left.mean(axis=0)
     right_centroid = right.mean(axis=0)
@@ -59,8 +102,9 @@ def kabsch_align(
     u, _singular, vt = np.linalg.svd(covariance)
     rotation = u @ vt
 
-    if not allow_reflection and np.linalg.det(rotation) < 0.0:
-        # Umeyama correction: flip the last column of u to force det=+1.
+    # Enforce a proper rotation (SE(3)).  A reflection is never a valid
+    # physical base transform; flip the last column of U (Umeyama) so det=+1.
+    if np.linalg.det(rotation) < 0.0:
         u_flipped = u.copy()
         u_flipped[:, -1] *= -1.0
         rotation = u_flipped @ vt
@@ -74,8 +118,11 @@ def kabsch_align(
 
 
 def apply_transform(points: np.ndarray, transform: np.ndarray) -> np.ndarray:
-    """Apply a 4x4 transform to (N,3) points."""
-    points = np.asarray(points, dtype=float)
+    """Apply a 4x4 transform to (N,3) points (N >= 1)."""
+    points = _validate_points(points, "points", min_count=1)
+    transform = np.asarray(transform, dtype=float)
+    if transform.shape != (4, 4) or not np.all(np.isfinite(transform)):
+        raise ValueError("transform must be a finite 4x4 matrix")
     return (transform[:3, :3] @ points.T).T + transform[:3, 3]
 
 
@@ -86,10 +133,12 @@ def alignment_error(
 ) -> dict:
     """Per-correspondence residuals after applying the estimated transform.
 
-    residual_i = || p_i^{B_L} - T · p_i^{B_R} ||  (mm, converted from m)
+    residual_i = || p_i^{B_L} - T · p_i^{B_R} ||  (m)
     """
-    left = np.asarray(left_points, dtype=float)
-    right = np.asarray(right_points, dtype=float)
+    left = _validate_points(left_points, "left_points")
+    right = _validate_points(right_points, "right_points")
+    if left.shape != right.shape:
+        raise ValueError(f"left/right shapes differ: {left.shape} vs {right.shape}")
     predicted = apply_transform(right, transform)
     residuals = np.linalg.norm(left - predicted, axis=1)
     return {
@@ -104,8 +153,13 @@ def transform_error(estimate: np.ndarray, truth: np.ndarray) -> Tuple[float, flo
     """Translation error (m) and rotation error (deg) between two 4x4 transforms.
 
     delta = estimate^{-1} · truth  →  translation = |delta_t|,
-    rotation = angle of delta_R.
+    rotation = angle of delta_R.  Both are proper rotations here, so the
+    trace formula applies.
     """
+    estimate = np.asarray(estimate, dtype=float)
+    truth = np.asarray(truth, dtype=float)
+    if estimate.shape != (4, 4) or truth.shape != (4, 4):
+        raise ValueError("estimate and truth must be 4x4")
     delta = np.linalg.inv(estimate) @ truth
     translation_error = float(np.linalg.norm(delta[:3, 3]))
     cos_angle = np.clip((np.trace(delta[:3, :3]) - 1.0) / 2.0, -1.0, 1.0)
@@ -123,16 +177,27 @@ def fit_holdout_split(
     """Fit {}^{B_L}T_{B_R} on ``fit_count`` correspondences, score on the rest.
 
     This mirrors M2.5's 15-fit + 5-hold-out protocol on the real robot.
-    Returns fit/hold-out RMS + MAX in mm.
+
+    NOTE: this only measures *internal consistency* (how well one rigid
+    transform explains the correspondences).  A systematic per-arm TCP bias
+    is absorbed into the fitted transform (the common offset cancels under
+    centering), so these residuals do NOT detect absolute translation error —
+    that requires an independent modality (e.g. global-camera cross-check).
     """
-    total = len(left_points)
+    left = _validate_points(left_points, "left_points")
+    right = _validate_points(right_points, "right_points")
+    if left.shape != right.shape:
+        raise ValueError(f"left/right shapes differ: {left.shape} vs {right.shape}")
+    if fit_count < 3:
+        raise ValueError("fit_count must be at least 3")
+    total = len(left)
     if fit_count >= total:
         raise ValueError("fit_count must leave at least one hold-out point")
     indices = rng.permutation(total)
     fit_idx, hold_idx = indices[:fit_count], indices[fit_count:]
-    transform = kabsch_align(left_points[fit_idx], right_points[fit_idx])
-    fit = alignment_error(left_points[fit_idx], right_points[fit_idx], transform)
-    hold = alignment_error(left_points[hold_idx], right_points[hold_idx], transform)
+    transform = kabsch_align(left[fit_idx], right[fit_idx])
+    fit = alignment_error(left[fit_idx], right[fit_idx], transform)
+    hold = alignment_error(left[hold_idx], right[hold_idx], transform)
     return {
         "fit_count": int(fit_count),
         "holdout_count": int(total - fit_count),

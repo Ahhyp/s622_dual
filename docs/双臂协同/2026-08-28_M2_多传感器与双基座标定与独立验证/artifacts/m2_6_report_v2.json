@@ -1,0 +1,279 @@
+{
+  "trials": 2000,
+  "seed": 0,
+  "noise": {
+    "touch_axis_sigma_m": 0.0005,
+    "tcp_axis_sigma_m": 0.000577,
+    "fk_axis_sigma_m": 0.0005,
+    "fixed_probe_orientation": true,
+    "tcp_3d_rms_m": 0.0009993933159672423
+  },
+  "wide": [
+    {
+      "sample_count": 4,
+      "translation_p95_m": 0.004048054979843161,
+      "translation_p50_m": 0.0021257722018957863,
+      "translation_max_m": 0.008133598561329227,
+      "rotation_p95_deg": 0.28408044465084714,
+      "rotation_p50_deg": 0.15531823530162314,
+      "rotation_max_deg": 0.5465986175743991,
+      "handover_point_p95_m": 0.005261417656293059,
+      "handover_point_p50_m": 0.0027130548894748144,
+      "handover_point_max_m": 0.00996212984698962
+    },
+    {
+      "sample_count": 6,
+      "translation_p95_m": 0.003825910004301967,
+      "translation_p50_m": 0.0020460912213584944,
+      "translation_max_m": 0.007105621593090388,
+      "rotation_p95_deg": 0.26243870679321957,
+      "rotation_p50_deg": 0.1436711953784716,
+      "rotation_max_deg": 0.41256934907355197,
+      "handover_point_p95_m": 0.004898362289317925,
+      "handover_point_p50_m": 0.0026136669608054176,
+      "handover_point_max_m": 0.008824668461421274
+    },
+    {
+      "sample_count": 10,
+      "translation_p95_m": 0.0033119802021074163,
+      "translation_p50_m": 0.001774037648285426,
+      "translation_max_m": 0.0060625569045654045,
+      "rotation_p95_deg": 0.2110980319054849,
+      "rotation_p50_deg": 0.11226685743201838,
+      "rotation_max_deg": 0.37390776695864464,
+      "handover_point_p95_m": 0.004124893701394747,
+      "handover_point_p50_m": 0.0022165368395233925,
+      "handover_point_max_m": 0.007820163841620934
+    },
+    {
+      "sample_count": 15,
+      "translation_p95_m": 0.0030923108164474826,
+      "translation_p50_m": 0.0016901354113197293,
+      "translation_max_m": 0.005022257814051307,
+      "rotation_p95_deg": 0.18067207022967688,
+      "rotation_p50_deg": 0.09823639800167819,
+      "rotation_max_deg": 0.280061398057653,
+      "handover_point_p95_m": 0.003767640287462818,
+      "handover_point_p50_m": 0.0020472314690183503,
+      "handover_point_max_m": 0.0062073349206940584
+    },
+    {
+      "sample_count": 20,
+      "translation_p95_m": 0.0029237807581154124,
+      "translation_p50_m": 0.0016084774225701107,
+      "translation_max_m": 0.004760755642192182,
+      "rotation_p95_deg": 0.16065931806971412,
+      "rotation_p50_deg": 0.08717825256627558,
+      "rotation_max_deg": 0.2537029705947372,
+      "handover_point_p95_m": 0.0035322368578513423,
+      "handover_point_p50_m": 0.0019227484127212532,
+      "handover_point_max_m": 0.0060428570828886695
+    }
+  ],
+  "small": [
+    {
+      "sample_count": 4,
+      "translation_p95_m": 0.006328662847171652,
+      "translation_p50_m": 0.0031430930739119825,
+      "translation_max_m": 0.012052958412603496,
+      "rotation_p95_deg": 0.4618427209698687,
+      "rotation_p50_deg": 0.24681103565580337,
+      "rotation_max_deg": 0.8092633092027451,
+      "handover_point_p95_m": 0.008697114430564161,
+      "handover_point_p50_m": 0.004321513832163958,
+      "handover_point_max_m": 0.017574149597273703
+    },
+    {
+      "sample_count": 6,
+      "translation_p95_m": 0.004605594899855292,
+      "translation_p50_m": 0.0023800316637843004,
+      "translation_max_m": 0.007468986382706699,
+      "rotation_p95_deg": 0.3900375662313782,
+      "rotation_p50_deg": 0.19168127320585787,
+      "rotation_max_deg": 0.7299235903000842,
+      "handover_point_p95_m": 0.005423268803927022,
+      "handover_point_p50_m": 0.0028458051318097696,
+      "handover_point_max_m": 0.008295094474703692
+    },
+    {
+      "sample_count": 10,
+      "translation_p95_m": 0.0036969507537372302,
+      "translation_p50_m": 0.001918196788321469,
+      "translation_max_m": 0.0057179250338908316,
+      "rotation_p95_deg": 0.2475022067199174,
+      "rotation_p50_deg": 0.13472080323143776,
+      "rotation_max_deg": 0.4002467708847544,
+      "handover_point_p95_m": 0.0044944006842211545,
+      "handover_point_p50_m": 0.002343499774662786,
+      "handover_point_max_m": 0.006726986301272778
+    },
+    {
+      "sample_count": 15,
+      "translation_p95_m": 0.0031155598799986004,
+      "translation_p50_m": 0.0016634447472148733,
+      "translation_max_m": 0.005711384032452648,
+      "rotation_p95_deg": 0.18419613965189102,
+      "rotation_p50_deg": 0.10129265842399224,
+      "rotation_max_deg": 0.2751210584910869,
+      "handover_point_p95_m": 0.003747452963594964,
+      "handover_point_p50_m": 0.0019850403583279285,
+      "handover_point_max_m": 0.0066035733380240096
+    },
+    {
+      "sample_count": 20,
+      "translation_p95_m": 0.0029887261249837657,
+      "translation_p50_m": 0.0015621925841443388,
+      "translation_max_m": 0.004714467613874086,
+      "rotation_p95_deg": 0.17982137725548047,
+      "rotation_p50_deg": 0.09718185397590043,
+      "rotation_max_deg": 0.26963001908046486,
+      "handover_point_p95_m": 0.0036620849953908586,
+      "handover_point_p50_m": 0.0019184981166086028,
+      "handover_point_max_m": 0.0054968072555929455
+    }
+  ],
+  "variants": {
+    "tcp_3d_0_5mm": {
+      "noise": {
+        "touch_axis_sigma_m": 0.0005,
+        "tcp_axis_sigma_m": 0.0002886751345948129,
+        "fk_axis_sigma_m": 0.0005,
+        "fixed_probe_orientation": true,
+        "tcp_3d_rms_m": 0.0005
+      },
+      "rows": [
+        {
+          "sample_count": 4,
+          "translation_p95_m": 0.003558886361665933,
+          "translation_p50_m": 0.001816414331846981,
+          "translation_max_m": 0.0068441882015427636,
+          "rotation_p95_deg": 0.28408044465572274,
+          "rotation_p50_deg": 0.15531823530161926,
+          "rotation_max_deg": 0.5465986175757326,
+          "handover_point_p95_m": 0.004905746386112906,
+          "handover_point_p50_m": 0.002459893272497693,
+          "handover_point_max_m": 0.00892369836089257
+        },
+        {
+          "sample_count": 6,
+          "translation_p95_m": 0.003344586806090759,
+          "translation_p50_m": 0.0017154677391953898,
+          "translation_max_m": 0.005909205266658339,
+          "rotation_p95_deg": 0.26243870679308084,
+          "rotation_p50_deg": 0.14367119537593515,
+          "rotation_max_deg": 0.41256934907355197,
+          "handover_point_p95_m": 0.004461469985345957,
+          "handover_point_p50_m": 0.002295046822572377,
+          "handover_point_max_m": 0.007814853425618263
+        },
+        {
+          "sample_count": 10,
+          "translation_p95_m": 0.00266180542338751,
+          "translation_p50_m": 0.0013782367269062402,
+          "translation_max_m": 0.004792196250497551,
+          "rotation_p95_deg": 0.2110980319023756,
+          "rotation_p50_deg": 0.11226685742877224,
+          "rotation_max_deg": 0.3739077669547456,
+          "handover_point_p95_m": 0.003596125300734334,
+          "handover_point_p50_m": 0.0018744421394679208,
+          "handover_point_max_m": 0.006721603003194266
+        },
+        {
+          "sample_count": 15,
+          "translation_p95_m": 0.0024066844684785,
+          "translation_p50_m": 0.0012705707052919077,
+          "translation_max_m": 0.0037572860764065437,
+          "rotation_p95_deg": 0.18067207024137738,
+          "rotation_p50_deg": 0.09823639800538915,
+          "rotation_max_deg": 0.280061398057653,
+          "handover_point_p95_m": 0.0031851088655740103,
+          "handover_point_p50_m": 0.0016525885922178685,
+          "handover_point_max_m": 0.005354027717928793
+        },
+        {
+          "sample_count": 20,
+          "translation_p95_m": 0.0022068814707619905,
+          "translation_p50_m": 0.001151130268638814,
+          "translation_max_m": 0.003824504780818936,
+          "rotation_p95_deg": 0.16065931805655545,
+          "rotation_p50_deg": 0.08717825255791498,
+          "rotation_max_deg": 0.2537029705889909,
+          "handover_point_p95_m": 0.0029216523140193494,
+          "handover_point_p50_m": 0.0015122920204963162,
+          "handover_point_max_m": 0.005240860687701214
+        }
+      ]
+    },
+    "no_tcp": {
+      "noise": {
+        "touch_axis_sigma_m": 0.0005,
+        "tcp_axis_sigma_m": 0.0,
+        "fk_axis_sigma_m": 0.0005,
+        "fixed_probe_orientation": true,
+        "tcp_3d_rms_m": 0.0
+      },
+      "rows": [
+        {
+          "sample_count": 4,
+          "translation_p95_m": 0.0034532786721937305,
+          "translation_p50_m": 0.0017075364798807718,
+          "translation_max_m": 0.005852252380821453,
+          "rotation_p95_deg": 0.284080444650719,
+          "rotation_p50_deg": 0.15531823530631628,
+          "rotation_max_deg": 0.5465986175757326,
+          "handover_point_p95_m": 0.004760250289966291,
+          "handover_point_p50_m": 0.0023575397632694794,
+          "handover_point_max_m": 0.008205284675224862
+        },
+        {
+          "sample_count": 6,
+          "translation_p95_m": 0.003165544432451672,
+          "translation_p50_m": 0.0015871399619265328,
+          "translation_max_m": 0.005160476356317426,
+          "rotation_p95_deg": 0.26243870679016457,
+          "rotation_p50_deg": 0.1436711953784716,
+          "rotation_max_deg": 0.41256934907355197,
+          "handover_point_p95_m": 0.00436390728562776,
+          "handover_point_p50_m": 0.002205106125940085,
+          "handover_point_max_m": 0.007068544828129043
+        },
+        {
+          "sample_count": 10,
+          "translation_p95_m": 0.0024422783362430416,
+          "translation_p50_m": 0.001200939067204511,
+          "translation_max_m": 0.0038565532171741623,
+          "rotation_p95_deg": 0.21109803189564136,
+          "rotation_p50_deg": 0.11226685743201838,
+          "rotation_max_deg": 0.3739077669566951,
+          "handover_point_p95_m": 0.0034177912936474734,
+          "handover_point_p50_m": 0.0017312377859512568,
+          "handover_point_max_m": 0.006375963065399697
+        },
+        {
+          "sample_count": 15,
+          "translation_p95_m": 0.0021866913058594148,
+          "translation_p50_m": 0.0010683330458713626,
+          "translation_max_m": 0.0035461528545057304,
+          "rotation_p95_deg": 0.180672070233913,
+          "rotation_p50_deg": 0.09823639800167935,
+          "rotation_max_deg": 0.2800613980602557,
+          "handover_point_p95_m": 0.002974787220518593,
+          "handover_point_p50_m": 0.0015056353275880487,
+          "handover_point_max_m": 0.004639914951292744
+        },
+        {
+          "sample_count": 20,
+          "translation_p95_m": 0.001918160953985041,
+          "translation_p50_m": 0.000948015717398829,
+          "translation_max_m": 0.0030156410714676,
+          "rotation_p95_deg": 0.16065931806495062,
+          "rotation_p50_deg": 0.0871782525537339,
+          "rotation_max_deg": 0.2537029705889909,
+          "handover_point_p95_m": 0.0026788876675788555,
+          "handover_point_p50_m": 0.0013382923347440212,
+          "handover_point_max_m": 0.004557761375715353
+        }
+      ]
+    }
+  }
+}
