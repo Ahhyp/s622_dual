@@ -17,6 +17,7 @@ install (PROGRAMS
   scripts/aruco_marker_pose_publisher.py
   scripts/calibration_aruco_publisher.py
   scripts/evaluate_calibration.py
+  scripts/evaluate_calibration_offline.py
   scripts/follow_aruco_marker.py
   scripts/handeye_publisher.py
   scripts/visualize_aruco_marker.py
@@ -36,6 +37,8 @@ if(BUILD_TESTING)
   ament_add_pytest_test(test_collector test/test_collector.py
     APPEND_ENV "PYTHONPATH=${_test_pythonpath}")
   ament_add_pytest_test(test_solver test/test_solver.py
+    APPEND_ENV "PYTHONPATH=${_test_pythonpath}")
+  ament_add_pytest_test(test_evaluator test/test_evaluator.py
     APPEND_ENV "PYTHONPATH=${_test_pythonpath}")
   ament_add_pytest_test(test_vision test/test_vision.py
     APPEND_ENV "PYTHONPATH=${_test_pythonpath}")
