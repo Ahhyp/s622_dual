@@ -1,0 +1,240 @@
+{
+  "default_noise": {
+    "noise": {
+      "touch_mm": 0.5,
+      "tcp_mm": 1.0,
+      "fk_mm": 0.5
+    },
+    "wide": [
+      {
+        "sample_count": 4,
+        "translation_p95_m": 0.008498100563142834,
+        "translation_p50_m": 0.004438437640900496,
+        "translation_max_m": 0.0110866243186562,
+        "rotation_p95_deg": 0.5189331143515361,
+        "rotation_p50_deg": 0.27026673136919155,
+        "rotation_max_deg": 0.7420918749136385
+      },
+      {
+        "sample_count": 6,
+        "translation_p95_m": 0.005500854176449167,
+        "translation_p50_m": 0.002970046648118932,
+        "translation_max_m": 0.008081529642945423,
+        "rotation_p95_deg": 0.42518074532067834,
+        "rotation_p50_deg": 0.2236974180338091,
+        "rotation_max_deg": 0.5577280561800889
+      },
+      {
+        "sample_count": 10,
+        "translation_p95_m": 0.004962885189890625,
+        "translation_p50_m": 0.002657360350825402,
+        "translation_max_m": 0.006233132475639895,
+        "rotation_p95_deg": 0.23571444588059556,
+        "rotation_p50_deg": 0.12956226543967253,
+        "rotation_max_deg": 0.4163681508915559
+      },
+      {
+        "sample_count": 15,
+        "translation_p95_m": 0.004919483294383573,
+        "translation_p50_m": 0.0025904730096402073,
+        "translation_max_m": 0.006373020824174448,
+        "rotation_p95_deg": 0.2001365002248915,
+        "rotation_p50_deg": 0.11228196502871025,
+        "rotation_max_deg": 0.3503059957753379
+      },
+      {
+        "sample_count": 20,
+        "translation_p95_m": 0.004425016265622764,
+        "translation_p50_m": 0.0025016689238775104,
+        "translation_max_m": 0.0061213998539044944,
+        "rotation_p95_deg": 0.19295149564661832,
+        "rotation_p50_deg": 0.10529684416713589,
+        "rotation_max_deg": 0.2593154225417358
+      },
+      {
+        "sample_count": 30,
+        "translation_p95_m": 0.0043323400530167816,
+        "translation_p50_m": 0.002434229582884158,
+        "translation_max_m": 0.005716787271567339,
+        "rotation_p95_deg": 0.14612248877035403,
+        "rotation_p50_deg": 0.07805450552680748,
+        "rotation_max_deg": 0.227833803821008
+      }
+    ],
+    "small": [
+      {
+        "sample_count": 4,
+        "translation_p95_m": 0.021580418524679956,
+        "translation_p50_m": 0.010902749853703344,
+        "translation_max_m": 0.032373698117102764,
+        "rotation_p95_deg": 2.5635353733958803,
+        "rotation_p50_deg": 1.264661830785129,
+        "rotation_max_deg": 4.228054666460863
+      },
+      {
+        "sample_count": 6,
+        "translation_p95_m": 0.024299087745784584,
+        "translation_p50_m": 0.012271888739522615,
+        "translation_max_m": 0.04054637590689237,
+        "rotation_p95_deg": 1.9309459615048141,
+        "rotation_p50_deg": 1.1110213897830605,
+        "rotation_max_deg": 3.059386428726181
+      },
+      {
+        "sample_count": 10,
+        "translation_p95_m": 0.01567058987759175,
+        "translation_p50_m": 0.008091714530209699,
+        "translation_max_m": 0.026031148575564024,
+        "rotation_p95_deg": 1.2072936169097777,
+        "rotation_p50_deg": 0.6824006087474466,
+        "rotation_max_deg": 2.2199110395893036
+      },
+      {
+        "sample_count": 15,
+        "translation_p95_m": 0.012208758550350203,
+        "translation_p50_m": 0.0057210853504959,
+        "translation_max_m": 0.021556191246110964,
+        "rotation_p95_deg": 0.9794558538721846,
+        "rotation_p50_deg": 0.5404834375505858,
+        "rotation_max_deg": 1.547985697411205
+      },
+      {
+        "sample_count": 20,
+        "translation_p95_m": 0.011542397476138793,
+        "translation_p50_m": 0.005578252453529933,
+        "translation_max_m": 0.018661108718444317,
+        "rotation_p95_deg": 0.9099895100098051,
+        "rotation_p50_deg": 0.4998713097840285,
+        "rotation_max_deg": 1.4782932753664895
+      },
+      {
+        "sample_count": 30,
+        "translation_p95_m": 0.009501840707171924,
+        "translation_p50_m": 0.004731670157373257,
+        "translation_max_m": 0.016677037739772076,
+        "rotation_p95_deg": 0.7400948080467398,
+        "rotation_p50_deg": 0.3828787291170618,
+        "rotation_max_deg": 1.0705094828986874
+      }
+    ]
+  },
+  "random_noise_only": {
+    "noise": {
+      "touch_mm": 0.5,
+      "tcp_mm": 0.0,
+      "fk_mm": 0.5
+    },
+    "wide": [
+      {
+        "sample_count": 4,
+        "translation_p95_m": 0.004800272154900519,
+        "translation_p50_m": 0.002127774209986946,
+        "translation_max_m": 0.008218334521356157,
+        "rotation_p95_deg": 0.4134760635910658,
+        "rotation_p50_deg": 0.20705778213291967,
+        "rotation_max_deg": 0.643327549806247
+      },
+      {
+        "sample_count": 6,
+        "translation_p95_m": 0.006787060730980823,
+        "translation_p50_m": 0.0029108931152067876,
+        "translation_max_m": 0.009798043191497985,
+        "rotation_p95_deg": 0.6063719820571268,
+        "rotation_p50_deg": 0.27931761657334986,
+        "rotation_max_deg": 0.8872432802229409
+      },
+      {
+        "sample_count": 10,
+        "translation_p95_m": 0.0033837554854969426,
+        "translation_p50_m": 0.0016310384384087754,
+        "translation_max_m": 0.005323386987623132,
+        "rotation_p95_deg": 0.29205962458326495,
+        "rotation_p50_deg": 0.16092133185768287,
+        "rotation_max_deg": 0.4171688700482544
+      },
+      {
+        "sample_count": 15,
+        "translation_p95_m": 0.0026438039349529065,
+        "translation_p50_m": 0.0013108863371908914,
+        "translation_max_m": 0.0036546180252281105,
+        "rotation_p95_deg": 0.24225185093884222,
+        "rotation_p50_deg": 0.12638694883297424,
+        "rotation_max_deg": 0.3862517475814018
+      },
+      {
+        "sample_count": 20,
+        "translation_p95_m": 0.002125622875868581,
+        "translation_p50_m": 0.0011283684851827297,
+        "translation_max_m": 0.0035906802961860568,
+        "rotation_p95_deg": 0.1796343454366981,
+        "rotation_p50_deg": 0.09592370584973132,
+        "rotation_max_deg": 0.2909071870545742
+      },
+      {
+        "sample_count": 30,
+        "translation_p95_m": 0.0017265617171370244,
+        "translation_p50_m": 0.000851684786087019,
+        "translation_max_m": 0.002555202344877986,
+        "rotation_p95_deg": 0.15561213083624328,
+        "rotation_p50_deg": 0.0813409064868618,
+        "rotation_max_deg": 0.22891970029770872
+      }
+    ],
+    "small": [
+      {
+        "sample_count": 4,
+        "translation_p95_m": 0.048034287345551076,
+        "translation_p50_m": 0.019588588045202925,
+        "translation_max_m": 0.07998107219827019,
+        "rotation_p95_deg": 4.241546811180833,
+        "rotation_p50_deg": 1.972283691983285,
+        "rotation_max_deg": 8.01104408732457
+      },
+      {
+        "sample_count": 6,
+        "translation_p95_m": 0.02421934054357432,
+        "translation_p50_m": 0.011481136694945094,
+        "translation_max_m": 0.037714989811764,
+        "rotation_p95_deg": 2.002875705614143,
+        "rotation_p50_deg": 1.0694942531001377,
+        "rotation_max_deg": 3.276415978209257
+      },
+      {
+        "sample_count": 10,
+        "translation_p95_m": 0.018290394976364917,
+        "translation_p50_m": 0.00882964931821081,
+        "translation_max_m": 0.02555540664328598,
+        "rotation_p95_deg": 1.4428764593226107,
+        "rotation_p50_deg": 0.814187644967028,
+        "rotation_max_deg": 2.1143247968435244
+      },
+      {
+        "sample_count": 15,
+        "translation_p95_m": 0.013058702416100633,
+        "translation_p50_m": 0.006482538784193031,
+        "translation_max_m": 0.0213237861991584,
+        "rotation_p95_deg": 1.1044877251859782,
+        "rotation_p50_deg": 0.631594333705594,
+        "rotation_max_deg": 1.6530582226195332
+      },
+      {
+        "sample_count": 20,
+        "translation_p95_m": 0.011768129976468934,
+        "translation_p50_m": 0.005469099617046797,
+        "translation_max_m": 0.01868110987646805,
+        "rotation_p95_deg": 0.9635300767003616,
+        "rotation_p50_deg": 0.524517833760237,
+        "rotation_max_deg": 1.5146513612339922
+      },
+      {
+        "sample_count": 30,
+        "translation_p95_m": 0.008729076521383163,
+        "translation_p50_m": 0.004168639890050865,
+        "translation_max_m": 0.01178081052485102,
+        "rotation_p95_deg": 0.772187545765371,
+        "rotation_p50_deg": 0.4281945820348121,
+        "rotation_max_deg": 1.0385240785979457
+      }
+    ]
+  }
+}
