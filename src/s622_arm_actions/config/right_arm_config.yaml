@@ -12,7 +12,7 @@
     # S2（2026-08-25）：双臂 MoveItMotion 参数化
     move_group_namespace: '/move_group_fairino'
     pipeline_id: 'fairino'
-    named_pose_names: ['home', 'safe', 'grasp_cube']
+    named_pose_names: ['home', 'safe', 'grasp_cube', 'calib_board_visible']
     home_joint_positions:
       - 0.0
       - -1.5708
@@ -27,6 +27,15 @@
       - 0.0
       - 1.2
       - 0.0
+    # [M2.7] 全局相机标定：右臂把大号 ArUco 标定板送到全局相机视野内清晰可见
+    # （RViz 手动拖到位后记录，2026-08-31；板在 right_grasp_frame 上方 0.08m）
+    calib_board_visible_joint_positions:
+      - 0.146254
+      - -1.499428
+      - -1.484837
+      - -3.255358
+      - -2.130576
+      - -0.120770
     grasp_cube_joint_positions:
       - 2.847
       - -0.723

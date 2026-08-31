@@ -15,8 +15,6 @@ from typing import Optional
 
 import numpy as np
 import rclpy
-from easy_handeye2 import GET_SAMPLE_LIST_TOPIC
-from easy_handeye2_msgs.srv import TakeSample
 from geometry_msgs.msg import Point
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
@@ -270,11 +268,15 @@ class ManualCalibrationAssistant(Node, SamplingRuntime):
 
     def __init__(self):
         super().__init__("manual_calibration_assistant")
+        # [M2.7] 可指定 config 文件（如 global_eye_on_base_right.yaml）
+        config_file = self.declare_parameter(
+            "config_file", "manual_calibration_assistant_params.yaml"
+        ).get_parameter_value().string_value
         (
             self.frames_config,
             self.motion_config,
             self.sampling_config,
-        ) = load_manual_config(self)
+        ) = load_manual_config(self, config_file)
         self._use_sim_time = bool(self.get_parameter("use_sim_time").value)
         self.state = ManualSessionState()
         self._state_lock = threading.Lock()
@@ -303,9 +305,7 @@ class ManualCalibrationAssistant(Node, SamplingRuntime):
             JointState, "/joint_states", self._on_joint_state, 10,
             callback_group=self._io_group,
         )
-        self._easy_samples = self.create_client(
-            TakeSample, GET_SAMPLE_LIST_TOPIC, callback_group=self._io_group,
-        )
+        # [M2.7] 去掉 easy_handeye2 GUI 依赖（工作区无此包）；样本数用本地记录
 
         self.create_service(
             Trigger, ASSISTANT_NAMESPACE + "status", self._status_service,
@@ -352,15 +352,9 @@ class ManualCalibrationAssistant(Node, SamplingRuntime):
         )
 
     def _easy_count(self, timeout: float = 2.0) -> int:
-        if not self._easy_samples.wait_for_service(timeout_sec=timeout):
-            raise RuntimeError("Easy get_sample_list service is unavailable")
-        future = self._easy_samples.call_async(TakeSample.Request())
-        deadline = time.monotonic() + timeout
-        while not future.done() and time.monotonic() < deadline and not self._should_stop():
-            time.sleep(0.01)
-        if not future.done() or future.result() is None:
-            raise RuntimeError("Easy get_sample_list service timed out")
-        return len(future.result().samples.samples)
+        """[M2.7] 去掉 easy_handeye2 GUI：返回本地已采样本数（无 GUI 旧样本阻塞）。"""
+        with self._state_lock:
+            return len(self.state.records)
 
     def _joint_snapshot_deg(self) -> tuple[float, ...]:
         with self._joint_lock:

@@ -30,6 +30,7 @@ install(DIRECTORY scripts launch config rviz worlds models
 install(
   PROGRAMS
     scripts/demo_pathplanning_node.py
+    scripts/move_to_calibration_pose.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

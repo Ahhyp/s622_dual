@@ -264,8 +264,13 @@ def load_collector_config(node):
     return _load_config(node, "auto_calibration_collector_params.yaml", "auto_calibration_collector", with_waypoints=True)
 
 
-def load_manual_config(node):
-    return _load_config(node, "manual_calibration_assistant_params.yaml", "manual_calibration_assistant", with_waypoints=False)
+def load_manual_config(node, filename: str = "manual_calibration_assistant_params.yaml"):
+    """Load the manual-assistant config.
+
+    ``filename`` can override the default YAML so the same node drives
+    different scenarios (e.g. M2.7 ``global_eye_on_base_right.yaml``).
+    """
+    return _load_config(node, filename, "manual_calibration_assistant", with_waypoints=False)
 
 
 def _load_config(node, filename: str, node_name: str, *, with_waypoints: bool):
