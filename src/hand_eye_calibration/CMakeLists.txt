@@ -41,6 +41,9 @@ if(BUILD_TESTING)
     APPEND_ENV "PYTHONPATH=${_test_pythonpath}")
   ament_add_pytest_test(test_evaluator test/test_evaluator.py
     APPEND_ENV "PYTHONPATH=${_test_pythonpath}")
+  # [M2.7 回归保护 2026-09-04] arm:= env / T_LR 组合方向 / marker_size 混用 / 分解语义
+  ament_add_pytest_test(test_m27_regression test/test_m27_regression.py
+    APPEND_ENV "PYTHONPATH=${_test_pythonpath}")
   ament_add_pytest_test(test_vision test/test_vision.py
     APPEND_ENV "PYTHONPATH=${_test_pythonpath}")
   ament_add_pytest_test(test_manual_calibration_assistant test/test_manual_calibration_assistant.py

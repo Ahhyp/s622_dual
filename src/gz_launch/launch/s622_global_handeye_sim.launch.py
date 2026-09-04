@@ -98,8 +98,7 @@ def generate_launch_description():
     def _launch_setup(context, *_args, **_kwargs):
         # [2026-09-03 修复] 在 include 求值前按 arm 参数设置环境变量
         arm = str(context.launch_configurations.get("arm", DEFAULT_ARM))
-        os.environ["M2_MODE"] = arm
-        os.environ["M2_ARM"] = arm
+        _apply_arm_env(arm)
         # ---- 1. 双臂仿真（其构造期读 M2_MODE）----
         dual_sim = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -112,3 +111,16 @@ def generate_launch_description():
         arm_arg,
         OpaqueFunction(function=_launch_setup),
     ])
+
+
+def _apply_arm_env(arm: str) -> str:
+    """[M2.7 回归保护] 把 `arm:=` 解析结果写入 M2_MODE/M2_ARM 环境变量。
+
+    2026-09-03 曾因只读 M2_ARM env、从不消费 `arm:=` launch 参数导致左臂标定板
+    挂错臂（相机看到"冻结"的板，数据全废）。该函数被 _launch_setup 调用，
+    有 test_m27_regression::test_m2_arm_env 守护。返回规范化后的 arm。
+    """
+    arm = str(arm) if arm else DEFAULT_ARM
+    os.environ["M2_MODE"] = arm
+    os.environ["M2_ARM"] = arm
+    return arm

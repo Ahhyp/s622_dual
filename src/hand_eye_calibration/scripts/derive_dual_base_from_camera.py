@@ -15,7 +15,6 @@ T_L_R_cam = {}^{B_L}T_{C_g} · ({}^{B_R}T_{C_g})^{-1}
 
 import argparse
 import json
-import math
 import sys
 from pathlib import Path
 
@@ -24,14 +23,10 @@ import numpy as np
 try:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from hand_eye_calibration import evaluator
+    from hand_eye_calibration.dual_base import rotation_delta_deg, t_lr_cam
 except ImportError as exc:  # pragma: no cover
     print(f"cannot import hand_eye_calibration: {exc}", file=sys.stderr)
     sys.exit(2)
-
-
-def _rotation_delta_deg(a: np.ndarray, b: np.ndarray) -> float:
-    delta = a.T @ b
-    return math.degrees(math.acos(np.clip((np.trace(delta) - 1.0) / 2.0, -1.0, 1.0)))
 
 
 def main(argv=None) -> int:
@@ -49,7 +44,9 @@ def main(argv=None) -> int:
 
     T_L_C = left.transform.matrix()
     T_R_C = right.transform.matrix()
-    T_L_R_cam = T_L_C @ np.linalg.inv(T_R_C)
+    # [M2.7 回归保护] 组合方向由 hand_eye_calibration.dual_base.t_lr_cam 统一提供
+    # （= T_LC @ inv(T_RC)），有 test_m27_regression::test_tlr_direction 守护，禁止写反。
+    T_L_R_cam = t_lr_cam(T_L_C, T_R_C)
 
     # GT from URDF（dual_arm_calibration.monte_carlo 提供）
     from dual_arm_calibration.monte_carlo import dual_base_ground_truth
@@ -57,7 +54,7 @@ def main(argv=None) -> int:
 
     delta = np.linalg.inv(T_L_R_cam) @ T_L_R_gt
     trans_diff_m = float(np.linalg.norm(delta[:3, 3]))
-    rot_diff_deg = _rotation_delta_deg(T_L_R_cam[:3, :3], T_L_R_gt[:3, :3])
+    rot_diff_deg = rotation_delta_deg(T_L_R_cam[:3, :3], T_L_R_gt[:3, :3])
 
     print("=" * 62)
     print("  M2.7-H dual base from global camera (method B)")
