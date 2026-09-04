@@ -10,12 +10,23 @@
   image_height:=480
   h_fov
   v_fov
+  focal_scale:=1.0
   min_depth:=0.05
   max_depth:=10.0
   enable_depth:=true">  <!-- [M2 标定] enable_depth=false 只渲染 RGB（标定只用 RGB，关 depth 渲染减半 → 帧率提升） -->
 
-    <xacro:property name="fx" value="${image_width * 0.5 / tan(h_fov * 0.5)}" />
-    <xacro:property name="fy" value="${image_height * 0.5 / tan(v_fov * 0.5)}" />
+    <!-- [M2.7 修正复盘 2026-09-03] 曾用 focal_scale 乘到 fx/fy 修正深度偏差——无效。
+         实测结论（17/18 组样本 ×3 次数采 + 偏相关分析）：
+           - gz-sim 分离 camera 的渲染投影跟随 <lens> fx（render ≈ 0.9957×lens），
+             不是 <horizontal_fov>（resolve 文档实验 8 的结论混淆了两者同改）。
+           - 改 lens fx → 渲染与 camera_info 同向变化 → solvePnP 深度自抵消，
+             偏差 ~0.6% 依旧（GT 误差 4.5~5.3mm，3mm 门不过）。
+           - 偏差含 ~0.96px 系统性角点内缩（深度相关，斜率 ~1.7%/m）。
+         真正的独立杠杆 = 标定配置 marker_size_m（只改 solvePnP 假设，不动渲染），
+         取 0.1988（见 global_eye_on_base_right.yaml）。故 focal_scale 还原 1.0。
+         真机换 realsense-ros 无需任何补偿。 -->
+    <xacro:property name="fx" value="${image_width * 0.5 / tan(h_fov * 0.5) * focal_scale}" />
+    <xacro:property name="fy" value="${image_height * 0.5 / tan(v_fov * 0.5) * focal_scale}" />
     <xacro:property name="cx" value="${image_width * 0.5}" />
     <xacro:property name="cy" value="${image_height * 0.5}" />
 

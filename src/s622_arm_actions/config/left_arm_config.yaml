@@ -12,7 +12,7 @@
     # S2（2026-08-25）：双臂 MoveItMotion 参数化
     move_group_namespace: '/move_group_fairino'
     pipeline_id: 'fairino'
-    named_pose_names: ['home', 'safe', 'grasp_cube']
+    named_pose_names: ['home', 'safe', 'grasp_cube', 'calib_board_visible']
     home_joint_positions:
       - 0.0
       - -1.5708
@@ -27,6 +27,15 @@
       - 0.0
       - 1.2
       - 0.0
+    # [M2.7 2026-09-03 手动微调] 左臂标定位姿：RViz 手动调整后记录（2026-09-03 用户微调，
+    # marker 画面居中 (583,268)px side≈168 margin≈189）。双臂场景需先把右臂停低位/safe。
+    calib_board_visible_joint_positions:
+      - 0.042817
+      - -0.999903
+      - -2.034671
+      - -3.175067
+      - -1.461087
+      - 0.383427
     grasp_cube_joint_positions:
       # M2.7 校准前先用 M1.7 原值占位(左臂坐标系变了,实际位姿可能不合适)
       - 2.847

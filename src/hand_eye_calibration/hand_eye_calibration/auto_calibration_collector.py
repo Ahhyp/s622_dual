@@ -253,7 +253,8 @@ class AutoCalibrationCollector(Node, SamplingRuntime):
         """订阅相机信息、图像、关节状态等 ROS 话题。"""
         if self._service_subs_ready:
             return
-        sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
+        # [M2.7 修复] ros_gz_bridge 发布 RELIABLE，BEST_EFFORT 订阅收不到
+        sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.RELIABLE)
         self.create_subscription(CameraInfo, self.frames_config.camera_info_topic, self._on_camera_info, sensor_qos)
         self.create_subscription(Image, self.frames_config.image_topic, self._on_image, sensor_qos)
         self.create_subscription(JointState, "/joint_states", self._on_joint_state, 10)

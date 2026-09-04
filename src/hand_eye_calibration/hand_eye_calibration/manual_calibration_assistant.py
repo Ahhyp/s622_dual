@@ -162,12 +162,14 @@ class ManualSessionState:
         if len(self.records) >= TARGET_SAMPLES:
             return False, "20 组样本已完成，请点击 Save"
         expected = len(self.records) + 1
-        if easy_count != expected:
-            message = f"Easy 样本数不同步：{easy_count}，期望 {expected}"
-            if easy_count > len(self.records):
-                self.pending_reason = message
-                self.last_message = f"{message}；请删除 Easy 中的最新样本"
-            return False, self.last_message if self.pending_reason else message
+        # [M2.7] 无 easy_handeye2 GUI：_easy_count 返回本地样本数（= len(records)）。
+        # 不要求 easy_count == expected（那是 GUI 先采帧再同步的模型）；
+        # 只拒绝"本地样本数异常减少"（外部删除）。
+        if easy_count > len(self.records):
+            message = f"Easy 样本数不同步：{easy_count}，期望 {len(self.records)}"
+            self.pending_reason = message
+            self.last_message = f"{message}；请删除 Easy 中的最新样本"
+            return False, self.last_message
         self.validating = True
         self.last_message = f"正在严格验证第 {expected}/20 组的 10 帧观测"
         return True, self.last_message
@@ -203,7 +205,8 @@ class ManualSessionState:
                 else "Easy 样本列表已清空，可以记录 root"
             )
             return True, self.last_message
-        if easy_count != len(self.records) - 1:
+        if easy_count != len(self.records) - 1 and easy_count != len(self.records):
+            # [M2.7] 无 GUI：easy_count == len(records)（删除后 = len-1 且已 pop）
             return False, f"Easy 样本数不同步：{easy_count}，期望 {len(self.records) - 1}"
         removed = self.records.pop()
         self.saved = False
@@ -221,7 +224,8 @@ class ManualSessionState:
         if self.saved:
             return False, "本会话已经保存"
         accepted = len(self.records)
-        if easy_count != accepted:
+        if easy_count != accepted and easy_count != accepted - 1:
+            # [M2.7] 无 GUI：easy_count == accepted（本地样本数）
             return False, f"Easy 样本数不同步：{easy_count}，期望 {accepted}"
         if accepted < MINIMUM_SAMPLES:
             return False, f"至少需要 {MINIMUM_SAMPLES} 组有效样本，当前 {accepted} 组"
@@ -292,7 +296,9 @@ class ManualCalibrationAssistant(Node, SamplingRuntime):
         self._keyboard_stream = self._open_keyboard_stream()
         self._initialize_sampling_runtime()
 
-        sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
+        # [M2.7 修复] ros_gz_bridge 发布 RELIABLE，BEST_EFFORT 订阅收不到
+        # （相机/CameraInfo → worker 无数据 → "no markers detected"）
+        sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.RELIABLE)
         self.create_subscription(
             CameraInfo, self.frames_config.camera_info_topic, self._on_camera_info,
             sensor_qos, callback_group=self._io_group,
@@ -342,7 +348,22 @@ class ManualCalibrationAssistant(Node, SamplingRuntime):
             f"use_sim_time={self._use_sim_time} "
             f"output={self.sampling_config.calibration_output_directory}"
         )
+        # [M2.7 诊断 2026-09-03] 启动后延迟打印一次实际收到的 camera_info 焦距，
+        # 用于确认 focal_scale 修正（fx 应为 ~545.3，而非旧的 ~548.3）已生效。
+        self.create_timer(2.0, self._log_camera_fx_once, callback_group=self._io_group)
         self._print_workflow()
+
+    def _log_camera_fx_once(self) -> None:
+        info = self.vision_gate.camera_info_snapshot()
+        if info.ready:
+            self.get_logger().info(
+                f"camera_info fx={info.p[0]:.3f} fy={info.p[5]:.3f} "
+                f"cx={info.p[2]:.1f} cy={info.p[6]:.1f} "
+                f"(仿真预期 fx≈548.3；深度偏差补偿已移到 marker_size_m=0.1988)"
+            )
+            self._camera_fx_logged = True
+        elif not getattr(self, "_camera_fx_logged", False):
+            self.get_logger().warn("camera_info not ready after 2s; will retry on next validate")
 
     def _should_stop(self) -> bool:
         return (
@@ -405,6 +426,16 @@ class ManualCalibrationAssistant(Node, SamplingRuntime):
 
     def _validate_service(self, _request, response):
         try:
+            # [M2.7 诊断 2026-09-03] 每次校验打印实际使用的相机焦距，
+            # 便于确认 camera_info 修正（focal_scale）是否真的进入位姿估计链路。
+            info = self.vision_gate.camera_info_snapshot()
+            if info.ready:
+                self.get_logger().info(
+                    f"validate: camera fx={info.p[0]:.3f} fy={info.p[5]:.3f} "
+                    f"cx={info.p[2]:.1f} cy={info.p[6]:.1f}"
+                )
+            else:
+                self.get_logger().warn("validate: camera_info NOT ready")
             easy_count = self._easy_count()
             with self._state_lock:
                 ok, message = self.state.begin_validation(easy_count)
@@ -424,8 +455,7 @@ class ManualCalibrationAssistant(Node, SamplingRuntime):
             joints_deg = self._joint_snapshot_deg()
             with self._state_lock:
                 index = len(self.state.records) + 1
-            if self._easy_count() != index:
-                raise RuntimeError("验证期间 Easy 样本列表发生变化")
+            # [M2.7] 无 easy_handeye2 GUI：跳过"验证期间 Easy 样本变化"检查
             with self._state_lock:
                 message = self.state.accept(CalibrationSample(index, joints_deg, robot, tracking))
             response.success = True

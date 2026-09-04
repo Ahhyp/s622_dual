@@ -146,7 +146,7 @@
             <parent link="left_grasp_frame" />
             <child link="left_calibration_aruco" />
             <!-- 板面 +x：纹理正面朝全局相机方向（grasp_frame +x 朝前） -->
-            <origin xyz="0.05 0 0.08" rpy="1.5708 0 0" />
+            <origin xyz="0 0 0.13" rpy="1.5708 0 0" />
         </joint>
     </xacro:if>
     <xacro:if value="${calib_arm == 'right'}">
@@ -179,7 +179,7 @@
         <joint name="right_grasp_to_calibration_aruco" type="fixed">
             <parent link="right_grasp_frame" />
             <child link="right_calibration_aruco" />
-            <origin xyz="0.05 0 0.08" rpy="1.5708 0 0" />
+            <origin xyz="0 0 0.13" rpy="1.5708 0 0" />
         </joint>
     </xacro:if>
 

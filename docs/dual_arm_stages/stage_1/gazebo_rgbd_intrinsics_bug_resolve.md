@@ -954,3 +954,96 @@ sed -i '/v_fov="${52.5/d' ~/my_S622/src/s622_moveit_descriptions/urdf/camera/cam
 | vertical_fov   | 42.5°            | 52.5°                 |
 | 传感器类型     | rgbd_camera	拆分 | camera + depth_camera |
 
+
+---
+
+## 十一、[M2.7] 残余投影偏差的量化与焦距修正 (2026-09-01)
+
+### 背景
+
+第十章锁定的配置（hfov=82.4° + lens fx≈548）下，**手眼标定 GT 验收失败**：
+M2.7 right eye-on-base 采满 17/20 组，`save` 报 `truth_failed`。
+解出的 `base_T_camera` vs URDF 真值：**5.35mm / 0.39°**（门限 3mm / 1°），
+其中 dx=2.1、dy=2.6、dz=4.2mm——三轴同向偏，旋转几乎零误差 → 系统性**深度尺度偏差**。
+
+### 诊断（全部用已存 `.samples` 在本地复现 + 仿真在线的 TF 真值）
+
+| 实验 | 结果 | 结论 |
+| --- | --- | --- |
+| 重跑求解（17 组原样） | marker RMS 0.513mm/0.199°，Park/Horaud 一致 0.008mm | 样本集自洽性极好，非离群问题 |
+| 逐样本 `\|tvec_est\|/\|tvec_true\|` | 均值 **1.00458**，std 0.0016，方向误差 ≤0.13° | **均匀 0.46% 深度偏大**，纯尺度 |
+| 纹理黑框像素实测 | 1200px 图黑框 1000px = 240mm 板面 ×5/6 = **200.0mm** | marker 尺寸假设正确 → 偏差在内参侧 |
+| tvec 缩放扫描 | 0.9930→1.89mm；0.9945→≈2.1mm；0.9955→2.56mm 全过；0.9960+ 超限 | 单一深度尺度修正可过 GT 门限 |
+| 单帧 fx 投影拟合 | 残差 ≥1.6px，不可靠 | 单帧定标被噪声/位姿误差混淆，弃用 |
+
+**结论**：gz-sim Fortress 的渲染投影（由 `<horizontal_fov>` 控制）与 `<lens>` 公式焦距
+之间存在**固定 ~0.55% 偏差**：camera_info 的 fx（548.3）比实际渲染焦距（≈545.4）偏大。
+solvePnP 深度 ∝ fx → marker 深度系统性偏大 0.46%。第十章"多帧联立求解可消除"的断言
+**不成立**——手眼求解只是把尺度偏差折进 camera 平移，5.35mm 超 3mm GT 门限。
+
+### 修复
+
+- `s622_moveit_descriptions/urdf/camera/rgbd_split.gazebo.xacro`：宏加 `focal_scale:=1.0`，
+  fx/fy 乘上该系数（RGB 与 Depth 两个 sensor 的 `<lens>` 都生效）。
+- `s622_moveit_descriptions/urdf/camera/camera.xacro`：`camera_gazebo_v0` 默认
+  `focal_scale:=0.9945`（0.9930~0.9955 通过区间取折中），全局相机与腕部相机均生效。
+- **`<horizontal_fov>` 不动** → 渲染画面无任何变化，只让 camera_info 如实报告渲染焦距。
+- 真机部署换 realsense-ros 驱动，`focal_scale` 不参与（realsense 内参来自驱动标定）。
+
+预期：重启仿真后 camera_info `fx≈545.4`（原 548.3），重新采集 20 组后 save 应通过
+GT 门限（预估 1.9~2.6mm / ≤0.4°）。
+
+### 验证方法（可复用）
+
+```bash
+# 1. 重启仿真 + 助手，重新采集 20 组，save
+# 2. 若需复测深度尺度：抓一帧 + TF 真值对比 marker 深度（脚本思路见对话记录）
+```
+
+### 涉及文件
+
+| 文件 | 操作 |
+| --- | --- |
+| `rgbd_split.gazebo.xacro` | 加 `focal_scale` 参数，fx/fy 乘系数 |
+| `camera.xacro` | `camera_gazebo_v0` 默认 `focal_scale=0.9945` |
+| `gazebo_rgbd_intrinsics_bug_resolve.md` | 本追加章节 |
+
+回滚：把 `focal_scale` 改回 `1.0`（两处）即可。
+
+---
+
+## 十二、[M2.7 复盘 2026-09-03] 第十一章结论被推翻：渲染跟随 lens，focal_scale 无效，真正杠杆是 marker_size
+
+### 现象
+
+第十一章的 `focal_scale=0.9945` 修正**未生效**：camera_info 已确认发布 fx=545.28、
+助手每次校验也确认使用 fx=545.28，但三次重新采集的 GT 误差依旧 **4.53 / 4.68 / 5.35mm**
+（3mm 门不过，dz≈4mm 主犯）。
+
+### 新证据（决定性）
+
+| 实验 | 结果 | 结论 |
+| --- | --- | --- |
+| 三次采集 ratio~depth 拟合线 | lens 548.3→545.28（-0.55%）后，线只下移 ~0.07% | **改 lens fx 对位姿估计几乎无影响** |
+| 反推渲染焦距 | fx_lens=548.3 → render≈545.8；fx_lens=545.28 → render≈543.1 | **渲染跟随 lens fx**（render≈0.9957×lens），非 horizontal_fov |
+| 偏相关 ratio vs depth \| tilt | +0.882（深度真相关）；tilt 控制深度后 -0.465 | 深度相关误差真实存在，非倾角假象 |
+| 模型拟合 | ratio = a + 1.7%/m·d → δ≈0.96px 系统性角点内缩 | 深度斜率 = 固定 ~1px 角点内缩的相对效应 |
+
+**机制**：gz-sim 分离 `camera` 的渲染投影跟随 `<lens>` fx（第十一章"渲染由 horizontal_fov
+控制"的结论来自实验 8 中 hfov 与 lens 同改的混淆实验，不成立）。因此改 lens fx 会让
+**渲染与 camera_info 同向变化，solvePnP 深度自抵消**——focal_scale 是无效杠杆。
+残余偏差来自渲染端 ~0.96px 系统性角点内缩（深度相关）+ ~0.5% 常量偏移。
+
+### 正确修法：marker_size（独立杠杆）
+
+`marker_size_m` 只进 solvePnP 假设、不动渲染 → 唯一能缩放记录 tvec 的杠杆。
+三次采集的求解最优：tvec×0.9930~0.9945 → **marker_size ≈ 0.1986~0.1989，取 0.1988**
+（板物理 200mm，此为仿真渲染补偿值；真机必须回 0.20）。
+
+| 文件 | 改动 |
+| --- | --- |
+| `camera.xacro` / `rgbd_split.gazebo.xacro` | `focal_scale` 还原 `1.0`（无效杠杆移除） |
+| `global_eye_on_base_right.yaml` / `_left.yaml` | `marker_size_m: 0.20 → 0.1988`（含注释） |
+
+预期：重新采集后 GT 误差 ~1.8~2.4mm（三次离线扫描验证），通过 3mm 门。
+残余深度斜率（±0.2%，~1px 角点内缩所致）无法用单参数消除，仅能被 marker_size 居中。

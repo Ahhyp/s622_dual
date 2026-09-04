@@ -73,6 +73,13 @@ class SamplingRuntime:
         self._bridge = CvBridge() if CvBridge is not None else None
         self._cv_ready = False
         self._aruco_queue = queue.Queue(maxsize=1)
+        # [M2.7 调试] 发布检测结果叠加图（/manual_calibration_assistant/debug_image），
+        # RViz 或 rqt_image_view 查看，便于定位检测失败原因
+        try:
+            self._debug_image_pub = self.create_publisher(
+                Image, "/manual_calibration_assistant/debug_image", 1)
+        except Exception:
+            self._debug_image_pub = None
         self._aruco_worker = threading.Thread(target=self._aruco_worker_loop, daemon=True)
         self._aruco_worker.start()
 
@@ -221,12 +228,37 @@ class SamplingRuntime:
             self.get_logger().error(f"Cannot initialize ArUco detector: {exc}")
             return
         self._cv_ready = True
+        # [M2.7] 兼容 OpenCV 新旧 Aruco API：cv2>=4.7 用 ArucoDetector.detectMarkers(image)
+        _use_new_api = hasattr(cv2.aruco, "ArucoDetector")
+        if _use_new_api:
+            self._aruco_detector = cv2.aruco.ArucoDetector(dictionary, parameters)
+        else:
+            self._aruco_detector = None
         while True:
             image, info, receipt_time = self._aruco_queue.get()
             if not self._collection_active.is_set():
                 continue
             try:
-                corners, ids, _ = cv2.aruco.detectMarkers(image, dictionary, parameters=parameters)
+                if self._aruco_detector is not None:
+                    corners, ids, _ = self._aruco_detector.detectMarkers(image)
+                else:
+                    corners, ids, _ = cv2.aruco.detectMarkers(image, dictionary, parameters=parameters)
+                # [M2.7 调试] 发布叠加图
+                debug_img = image.copy()
+                note = "no markers detected"
+                if ids is not None:
+                    for idx, marker_id in enumerate(ids.flatten()):
+                        pts = np.asarray(corners[idx][0], dtype=np.int32).reshape(-1, 1, 2)
+                        color = (0, 255, 0) if int(marker_id) == self.frames_config.marker_id else (0, 0, 255)
+                        cv2.polylines(debug_img, [pts], True, color, 2)
+                        cv2.putText(debug_img, str(int(marker_id)), tuple(pts[0][0]),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+                    note = f"detected ids={ids.flatten().tolist()}"
+                else:
+                    cv2.putText(debug_img, "NO MARKERS", (20, 40),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                if self._debug_image_pub is not None and self._bridge is not None:
+                    self._debug_image_pub.publish(self._bridge.cv2_to_imgmsg(debug_img, encoding="bgr8"))
                 if ids is None:
                     self.vision_gate.record_failure("no markers detected", receipt_time=receipt_time)
                     continue

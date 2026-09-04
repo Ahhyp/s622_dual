@@ -26,8 +26,12 @@
   <!-- 仿真性能：fps 60→20、960×540→640×480（对齐 robotarm），渲染负载降 ~7 倍 → RTF 大幅提升。
        视觉伺服 50-100Hz 控制用锁定目标，20fps 检测足够。分辨率变化后 camera_info 自动更新，
        visual_servo 的 use_adaptive_jacobian=true 运行时自适应，j_img_to_base 仅作 fallback。
-       name 必须与 camera_v0 的 name 一致。 -->
-  <xacro:macro name="camera_gazebo_v0" params="name:=camera enable_depth:=true">
+       name 必须与 camera_v0 的 name 一致。
+       [M2.7 修正 2026-09-03 复盘] 曾用 focal_scale=0.9945 修正深度偏差——无效：
+       gz-sim 分离 camera 的渲染投影跟随 <lens> fx（≈0.9957×lens 常量偏移），
+       改 lens 会让渲染与 camera_info 一起变，solvePnP 深度自抵消。真正的独立杠杆是
+       标定配置里的 marker_size_m（见 global_eye_on_base_right.yaml 注释）。故还原 1.0。 -->
+  <xacro:macro name="camera_gazebo_v0" params="name:=camera enable_depth:=true focal_scale:=1.0">
     <xacro:gazebo_rgbd_split
       name="${name}"
       fps="20"
@@ -36,6 +40,7 @@
       image_height="540"
       h_fov="${82.4 * pi/180}"
       v_fov="${52.5 * pi/180}"
+      focal_scale="${focal_scale}"
       min_depth="0.05"
       max_depth="10.0"
       enable_depth="${enable_depth}"/>

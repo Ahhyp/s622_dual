@@ -32,16 +32,16 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-# [M2.7] 标定板挂哪只臂：由 M2_ARM 环境变量决定（构造期生效，s622_dual_arm 读取）。
-# 用法：M2_ARM=right ros2 launch gz_launch s622_global_handeye_sim.launch.py
-#       M2_ARM=left  ros2 launch gz_launch s622_global_handeye_sim.launch.py
-_M2_ARM = os.environ.get("M2_ARM", "right")
-os.environ["M2_MODE"] = _M2_ARM  # 通知 s622_dual_arm 使用 M2.7 场景参数
+# [M2.7] 标定板挂哪只臂：优先 `arm:=` launch 参数（默认取 M2_ARM 环境变量，再默认 right）。
+# [2026-09-03 修复] 原实现只在模块导入期从 M2_ARM 环境变量设置 M2_MODE，`arm:=` 参数
+# 声明后从未被消费 → `arm:=left` 启动时 calibration_arm 实际仍是 right（相机一直看到
+# 右臂上的板，左臂标定数据全废）。现改为 OpaqueFunction：解析 arm 参数后再写环境变量，
+# s622_dual_arm.launch.py 构造期（含于函数内 evaluate）即可读到正确值。
+DEFAULT_ARM = os.environ.get("M2_ARM", "right")
 
 
 def generate_launch_description():
@@ -49,15 +49,8 @@ def generate_launch_description():
     handeye_pkg = get_package_share_directory("hand_eye_calibration")
 
     arm_arg = DeclareLaunchArgument(
-        "arm", default_value=_M2_ARM, choices=["left", "right"],
-        description="标定板固定到哪只臂（建议用 M2_ARM 环境变量）")
-
-    # ---- 1. 双臂仿真：M2_MODE 已设 → 全局相机开 + 腕部关 + 标定板挂 M2_ARM ----
-    dual_sim = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(gz_pkg, "launch", "s622_dual_arm.launch.py"),
-        ),
-    )
+        "arm", default_value=DEFAULT_ARM, choices=["left", "right"],
+        description="标定板固定到哪只臂（可用 M2_ARM 环境变量给定默认值）")
 
     aruco_params = os.path.join(handeye_pkg, "config", "aruco_parameters.yaml")
 
@@ -102,10 +95,20 @@ def generate_launch_description():
         ],
     )
 
+    def _launch_setup(context, *_args, **_kwargs):
+        # [2026-09-03 修复] 在 include 求值前按 arm 参数设置环境变量
+        arm = str(context.launch_configurations.get("arm", DEFAULT_ARM))
+        os.environ["M2_MODE"] = arm
+        os.environ["M2_ARM"] = arm
+        # ---- 1. 双臂仿真（其构造期读 M2_MODE）----
+        dual_sim = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(gz_pkg, "launch", "s622_dual_arm.launch.py"),
+            ),
+        )
+        return [dual_sim, aruco_node, marker_pose_pub, calib_aruco_pub]
+
     return LaunchDescription([
         arm_arg,
-        dual_sim,
-        aruco_node,
-        marker_pose_pub,
-        calib_aruco_pub,
+        OpaqueFunction(function=_launch_setup),
     ])
