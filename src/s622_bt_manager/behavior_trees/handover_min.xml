@@ -57,7 +57,7 @@
 
         <!-- gate: Transfer 前必须 right verified + BOTH -->
         <ScriptCondition code="right_grasp_verified == true
-                                and object_owner == 'BOTH_PHYSICAL'" />
+                                &amp;&amp; object_owner == 'BOTH_PHYSICAL'" />
 
         <!-- 5. PlanningScene 原子转移 Left -> Right (单次 diff) -->
         <TransferObject object_name="cube"
@@ -71,7 +71,7 @@
         <PrintMessage msg="TransferObject SUCCESS -> owner=RIGHT" />
 
         <!-- gate: LeftOpen 只在 transfer_success + RIGHT 时允许 (M4.6 invariant) -->
-        <ScriptCondition code="transfer_success == true and object_owner == 'RIGHT'" />
+        <ScriptCondition code="transfer_success == true &amp;&amp; object_owner == 'RIGHT'" />
 
         <!-- 7. Left Open (cube 只被 Right 夹持) -->
         <SetGripper arm_prefix="left" command="open" timeout_sec="5.0" />
@@ -149,8 +149,8 @@
           <!-- LEFT / 默认: RightClose 或 Verify 失败, 物体仍在 Left -> Right 撤离 -->
           <Sequence name="RecoverLeft">
             <ScriptCondition code="object_owner != 'BOTH_PHYSICAL'
-                                    and object_owner != 'RIGHT'
-                                    and object_owner != 'UNKNOWN'" />
+                                    &amp;&amp; object_owner != 'RIGHT'
+                                    &amp;&amp; object_owner != 'UNKNOWN'" />
             <PrintMessage msg="RECOVERY[LEFT]: left holds cube; open+retreat right arm" />
             <ForceSuccess>
               <SetGripper arm_prefix="right" command="open" timeout_sec="3.0" />
