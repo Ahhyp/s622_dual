@@ -1,0 +1,175 @@
+<root BTCPP_format="4">
+  <!-- ============================================================
+       M4.3 最小 Handover BT (fixed cube, 无视觉)
+       ID: HandoverMin
+
+       前置条件(由外部 runner 保证):
+         - cube 已被 Left 夹住, PlanningScene attached to Left
+         - Right 处于安全位
+       blackboard: object_owner / handover_stage / right_grasp_verified /
+                   transfer_success  (M4.8 §11)
+       严格顺序 (M4.4/§7/§9):
+         DualMove(HandoverReady) -> RightClose -> VerifyRightGrasp
+           -> TransferObject -> LeftOpen -> DualRetreat
+       gate: VerifyRightGrasp!=SUCCESS 时 Left 禁止松开(顺序天然保证);
+             LeftOpen 只在 TransferObject SUCCESS 后(transfer_success 断言)
+       Recovery: ownership-aware (M4.7 §10), 不用通用 OpenBoth
+       ============================================================ -->
+  <BehaviorTree ID="HandoverMin">
+
+    <Fallback name="MainWithOwnershipRecovery">
+
+      <!-- ==================== 主任务 ==================== -->
+      <Sequence name="HandoverMain">
+
+        <CheckSystemReady />
+
+        <!-- 初始化 ownership blackboard -->
+        <Script code="object_owner := 'LEFT'; handover_stage := 'init';
+                      right_grasp_verified := false; transfer_success := false" />
+        <PrintMessage msg="=== M4 handover: start (owner=LEFT, cube in Left) ===" />
+
+        <!-- gate: 仅 LEFT 归属时可进入交接 -->
+        <ScriptCondition code="object_owner == 'LEFT'" />
+
+        <!-- 1. 双臂进入固定交接构型 -->
+        <Script code="handover_stage := 'approach'" />
+        <DualMoveToJointState named_pose="dual_handover_ready"
+            velocity_scale="0.15" acceleration_scale="0.15"
+            timeout_sec="25.0" />
+
+        <!-- M4.9: 到位后短暂 dwell 稳定 -->
+        <Wait sec="0.25" />
+
+        <!-- 2. Right Close (右爪咬住 cube, cube 此刻被双爪同时夹持) -->
+        <SetGripper arm_prefix="right" command="close" timeout_sec="5.0"
+            finger_position="{right_finger_pos}" />
+
+        <!-- 3. Verify Right Grasp: 失败 => Left 不松 (子树失败 -> 恢复分支 owner=LEFT) -->
+        <VerifyGrasp arm_prefix="right"
+            finger_min_position="0.005" timeout_sec="8.0"
+            finger_position="{right_finger_pos}" />
+
+        <!-- 4. 双爪持物 -> 更新 ownership -->
+        <Script code="right_grasp_verified := true;
+                      object_owner := 'BOTH_PHYSICAL'; handover_stage := 'both'" />
+        <PrintMessage msg="Right grasp VERIFIED -> owner=BOTH_PHYSICAL" />
+
+        <!-- gate: Transfer 前必须 right verified + BOTH -->
+        <ScriptCondition code="right_grasp_verified == true
+                                and object_owner == 'BOTH_PHYSICAL'" />
+
+        <!-- 5. PlanningScene 原子转移 Left -> Right (单次 diff) -->
+        <TransferObject object_name="cube"
+            new_arm_prefix="right"
+            offset_z="0.02"
+            timeout_sec="3.0" />
+
+        <!-- 6. 转移成功 -> ownership RIGHT -->
+        <Script code="transfer_success := true;
+                      object_owner := 'RIGHT'; handover_stage := 'right'" />
+        <PrintMessage msg="TransferObject SUCCESS -> owner=RIGHT" />
+
+        <!-- gate: LeftOpen 只在 transfer_success + RIGHT 时允许 (M4.6 invariant) -->
+        <ScriptCondition code="transfer_success == true and object_owner == 'RIGHT'" />
+
+        <!-- 7. Left Open (cube 只被 Right 夹持) -->
+        <SetGripper arm_prefix="left" command="open" timeout_sec="5.0" />
+
+        <!-- 8. 双臂安全分离回 home (Right 持物) -->
+        <DualMoveToJointState named_pose="dual_home"
+            velocity_scale="0.15" acceleration_scale="0.15"
+            timeout_sec="25.0" />
+
+        <PrintMessage msg="=== M4 handover SUCCESS (owner=RIGHT, cube with Right at home) ===" />
+        <!-- 树 SUCCESS: trial 成功; cube 仍 attached to Right, 由 runner/place 阶段处理 -->
+
+      </Sequence>
+
+      <!-- ==================== Ownership-aware Recovery ==================== -->
+      <Sequence name="OwnershipRecovery">
+        <PrintMessage msg="=== M4 RECOVERY (ownership-aware) ===" />
+
+        <!-- 先停 servo, 再按 owner 分支; 不做无条件 OpenBoth -->
+        <ForceSuccess>
+          <StopServo arm_prefix="left" />
+        </ForceSuccess>
+        <ForceSuccess>
+          <StopServo arm_prefix="right" />
+        </ForceSuccess>
+
+        <Fallback name="OwnerDispatch">
+
+          <!-- BOTH_PHYSICAL: 双爪都咬住但 transfer 失败 -> 禁止立即运动;
+               只 Right Open + 确认后回到 LEFT 再撤离 -->
+          <Sequence name="RecoverBothPhysical">
+            <ScriptCondition code="object_owner == 'BOTH_PHYSICAL'" />
+            <PrintMessage msg="RECOVERY[BOTH_PHYSICAL]: both hold, NO motion; open right first" />
+            <ForceSuccess>
+              <SetGripper arm_prefix="right" command="open" timeout_sec="3.0" />
+            </ForceSuccess>
+            <ForceSuccess>
+              <Wait sec="0.3" />
+            </ForceSuccess>
+            <!-- 确认 Right 已松开: VerifyGrasp 现在应 FAILURE(空/未咬) -->
+            <Inverter>
+              <VerifyGrasp arm_prefix="right"
+                  finger_min_position="0.005" timeout_sec="5.0" />
+            </Inverter>
+            <Script code="object_owner := 'LEFT'; right_grasp_verified := false;
+                          handover_stage := 'recovered_left'" />
+            <PrintMessage msg="RECOVERY[BOTH_PHYSICAL]: right open confirmed -> owner=LEFT, retreat" />
+            <ForceSuccess>
+              <DualMoveToJointState named_pose="dual_home"
+                  velocity_scale="0.15" acceleration_scale="0.15"
+                  timeout_sec="25.0" />
+            </ForceSuccess>
+          </Sequence>
+
+          <!-- RIGHT: transfer 成功但 LeftOpen/撤离失败 -> Right 持物, 确保 Left 开 + 撤离 -->
+          <Sequence name="RecoverRight">
+            <ScriptCondition code="object_owner == 'RIGHT'" />
+            <PrintMessage msg="RECOVERY[RIGHT]: right holds cube; ensure left open; retreat home" />
+            <ForceSuccess>
+              <SetGripper arm_prefix="left" command="open" timeout_sec="3.0" />
+            </ForceSuccess>
+            <ForceSuccess>
+              <DualMoveToJointState named_pose="dual_home"
+                  velocity_scale="0.15" acceleration_scale="0.15"
+                  timeout_sec="25.0" />
+            </ForceSuccess>
+          </Sequence>
+
+          <!-- UNKNOWN: 状态不明 -> Both Stop/Hold, 禁止自动 Open/Motion, 人工处理 -->
+          <Sequence name="RecoverUnknown">
+            <ScriptCondition code="object_owner == 'UNKNOWN'" />
+            <PrintMessage msg="RECOVERY[UNKNOWN]: both hold; NO auto open / motion; MANUAL intervention required" />
+          </Sequence>
+
+          <!-- LEFT / 默认: RightClose 或 Verify 失败, 物体仍在 Left -> Right 撤离 -->
+          <Sequence name="RecoverLeft">
+            <ScriptCondition code="object_owner != 'BOTH_PHYSICAL'
+                                    and object_owner != 'RIGHT'
+                                    and object_owner != 'UNKNOWN'" />
+            <PrintMessage msg="RECOVERY[LEFT]: left holds cube; open+retreat right arm" />
+            <ForceSuccess>
+              <SetGripper arm_prefix="right" command="open" timeout_sec="3.0" />
+            </ForceSuccess>
+            <ForceSuccess>
+              <DualMoveToJointState named_pose="dual_home"
+                  velocity_scale="0.15" acceleration_scale="0.15"
+                  timeout_sec="25.0" />
+            </ForceSuccess>
+          </Sequence>
+
+        </Fallback>
+
+        <!-- recovery 完成 => 整树 FAILURE (trial 计失败; 若 recovery 内部仍失败,
+             同样 FAILURE, owner 保持可查) -->
+        <PrintMessage msg="=== M4 RECOVERY DONE ===" />
+        <AlwaysFailure />
+      </Sequence>
+
+    </Fallback>
+  </BehaviorTree>
+</root>
