@@ -31,8 +31,23 @@ namespace s622_bt
                 BT::InputPort<double>("size_x", 0.04, ""),
                 BT::InputPort<double>("size_y", 0.04, ""),
                 BT::InputPort<double>("size_z", 0.04, ""),
+                // [M4 rod] 物体在 link 系中的完整位姿。长条物体抓取点可在中心之外、
+                // 长轴也未必与 link 轴一致 → 需要 pos_x/y/z + 四元数。
+                // 兼容旧用法：pos_z 未给出(NaN)时回退到 offset_z。
+                BT::InputPort<double>("pos_x", 0.0, "object center x in link frame"),
+                BT::InputPort<double>("pos_y", 0.0, "object center y in link frame"),
+                BT::InputPort<double>("pos_z", std::numeric_limits<double>::quiet_NaN(),
+                                      "object center z in link frame (default: offset_z)"),
+                BT::InputPort<double>("quat_x", 0.0, "object orientation (w=1 identity)"),
+                BT::InputPort<double>("quat_y", 0.0, ""),
+                BT::InputPort<double>("quat_z", 0.0, ""),
+                BT::InputPort<double>("quat_w", 1.0, ""),
                 BT::InputPort<double>("offset_z", 0.02,
-                                      "pose.z in link frame (cube center below TCP)"),
+                                      "legacy: pose.z in link frame (cube center below TCP)"),
+                // 空格/逗号分隔的 link 名列表；空 = server 默认(按 link 臂前缀过滤)。
+                // 交接阶段需要放行右指接触时显式传左右手指/grasp links。
+                BT::InputPort<std::string>("touch_links", "",
+                                           "space/comma separated link names"),
                 BT::InputPort<double>("timeout_sec", 3.0, ""),
             };
         }
@@ -80,8 +95,19 @@ namespace s622_bt
                                            "'left' | 'right' - derives new_link_name"),
                 // 或直接给 new_link_name (覆盖派生)
                 BT::InputPort<std::string>("new_link_name", "", ""),
+                // [M4 rod] 物体在新 link 系中的完整位姿(缺省 x=y=0, z=offset_z, identity)
+                BT::InputPort<double>("pos_x", 0.0, "object center x in new link frame"),
+                BT::InputPort<double>("pos_y", 0.0, "object center y in new link frame"),
+                BT::InputPort<double>("pos_z", std::numeric_limits<double>::quiet_NaN(),
+                                      "object center z in new link frame (default: offset_z)"),
+                BT::InputPort<double>("quat_x", 0.0, "object orientation (w=1 identity)"),
+                BT::InputPort<double>("quat_y", 0.0, ""),
+                BT::InputPort<double>("quat_z", 0.0, ""),
+                BT::InputPort<double>("quat_w", 1.0, ""),
                 BT::InputPort<double>("offset_z", 0.02,
-                                      "cube pose z in new link frame"),
+                                      "legacy: cube pose z in new link frame"),
+                BT::InputPort<std::string>("touch_links", "",
+                                           "space/comma separated link names"),
                 BT::InputPort<double>("timeout_sec", 3.0, ""),
             };
         }

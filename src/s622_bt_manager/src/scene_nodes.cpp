@@ -1,6 +1,10 @@
 #include "s622_bt_manager/scene_nodes.hpp"
 
 #include <chrono>
+#include <cmath>
+#include <limits>
+#include <sstream>
+#include <vector>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
@@ -8,6 +12,60 @@ using namespace std::chrono_literals;
 
 namespace s622_bt
 {
+
+    // [M4 rod] 解析 'touch_links' 字符串端口：空格/逗号分隔 → vector<string>
+    static std::vector<std::string> split_touch_links(const std::string &raw)
+    {
+        std::vector<std::string> out;
+        std::stringstream ss(raw);
+        std::string tok;
+        while (ss >> tok)
+        {
+            std::stringstream tok_ss(tok);
+            std::string item;
+            while (std::getline(tok_ss, item, ','))
+            {
+                if (!item.empty())
+                    out.push_back(item);
+            }
+        }
+        return out;
+    }
+
+    // [M4 rod] 组装物体在 link 系中的 pose：pos_x/y/z 优先；pos_z 缺失(NaN)时回退 offset_z；
+    // 四元数默认 identity，非单位时归一化。
+    static geometry_msgs::msg::Pose object_pose_from_ports(
+        BT::TreeNode &node, const std::string &offset_port)
+    {
+        geometry_msgs::msg::Pose p;
+        double ox = node.getInput<double>(offset_port).value_or(0.02);
+        double x = node.getInput<double>("pos_x").value_or(0.0);
+        double y = node.getInput<double>("pos_y").value_or(0.0);
+        double z = node.getInput<double>("pos_z").value_or(ox);
+        if (std::isnan(z))
+            z = ox; // 未给 pos_z → 旧 offset_z 语义
+        p.position.x = x;
+        p.position.y = y;
+        p.position.z = z;
+        p.orientation.x = node.getInput<double>("quat_x").value_or(0.0);
+        p.orientation.y = node.getInput<double>("quat_y").value_or(0.0);
+        p.orientation.z = node.getInput<double>("quat_z").value_or(0.0);
+        p.orientation.w = node.getInput<double>("quat_w").value_or(1.0);
+        double n = std::sqrt(p.orientation.x * p.orientation.x +
+                             p.orientation.y * p.orientation.y +
+                             p.orientation.z * p.orientation.z +
+                             p.orientation.w * p.orientation.w);
+        if (n < 1e-9)
+            p.orientation.w = 1.0; // 全零 → identity
+        else if (std::abs(n - 1.0) > 1e-6)
+        {
+            p.orientation.x /= n;
+            p.orientation.y /= n;
+            p.orientation.z /= n;
+            p.orientation.w /= n;
+        }
+        return p;
+    }
 
     static std::string resolve_link_name(const std::string &explicit_link,
                                          const std::string &arm_prefix,
@@ -50,11 +108,11 @@ namespace s622_bt
         req->size.x = getInput<double>("size_x").value_or(0.04);
         req->size.y = getInput<double>("size_y").value_or(0.04);
         req->size.z = getInput<double>("size_z").value_or(0.04);
-        req->pose_in_link.position.x = 0.0;
-        req->pose_in_link.position.y = 0.0;
-        req->pose_in_link.position.z = getInput<double>("offset_z").value_or(0.02);
-        req->pose_in_link.orientation.w = 1.0;
-        // touch_links 留空，server 用 default_touch_links
+        req->pose_in_link = object_pose_from_ports(*this, "offset_z");
+        auto touch_raw = getInput<std::string>("touch_links").value_or("");
+        if (!touch_raw.empty())
+            req->touch_links = split_touch_links(touch_raw);
+        // touch_links 留空 → server 用 default_touch_links
 
         auto future = client_->async_send_request(req);
         if (future.wait_for(std::chrono::duration<double>(timeout)) !=
@@ -188,11 +246,11 @@ namespace s622_bt
         auto req = std::make_shared<s622_bt_manager::srv::TransferObject::Request>();
         req->object_name = getInput<std::string>("object_name").value_or("cube");
         req->new_link_name = new_link;
-        req->pose_in_new_link.position.x = 0.0;
-        req->pose_in_new_link.position.y = 0.0;
-        req->pose_in_new_link.position.z = getInput<double>("offset_z").value_or(0.02);
-        req->pose_in_new_link.orientation.w = 1.0;
-        // touch_links 留空 -> server 用 default_touch_links (双臂 launch 里已配)
+        req->pose_in_new_link = object_pose_from_ports(*this, "offset_z");
+        auto touch_raw = getInput<std::string>("touch_links").value_or("");
+        if (!touch_raw.empty())
+            req->touch_links = split_touch_links(touch_raw);
+        // touch_links 留空 → server 用 default_touch_links
 
         auto future = client_->async_send_request(req);
         if (future.wait_for(std::chrono::duration<double>(timeout)) !=
