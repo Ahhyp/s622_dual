@@ -29,6 +29,14 @@ class GripperService(Node):
                                ['finger1_joint', 'finger2_joint'])
         self.declare_parameter('open_positions', [0.025, -0.025])
         self.declare_parameter('close_positions', [0.0, 0.0])
+        # [M4 §7.21] 仿真侧"机械限位(拧螺丝)"等效参数。
+        #   >0 时 close 的目标改为 ±close_stop_gap/2 —— 指板停在该间隙、不再继续压向 0，
+        #   与真机"螺丝决定最小闭合间隙、气压决定夹持力"的语义一致。
+        #   默认 0.0 = 保持原行为（close → close_positions），
+        #   因为真机 fairino_hardware 把 position 命令当开关量
+        #   （opening > GRIPPER_OPEN_THRESHOLD(0.010) → 张开），
+        #   真机路径绝不能收到"中间位置"的命令值。仿真启动时用 launch 参数显式打开。
+        self.declare_parameter('close_stop_gap', 0.0)
         self.declare_parameter('command_duration_sec', 1.0)
         self.declare_parameter('settle_sec', 1.2)
         self.declare_parameter('feedback_joint', 'finger1_joint')
@@ -46,6 +54,12 @@ class GripperService(Node):
         self._joint_names = list(self.get_parameter('finger_joint_names').value)
         self._open = [float(x) for x in self.get_parameter('open_positions').value]
         self._close = [float(x) for x in self.get_parameter('close_positions').value]
+        # [M4 §7.21] 有效 close 目标：stop_gap>0 → ±gap/2（仿真限位）；否则原值（真机行为）
+        self._stop_gap = float(self.get_parameter('close_stop_gap').value)
+        self._close_eff = list(self._close)
+        if self._stop_gap > 0.0:
+            half = 0.5 * self._stop_gap
+            self._close_eff = [(half if o >= 0.0 else -half) for o in self._open]
         self._settle = float(self.get_parameter('settle_sec').value)
         self._fb_joint = self.get_parameter('feedback_joint').value
         base_link = self.get_parameter('base_link').value
@@ -97,7 +111,7 @@ class GripperService(Node):
             gripper=self.moveit2_gripper,
             abort=self.abort,
             open_positions=tuple(self._open),
-            close_positions=tuple(self._close),
+            close_positions=tuple(self._close_eff),
             action_delay=0.0,
         )
 
@@ -105,9 +119,13 @@ class GripperService(Node):
             SetGripper, 'set_gripper', self._on_set_gripper, callback_group=cb)
 
         self.get_logger().info(
-            f'gripper_service ready (MoveItMotion): open={self._open}, close={self._close}, '
+            f'gripper_service ready (MoveItMotion): open={self._open}, close={self._close_eff}, '
             f'mg_ns={move_group_namespace}, arm_group={arm_group_name}, '
             f'gripper_group={gripper_group_name}')
+        if self._stop_gap > 0.0:
+            self.get_logger().warn(
+                f'[M4] close_stop_gap={self._stop_gap:.4f}m 生效: close 目标 = {self._close_eff} '
+                f'(仿真限位, 等效真机螺丝; 真机请勿设置该参数)')
 
     def _on_joint_states(self, msg: JointState):
         self._latest_js = msg

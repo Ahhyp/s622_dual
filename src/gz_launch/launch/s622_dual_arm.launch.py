@@ -107,6 +107,12 @@ def generate_launch_description():
     #   docs/2026-08-27_双臂控制器启动竞态），恢复 robotarm 对齐时序。
     robot_spawn_delay = DeclareLaunchArgument('robot_spawn_delay', default_value='5.0')
     controller_spawn_delay = DeclareLaunchArgument('controller_spawn_delay', default_value='8.0')
+    # [M4 §7.21] 仿真侧夹爪"机械限位"（等效真机拧螺丝定的最小闭合间隙）。
+    # 默认 0.0 = 原行为（close 压到 close_positions=[0,0]）；跑长条交接时传
+    #   gripper_close_stop_gap:=0.029   （30mm 杆留 1mm 过盈）
+    gripper_close_stop_gap = DeclareLaunchArgument(
+        'gripper_close_stop_gap', default_value='0.0',
+        description='[sim] 夹爪最小闭合间隙(m), 0=不启用(原行为)')
     rv_spawn_delay = LaunchConfiguration('robot_spawn_delay')
     ctrl_spawn_delay = LaunchConfiguration('controller_spawn_delay')
 
@@ -476,6 +482,10 @@ def generate_launch_description():
                         'launch', 'arm_actions_dual.launch.py'
                     )
                 ),
+                # [M4 §7.21] 把仿真限位透传给 left/right gripper_service
+                launch_arguments={
+                    'gripper_close_stop_gap': LaunchConfiguration('gripper_close_stop_gap'),
+                }.items(),
             )
         ],
     )
@@ -570,7 +580,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         set_model_path, tree_file_arg, tree_id_arg,
-        robot_spawn_delay, controller_spawn_delay,
+        robot_spawn_delay, controller_spawn_delay, gripper_close_stop_gap,
         gazebo, clock_bridge, camera_bridge, wrist_camera_bridge,
         spawn_robot, spawn_box,
         robot_state_pub,
