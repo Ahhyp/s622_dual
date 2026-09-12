@@ -145,11 +145,13 @@ def generate_launch_description():
                 "include_global_camera": _m2_global,
                 "include_wrist_camera": _m2_wrist,
                 "calibration_arm": _m2_calib,
-                # [M4_2 / A''] 夹爪"螺丝限位"：由环境变量 GRIPPER_STOP_GAP 传入（m，字符串）。
-                # 默认 "0.0" = 不启用（保留真机原始行程）。跑长条交接时:
-                #   GRIPPER_STOP_GAP=0.029 ros2 launch gz_launch s622_dual_arm.launch.py ...
-                # 注意：mappings 必须是纯 str（不能塞 LaunchConfiguration，见上方注释）。
-                "finger_stop_gap": os.environ.get("GRIPPER_STOP_GAP", "0.0"),
+                # [M4_2 / A''] 夹爪"关节限位"路线（已证会与初始位冲突导致 finger1 锁死，默认关闭）。
+                # 注意：与下面 S3 的限位块用【不同】环境变量，避免误开。
+                "finger_stop_gap": os.environ.get("GRIPPER_JOINT_LIMIT_GAP", "0.0"),
+                # [M4_2 / S3] 夹爪"物理限位块"（推荐路线；默认关闭）
+                #   GRIPPER_STOP_BLOCK=1 GRIPPER_STOP_GAP=0.028 → 两爪各加一个挡块
+                "gripper_stop_block": os.environ.get("GRIPPER_STOP_BLOCK", "false"),
+                "gripper_stop_gap": os.environ.get("GRIPPER_STOP_GAP", "0.028"),
             },
         )
         .robot_description_semantic(file_path="config/s622_dual_arm.srdf")
