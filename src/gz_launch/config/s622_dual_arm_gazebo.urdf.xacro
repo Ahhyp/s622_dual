@@ -4,6 +4,10 @@
     <xacro:property name="M_PI" value="3.14159265358979323846" />
 
     <xacro:arg name="instantiate" default="false" />   <!-- ← 加这行 -->
+    <!-- [M4_2 / S1] 是否给 finger 关节挂"夹持力"注入插件（ApplyJointForce）。
+         true=挂上（默认；插件在收到 cmd_force 前完全惰性）
+         false=完全不挂（A/B 对照用：排查插件是否干扰 position 控制） -->
+    <xacro:arg name="gripper_force_plugins" default="false" />
     <!-- 2026-08-25 对齐单臂/robotarm：include_camera_visual=false（默认）=
          简化几何体，RViz 不卡；true=真实 mesh（d435.dae） -->
     <xacro:arg name="include_camera_visual" default="false" />
@@ -32,6 +36,36 @@
             name="ignition::gazebo::systems::Sensors">
             <render_engine>ogre2</render_engine>
         </plugin>
+
+        <!-- ==================================================================
+             [M4_2 / S1-P0] 夹爪"气压"等效：给 finger 关节注入常值夹持力。
+             真机：气动夹爪的夹持力由调压阀提供（软件只有开/关阀）；
+             仿真：gz_ros2_control 的 position 命令是"速度 ∝ 位置误差"的P型伺服，
+                   误差归零后夹持力=0（见 M4_0 §7.21）。故用 gz 原生插件在
+                   "被控对象层"补上这个力 —— 不改 ros2_control、不加控制器、
+                   不动真机任何文件。
+             接口：Double 消息 → /model/s622_dual_arm/joint/<joint>/cmd_force
+                   未收到消息前完全惰性（不影响既有行为）。
+             符号：沿关节轴。finger1 正=张开 → 夹持取负；finger2 反号。
+             ================================================================== -->
+        <xacro:if value="$(arg gripper_force_plugins)">
+        <plugin filename="ignition-gazebo-apply-joint-force-system"
+            name="gz::sim::systems::ApplyJointForce">
+            <joint_name>right_finger1_joint</joint_name>
+        </plugin>
+        <plugin filename="ignition-gazebo-apply-joint-force-system"
+            name="gz::sim::systems::ApplyJointForce">
+            <joint_name>right_finger2_joint</joint_name>
+        </plugin>
+        <plugin filename="ignition-gazebo-apply-joint-force-system"
+            name="gz::sim::systems::ApplyJointForce">
+            <joint_name>left_finger1_joint</joint_name>
+        </plugin>
+        <plugin filename="ignition-gazebo-apply-joint-force-system"
+            name="gz::sim::systems::ApplyJointForce">
+            <joint_name>left_finger2_joint</joint_name>
+        </plugin>
+        </xacro:if>
     </gazebo>
 
     <!-- ============ 引入 arm macro (M2.3 已 macro 化) ============ -->
