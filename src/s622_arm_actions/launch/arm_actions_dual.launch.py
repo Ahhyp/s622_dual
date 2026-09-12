@@ -27,6 +27,15 @@ def generate_launch_description():
         'gripper_direct_close', default_value='false',
         description='[sim] true=close 绕过 MoveIt 直发轨迹(A\'\' 方案)；false=原 MoveIt 路径')
 
+    # [M4_2 / Plan B'] 仿真专用：纯力控夹爪（气动模型）。默认全关 → 真机零影响。
+    force_mode = DeclareLaunchArgument(
+        'gripper_force_mode', default_value='false',
+        description='[sim] true=夹爪改力控(close 施闭合恒力/open 施张开力)')
+    clamp_force = DeclareLaunchArgument('gripper_clamp_force', default_value='5.0',
+                                        description='[sim] 闭合恒力(N/指)')
+    open_force = DeclareLaunchArgument('gripper_open_force', default_value='2.0',
+                                       description='[sim] 张开力(N/指)')
+
     # 保留的最小 remap：joint_states（namespaced 节点默认订阅 /<ns>/joint_states）
     def make_arm_group(ns, cfg):
         return GroupAction([
@@ -55,7 +64,10 @@ def generate_launch_description():
                 parameters=[cfg,
                             {'use_sim_time': True,
                              'close_stop_gap': LaunchConfiguration('gripper_close_stop_gap'),
-                             'finger_direct_close': LaunchConfiguration('gripper_direct_close')}],
+                             'finger_direct_close': LaunchConfiguration('gripper_direct_close'),
+                             'finger_force_mode': LaunchConfiguration('gripper_force_mode'),
+                             'clamp_force': LaunchConfiguration('gripper_clamp_force'),
+                             'open_force': LaunchConfiguration('gripper_open_force')}],
                 remappings=[('joint_states', '/joint_states')],
             ),
         ])
@@ -77,6 +89,9 @@ def generate_launch_description():
     return LaunchDescription([
         close_stop_gap,
         direct_close,
+        force_mode,
+        clamp_force,
+        open_force,
         make_arm_group('left', left_cfg),
         make_arm_group('right', right_cfg),
         dual_group,

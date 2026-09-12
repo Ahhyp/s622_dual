@@ -59,6 +59,23 @@ def generate_launch_description():
         remappings=[("/world/dual_arm_world/clock", "/clock")],
     )
 
+    # [M4_2 / Plan B'] 夹爪"夹持力"通道：ROS std_msgs/Float64 → gz Double（apply_joint_force 插件）
+    # 语法（见 `ros2 run ros_gz_bridge parameter_bridge --help`）：
+    #   <topic@ROS类型@GZ类型>，方向符号紧跟 ROS 类型：@双向 / [ = GZ→ROS / ] = ROS→GZ
+    # 本机 bridge 0.244.x 用 gz.msgs.* 命名（不是 ignition.msgs.*）。
+    # 仅在仿真启用（GRIPPER_FORCE_PLUGINS=1 时插件才订阅；桥本身无害）
+    _force_bridge_topics = [
+        f"/model/s622_dual_arm/joint/{arm}_finger{i}_joint/cmd_force"
+        for arm in ("left", "right")
+        for i in (1, 2)
+    ]
+    gripper_force_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[f"{t}@std_msgs/msg/Float64]gz.msgs.Double" for t in _force_bridge_topics],
+        parameters=[{"use_sim_time": True}],
+    )
+
     camera_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
@@ -117,6 +134,12 @@ def generate_launch_description():
     gripper_direct_close = DeclareLaunchArgument(
         'gripper_direct_close', default_value='false',
         description='[sim] true=close 绕过 MoveIt 直发轨迹(A\'\'方案)')
+    # [M4_2 / Plan B'] 仿真纯力控夹爪（气动模型）；默认关闭
+    gripper_force_mode = DeclareLaunchArgument(
+        'gripper_force_mode', default_value='false',
+        description='[sim] true=夹爪力控(close 施闭合恒力/open 施张开力)')
+    gripper_clamp_force = DeclareLaunchArgument('gripper_clamp_force', default_value='5.0')
+    gripper_open_force = DeclareLaunchArgument('gripper_open_force', default_value='2.0')
     rv_spawn_delay = LaunchConfiguration('robot_spawn_delay')
     ctrl_spawn_delay = LaunchConfiguration('controller_spawn_delay')
 
@@ -152,6 +175,8 @@ def generate_launch_description():
                 #   GRIPPER_STOP_BLOCK=1 GRIPPER_STOP_GAP=0.028 → 两爪各加一个挡块
                 "gripper_stop_block": os.environ.get("GRIPPER_STOP_BLOCK", "false"),
                 "gripper_stop_gap": os.environ.get("GRIPPER_STOP_GAP", "0.028"),
+                # [M4_2 / Plan B'] 启用 gz 关节力插件（=仿真夹持力来源）
+                "gripper_force_plugins": os.environ.get("GRIPPER_FORCE_PLUGINS", "false"),
             },
         )
         .robot_description_semantic(file_path="config/s622_dual_arm.srdf")
@@ -497,6 +522,9 @@ def generate_launch_description():
                 launch_arguments={
                     'gripper_close_stop_gap': LaunchConfiguration('gripper_close_stop_gap'),
                     'gripper_direct_close': LaunchConfiguration('gripper_direct_close'),
+                    'gripper_force_mode': LaunchConfiguration('gripper_force_mode'),
+                    'gripper_clamp_force': LaunchConfiguration('gripper_clamp_force'),
+                    'gripper_open_force': LaunchConfiguration('gripper_open_force'),
                 }.items(),
             )
         ],
@@ -593,7 +621,8 @@ def generate_launch_description():
     return LaunchDescription([
         set_model_path, tree_file_arg, tree_id_arg,
         robot_spawn_delay, controller_spawn_delay, gripper_close_stop_gap, gripper_direct_close,
-        gazebo, clock_bridge, camera_bridge, wrist_camera_bridge,
+        gripper_force_mode, gripper_clamp_force, gripper_open_force,
+        gazebo, clock_bridge, camera_bridge, wrist_camera_bridge, gripper_force_bridge,
         spawn_robot, spawn_box,
         robot_state_pub,
         jsb_spawner, arm_hand_spawner,

@@ -45,6 +45,15 @@ class GripperService(Node):
         #   背景：A'' 用"关节限位=螺丝 + 命令越界(0/0)"产生持续夹持力；而 MoveIt 会拒绝越界目标，
         #   故仿真侧 close 必须直发。默认 False = 真机原路径（MoveIt 计划→JTC→驱动开阀阈值）。
         self.declare_parameter('finger_direct_close', False)
+        # [M4_2 / Plan B'] 仿真专用：**纯力控**夹爪（= 气动模型）。
+        #   位置伺服+硬限位结构上无法产生稳定夹持力（见 M4_2 §12 结构性结论），故改用力源：
+        #   close=每指施加闭合恒力 clamp_force；open=施加张开力 open_force（gz apply_joint_force 插件）。
+        #   默认 False = 真机原路径（真机夹持力由调压阀提供，软件只需开/关阀）。
+        self.declare_parameter('finger_force_mode', False)
+        self.declare_parameter('clamp_force', 5.0)
+        self.declare_parameter('open_force', 2.0)
+        self.declare_parameter('force_topic_template',
+                               '/model/s622_dual_arm/joint/{joint}/cmd_force')
         self.declare_parameter('command_duration_sec', 1.0)
         self.declare_parameter('settle_sec', 1.2)
         self.declare_parameter('feedback_joint', 'finger1_joint')
@@ -78,7 +87,19 @@ class GripperService(Node):
         gripper_group_name = self.get_parameter('gripper_group_name').value
         gripper_controller_action = self.get_parameter('gripper_controller_action').value
         self._direct_close = bool(self.get_parameter('finger_direct_close').value)
+        self._force_mode = bool(self.get_parameter('finger_force_mode').value)
+        self._clamp_force = float(self.get_parameter('clamp_force').value)
+        self._open_force = float(self.get_parameter('open_force').value)
+        self._force_topic_tpl = self.get_parameter('force_topic_template').value
         self._gripper_action = gripper_controller_action
+        # 每指一个力话题发布者（仿真力控用；真机模式下不创建）
+        self._force_pubs = {}
+        if self._force_mode:
+            from std_msgs.msg import Float64
+            for jn, op in zip(self._joint_names, self._open):
+                topic = self._force_topic_tpl.format(joint=jn)
+                self._force_pubs[jn] = (self.create_publisher(Float64, topic, 10),
+                                        (1.0 if op >= 0.0 else -1.0))   # sign: 张开方向
 
         cb = ReentrantCallbackGroup()
         self.js_sub = self.create_subscription(
@@ -141,6 +162,24 @@ class GripperService(Node):
                 f'[M4/A\'\'] finger_direct_close=True 生效: close 将绕过 MoveIt, 直发 '
                 f'{self._gripper_action} 目标={self._close} '
                 f'(仿真专用: 配合关节限位产生持续夹持力; 真机请勿设置)')
+        if self._force_mode:
+            self.get_logger().warn(
+                f'[M4/Plan B\'] finger_force_mode=True 生效: close=施加 {self._clamp_force}N 闭合恒力, '
+                f'open=施加 {self._open_force}N 张开力; 位置伺服将被旁路(仿真专用)')
+
+    def _force_grip(self, opening: bool) -> bool:
+        """[M4_2 / Plan B'] 纯力控：把(开/合)恒力发到 gz apply_joint_force 插件。
+        插件会把关节变成力控（位置伺服失效）——这正是气动模型的要点。"""
+        if not self._force_pubs:
+            return False
+        from std_msgs.msg import Float64
+        for jn, (pub, sgn) in self._force_pubs.items():
+            mag = self._open_force if opening else self._clamp_force
+            msg = Float64()
+            msg.data = float(sgn * mag) if opening else float(-sgn * mag)
+            pub.publish(msg)
+        time.sleep(0.2)
+        return True
 
     def _direct_gripper_traj(self, targets) -> bool:
         """[M4_2 / A''] 绕过 MoveIt, 直发单点轨迹给 hand controller。
@@ -193,10 +232,15 @@ class GripperService(Node):
 
     def _on_set_gripper(self, request, response):
         if request.command == 'open':
-            ok = self.motion.control_gripper(
-                open_gripper=True, action_name='SetGripper open')
+            if self._force_mode:
+                ok = self._force_grip(opening=True)
+            else:
+                ok = self.motion.control_gripper(
+                    open_gripper=True, action_name='SetGripper open')
         elif request.command == 'close':
-            if self._direct_close:
+            if self._force_mode:
+                ok = self._force_grip(opening=False)
+            elif self._direct_close:
                 # [M4_2 / A''] 仿真：绕过 MoveIt 直发（目标=close_positions=[0,0]，被关节限位挡住）
                 ok = self._direct_gripper_traj(self._close)
             else:
