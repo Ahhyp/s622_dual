@@ -10,11 +10,19 @@
     <!-- <xacro:arg name="instantiate" default="true" /> -->
          <xacro:arg name="instantiate" default="false" />
 
+    <!-- [M4_2 / A''] 夹爪"机械限位螺丝"等效：>0 时把两指行程下限收到 ±值/2
+         （即最小闭合间隙 = 该值）。默认 0.0 = 保留真机原始行程（真机零影响）。
+         只应由仿真侧（gz_launch 的 gazebo xacro）传入。 -->
+    <xacro:arg name="finger_stop_gap" default="0.0" />
+
     <!-- ==================================================================
        Macro: s622_arm
        双臂顶层需显式实例化两次, 各自不同 prefix + attach_world=false
        ================================================================== -->
-    <xacro:macro name="s622_arm" params="prefix:='' attach_world:=true">
+    <xacro:macro name="s622_arm" params="prefix:='' attach_world:=true finger_stop_gap:=0.0">
+
+        <!-- [M4_2 / A''] 限位半间隙；<=0 表示不启用额外限位 -->
+        <xacro:property name="finger_stop_half" value="${float(finger_stop_gap) * 0.5}" />
 
         <xacro:if value="${attach_world}">
             <link name="world" />
@@ -294,7 +302,7 @@
             <parent link="${prefix}wrist3_link" />
             <child link="${prefix}finger1" />
             <axis xyz="0.99996 0 -0.0087267" />
-            <limit lower="-1e-6" upper="0.0305" effort="150" velocity="3.2" />
+            <limit lower="${finger_stop_half if finger_stop_half > 0.0 else -1e-6}" upper="0.0305" effort="150" velocity="3.2" />
         </joint>
 
         <link name="${prefix}finger2">
@@ -326,7 +334,7 @@
             <parent link="${prefix}wrist3_link" />
             <child link="${prefix}finger2" />
             <axis xyz="0.99996 0 -0.0087267" />
-            <limit lower="-0.0305" upper="1e-6" effort="150" velocity="3.2" />
+            <limit lower="-0.0305" upper="${-finger_stop_half if finger_stop_half > 0.0 else 1e-6}" effort="150" velocity="3.2" />
         </joint>
 
         <!-- Grasp frame at the center of the gripper -->
@@ -388,7 +396,8 @@
        双臂顶层文件应传 instantiate:=false 并显式调 s622_arm 两次
        ================================================================== -->
     <xacro:if value="$(arg instantiate)">
-        <xacro:s622_arm prefix="$(arg prefix)" attach_world="$(arg attach_world)" />
+        <xacro:s622_arm prefix="$(arg prefix)" attach_world="$(arg attach_world)"
+            finger_stop_gap="$(arg finger_stop_gap)" />
     </xacro:if>
 
 </robot>

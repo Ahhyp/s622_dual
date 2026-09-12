@@ -6,8 +6,12 @@ import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.action import ActionClient
 
+from builtin_interfaces.msg import Duration
+from control_msgs.action import FollowJointTrajectory
 from sensor_msgs.msg import JointState
+from trajectory_msgs.msg import JointTrajectoryPoint
 
 from s622_bt_manager.srv import SetGripper
 
@@ -37,6 +41,10 @@ class GripperService(Node):
         #   （opening > GRIPPER_OPEN_THRESHOLD(0.010) → 张开），
         #   真机路径绝不能收到"中间位置"的命令值。仿真启动时用 launch 参数显式打开。
         self.declare_parameter('close_stop_gap', 0.0)
+        # [M4_2 / A''] 仿真专用：close 时【绕过 MoveIt】直发 FollowJointTrajectory 到 hand controller。
+        #   背景：A'' 用"关节限位=螺丝 + 命令越界(0/0)"产生持续夹持力；而 MoveIt 会拒绝越界目标，
+        #   故仿真侧 close 必须直发。默认 False = 真机原路径（MoveIt 计划→JTC→驱动开阀阈值）。
+        self.declare_parameter('finger_direct_close', False)
         self.declare_parameter('command_duration_sec', 1.0)
         self.declare_parameter('settle_sec', 1.2)
         self.declare_parameter('feedback_joint', 'finger1_joint')
@@ -69,6 +77,8 @@ class GripperService(Node):
         arm_group_name = self.get_parameter('arm_group_name').value
         gripper_group_name = self.get_parameter('gripper_group_name').value
         gripper_controller_action = self.get_parameter('gripper_controller_action').value
+        self._direct_close = bool(self.get_parameter('finger_direct_close').value)
+        self._gripper_action = gripper_controller_action
 
         cb = ReentrantCallbackGroup()
         self.js_sub = self.create_subscription(
@@ -126,6 +136,48 @@ class GripperService(Node):
             self.get_logger().warn(
                 f'[M4] close_stop_gap={self._stop_gap:.4f}m 生效: close 目标 = {self._close_eff} '
                 f'(仿真限位, 等效真机螺丝; 真机请勿设置该参数)')
+        if self._direct_close:
+            self.get_logger().warn(
+                f'[M4/A\'\'] finger_direct_close=True 生效: close 将绕过 MoveIt, 直发 '
+                f'{self._gripper_action} 目标={self._close} '
+                f'(仿真专用: 配合关节限位产生持续夹持力; 真机请勿设置)')
+
+    def _direct_gripper_traj(self, targets) -> bool:
+        """[M4_2 / A''] 绕过 MoveIt, 直发单点轨迹给 hand controller。
+        越界目标（如限位下的 0/0）MoveIt 会拒绝, 而 A'' 正需要"命令越界 + 机械限位挡位"来产生
+        持续夹持力。回调内不 spin（节点由 MultiThreadedExecutor 驱动），沿用项目既有轮询等待写法。"""
+        ac = ActionClient(self, FollowJointTrajectory, self._gripper_action)
+        if not ac.wait_for_server(timeout_sec=5.0):
+            self.get_logger().error(f'[M4] 直发失败: action {self._gripper_action} 不可用')
+            return False
+        goal = FollowJointTrajectory.Goal()
+        goal.trajectory.joint_names = list(self._joint_names)
+        pt = JointTrajectoryPoint()
+        pt.positions = [float(v) for v in targets]
+        pt.velocities = [0.0] * len(targets)
+        pt.time_from_start = Duration(sec=2, nanosec=0)
+        goal.trajectory.points = [pt]
+        send_fut = ac.send_goal_async(goal)
+        t0 = time.monotonic()
+        while not send_fut.done() and time.monotonic() - t0 < 10.0:
+            time.sleep(0.02)
+        handle = send_fut.result() if send_fut.done() else None
+        if handle is None or not handle.accepted:
+            self.get_logger().error('[M4] 直发轨迹被拒绝')
+            return False
+        res_fut = handle.get_result_async()
+        t0 = time.monotonic()
+        while not res_fut.done() and time.monotonic() - t0 < 30.0:
+            time.sleep(0.02)
+        if not res_fut.done():
+            self.get_logger().warn('[M4] 直发轨迹等待结果超时（可能因限位挡住未报 SUCCEEDED）')
+            return False
+        code = res_fut.result().result.error_code
+        # 被机械限位挡住时 JTC 可能返回 GOAL_TOLERANCE_VIOLATED(-5)/PATH_TOLERANCE(-4) 之类:
+        # 对 A'' 而言"被挡住"= 正是我们要的持续夹持力, 故这些码不算失败。
+        ok = code in (0, -4, -5)
+        self.get_logger().info(f'[M4] 直发轨迹 error_code={code} -> {"ok" if ok else "FAILED"}')
+        return ok
 
     def _on_joint_states(self, msg: JointState):
         self._latest_js = msg
@@ -144,8 +196,12 @@ class GripperService(Node):
             ok = self.motion.control_gripper(
                 open_gripper=True, action_name='SetGripper open')
         elif request.command == 'close':
-            ok = self.motion.control_gripper(
-                open_gripper=False, action_name='SetGripper close')
+            if self._direct_close:
+                # [M4_2 / A''] 仿真：绕过 MoveIt 直发（目标=close_positions=[0,0]，被关节限位挡住）
+                ok = self._direct_gripper_traj(self._close)
+            else:
+                ok = self.motion.control_gripper(
+                    open_gripper=False, action_name='SetGripper close')
         else:
             response.success = False
             response.error_msg = f'unknown command: {request.command}'

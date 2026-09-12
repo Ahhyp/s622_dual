@@ -113,6 +113,10 @@ def generate_launch_description():
     gripper_close_stop_gap = DeclareLaunchArgument(
         'gripper_close_stop_gap', default_value='0.0',
         description='[sim] 夹爪最小闭合间隙(m), 0=不启用(原行为)')
+    # [M4_2 / A''] 仿真专用：close 绕过 MoveIt 直发（配合 GRIPPER_STOP_GAP 关节限位产生夹持力）
+    gripper_direct_close = DeclareLaunchArgument(
+        'gripper_direct_close', default_value='false',
+        description='[sim] true=close 绕过 MoveIt 直发轨迹(A\'\'方案)')
     rv_spawn_delay = LaunchConfiguration('robot_spawn_delay')
     ctrl_spawn_delay = LaunchConfiguration('controller_spawn_delay')
 
@@ -141,6 +145,11 @@ def generate_launch_description():
                 "include_global_camera": _m2_global,
                 "include_wrist_camera": _m2_wrist,
                 "calibration_arm": _m2_calib,
+                # [M4_2 / A''] 夹爪"螺丝限位"：由环境变量 GRIPPER_STOP_GAP 传入（m，字符串）。
+                # 默认 "0.0" = 不启用（保留真机原始行程）。跑长条交接时:
+                #   GRIPPER_STOP_GAP=0.029 ros2 launch gz_launch s622_dual_arm.launch.py ...
+                # 注意：mappings 必须是纯 str（不能塞 LaunchConfiguration，见上方注释）。
+                "finger_stop_gap": os.environ.get("GRIPPER_STOP_GAP", "0.0"),
             },
         )
         .robot_description_semantic(file_path="config/s622_dual_arm.srdf")
@@ -485,6 +494,7 @@ def generate_launch_description():
                 # [M4 §7.21] 把仿真限位透传给 left/right gripper_service
                 launch_arguments={
                     'gripper_close_stop_gap': LaunchConfiguration('gripper_close_stop_gap'),
+                    'gripper_direct_close': LaunchConfiguration('gripper_direct_close'),
                 }.items(),
             )
         ],
@@ -580,7 +590,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         set_model_path, tree_file_arg, tree_id_arg,
-        robot_spawn_delay, controller_spawn_delay, gripper_close_stop_gap,
+        robot_spawn_delay, controller_spawn_delay, gripper_close_stop_gap, gripper_direct_close,
         gazebo, clock_bridge, camera_bridge, wrist_camera_bridge,
         spawn_robot, spawn_box,
         robot_state_pub,

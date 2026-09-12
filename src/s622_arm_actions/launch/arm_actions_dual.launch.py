@@ -21,6 +21,12 @@ def generate_launch_description():
         'gripper_close_stop_gap', default_value='0.0',
         description='[sim] 0=原行为(压到 close_positions); >0=close 目标改为 ±值/2 的限位间隙(m)')
 
+    # [M4_2 / A''] 仿真专用：close 时绕过 MoveIt 直发 hand controller（配合关节限位产生持续夹持力）。
+    # 默认 false = 真机原路径（MoveIt 计划 → JTC → 驱动开阀阈值）。
+    direct_close = DeclareLaunchArgument(
+        'gripper_direct_close', default_value='false',
+        description='[sim] true=close 绕过 MoveIt 直发轨迹(A\'\' 方案)；false=原 MoveIt 路径')
+
     # 保留的最小 remap：joint_states（namespaced 节点默认订阅 /<ns>/joint_states）
     def make_arm_group(ns, cfg):
         return GroupAction([
@@ -48,7 +54,8 @@ def generate_launch_description():
                 output='screen',
                 parameters=[cfg,
                             {'use_sim_time': True,
-                             'close_stop_gap': LaunchConfiguration('gripper_close_stop_gap')}],
+                             'close_stop_gap': LaunchConfiguration('gripper_close_stop_gap'),
+                             'finger_direct_close': LaunchConfiguration('gripper_direct_close')}],
                 remappings=[('joint_states', '/joint_states')],
             ),
         ])
@@ -69,6 +76,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         close_stop_gap,
+        direct_close,
         make_arm_group('left', left_cfg),
         make_arm_group('right', right_cfg),
         dual_group,

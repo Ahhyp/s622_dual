@@ -8,6 +8,9 @@
          true=挂上（默认；插件在收到 cmd_force 前完全惰性）
          false=完全不挂（A/B 对照用：排查插件是否干扰 position 控制） -->
     <xacro:arg name="gripper_force_plugins" default="false" />
+    <!-- [M4_2 / A''] 夹爪"螺丝限位"（最小闭合间隙, m）。0.0=不启用(真机原始行程)。
+         仿真跑长条交接时由 launch 从环境变量 GRIPPER_STOP_GAP 传入，例如 0.029。 -->
+    <xacro:arg name="finger_stop_gap" default="0.0" />
     <!-- 2026-08-25 对齐单臂/robotarm：include_camera_visual=false（默认）=
          简化几何体，RViz 不卡；true=真实 mesh（d435.dae） -->
     <xacro:arg name="include_camera_visual" default="false" />
@@ -73,7 +76,7 @@
         filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
     <xacro:property name="instantiate" value="false" />
     <!-- ============ Left Arm: (0.35, 0, 0), yaw=π ============ -->
-    <xacro:s622_arm prefix="left_" attach_world="false" />
+    <xacro:s622_arm prefix="left_" attach_world="false" finger_stop_gap="$(arg finger_stop_gap)" />
     <joint name="left_mount_joint" type="fixed">
         <parent link="world" />
         <child link="left_base_link" />
@@ -81,7 +84,7 @@
     </joint>
 
     <!-- ============ Right Arm: (-0.35, 0, 0), yaw=0 ============ -->
-    <xacro:s622_arm prefix="right_" attach_world="false" />
+    <xacro:s622_arm prefix="right_" attach_world="false" finger_stop_gap="$(arg finger_stop_gap)" />
     <joint name="right_mount_joint" type="fixed">
         <parent link="world" />
         <child link="right_base_link" />
