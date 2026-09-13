@@ -895,8 +895,24 @@ namespace s622_bt
                          arm_prefix.c_str(), label.c_str(), err.c_str());
             return BT::NodeStatus::FAILURE;
         }
-        RCLCPP_INFO(node_->get_logger(), "CartesianApproach[%s]%s: 完成",
-                    arm_prefix.c_str(), label.c_str());
+        // 完成后再 FK 一次，报告"命令位移 vs 实际达成位移"（跟随率/是否被挡住的直接证据）
+        geometry_msgs::msg::Pose p_end;
+        if (fk_->fk(fk_->currentJoints(), &p_end, 5.0))
+        {
+            const double dz_cmd = p_to[2] - p_start[2];
+            const double dz_ach = p_end.position.z - p_start[2];
+            RCLCPP_INFO(node_->get_logger(),
+                        "CartesianApproach[%s]%s: 完成  Δz 命令=%.1fmm 实际=%.1fmm  "
+                        "Δxyz 实际=(%.1f, %.1f, %.1f)mm",
+                        arm_prefix.c_str(), label.c_str(), dz_cmd * 1000, dz_ach * 1000,
+                        (p_end.position.x - p_start[0]) * 1000,
+                        (p_end.position.y - p_start[1]) * 1000, dz_ach * 1000);
+        }
+        else
+        {
+            RCLCPP_INFO(node_->get_logger(), "CartesianApproach[%s]%s: 完成",
+                        arm_prefix.c_str(), label.c_str());
+        }
         return BT::NodeStatus::SUCCESS;
     }
 
