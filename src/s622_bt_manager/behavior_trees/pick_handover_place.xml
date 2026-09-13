@@ -1,173 +1,135 @@
 <root BTCPP_format="4">
-    <BehaviorTree ID="PickHandoverPlace">
-        <Fallback name="MainWithRecovery">
 
-            <!-- ============ 主任务 ============ -->
-            <Sequence name="MainTask">
-                <CheckSystemReady />
+  <!-- ==========================================================================
+       M4 主树：长条物体 Pick → 松耦合交接 → （可选）Place
+       规划 §9 正式运动顺序：
 
-                <!-- ============ 起点: 双臂到 home ============ -->
-                <DualMoveToJointState named_pose="dual_home"
-                    velocity_scale="0.3" acceleration_scale="0.3"
-                    timeout_sec="20.0" />
+         Left Pick → Attach Long Object → Left Lift
+         → [HandoverRodOnly 子树]
+             GenerateHandoverCandidate → Right Open → Right Pre-Pose
+             → Right Low-Speed Approach → Right Close → VerifyRightGrasp
+             → TransferObject → Left Open → Left Retreat → Right Retreat
+         → （物体已在右手，后续 Place 由 M5/M6 处理）
 
-                <!-- ============ 左臂 Pick ============ -->
-                <SetGripper arm_prefix="left" command="open" timeout_sec="5.0" />
+       与旧版（cube + DualMove(dual_handover_ready)）的关键差别：
+         1. 物体是长条（0.03×0.15×0.03），Attach/Transfer 用完整 position+orientation；
+         2. 删除 "双爪同时夹 + DualMove 到固定交接位" 的老流程，改为
+            Left 静止持物 → 运行期生成 Object-relative Receive Pose → 受控接近；
+         3. Transfer 后先 Left Retreat 再 Right 动作（规划 §11）。
+       旧 cube 版本保留在 pick_handover_place_cube.xml。
+       ========================================================================== -->
+  <BehaviorTree ID="PickHandoverPlace">
+    <Fallback name="MainWithRecovery">
 
-                <RetryUntilSuccessful num_attempts="5">
-                    <Sequence>
-                        <DetectObject object_name="cube" min_confidence="0.10" max_age_sec="1.0"
-                            output_u="{u}" output_v="{v}"
-                            output_yaw="{obj_yaw}" output_confidence="{conf}" />
-                        <GenerateGraspCandidate arm_prefix="left"
-                            u="{u}" v="{v}" object_yaw="{obj_yaw}"
-                            tcp_grasp_pose="{grasp_pose}"
-                            tcp_pregrasp_pose="{pregrasp_pose}"
-                            grasp_yaw="{grasp_yaw}"
-                            grasp_pose_x="{grasp_x}"
-                            grasp_pose_y="{grasp_y}" />
-                    </Sequence>
-                </RetryUntilSuccessful>
+      <!-- ==================== 主任务 ==================== -->
+      <Sequence name="MainTask">
+        <CheckSystemReady />
 
-                <LockTargetPixel input_u="{u}" input_v="{v}"
-                    locked_u="{lu}" locked_v="{lv}" />
+        <!-- 起点：双臂 home -->
+        <DualMoveToJointState named_pose="dual_home"
+            velocity_scale="0.3" acceleration_scale="0.3"
+            timeout_sec="20.0" />
 
-                <MoveToPose arm_prefix="left" target_pose="{pregrasp_pose}"
-                    velocity_scale="0.2" acceleration_scale="0.2"
-                    ensure_servo_stopped="true"
-                    timeout_sec="25.0" />
+        <!-- ============ 左臂 Pick（视觉；与 M1.7 单臂流程一致）============ -->
+        <SetGripper arm_prefix="left" command="open" timeout_sec="8.0" />
 
-                <VisualAlign arm_prefix="left" mode="xy"
-                    target_x_base="{grasp_x}" target_y_base="{grasp_y}"
-                    tolerance_m="0.005"
-                    ensure_servo_started="true"
-                    timeout_sec="25.0" />
+        <RetryUntilSuccessful num_attempts="5">
+          <Sequence>
+            <DetectObject object_name="{object_name}" min_confidence="0.10" max_age_sec="1.0"
+                output_u="{u}" output_v="{v}"
+                output_yaw="{obj_yaw}" output_confidence="{conf}" />
+            <GenerateGraspCandidate arm_prefix="left"
+                u="{u}" v="{v}" object_yaw="{obj_yaw}"
+                tcp_grasp_pose="{grasp_pose}"
+                tcp_pregrasp_pose="{pregrasp_pose}"
+                grasp_yaw="{grasp_yaw}"
+                grasp_pose_x="{grasp_x}"
+                grasp_pose_y="{grasp_y}" />
+          </Sequence>
+        </RetryUntilSuccessful>
 
-                <VisualAlign arm_prefix="left" mode="yaw"
-                    target_yaw="{grasp_yaw}"
-                    tolerance_rad="0.10"
-                    ensure_servo_started="true"
-                    timeout_sec="5.0" />
+        <LockTargetPixel input_u="{u}" input_v="{v}"
+            locked_u="{lu}" locked_v="{lv}" />
 
-                <AlignLockCheck locked_u="{lu}" locked_v="{lv}"
-                    object_name="cube"
-                    min_confidence="0.05"
-                    tolerance_px="25.0" />
+        <MoveToPose arm_prefix="left" target_pose="{pregrasp_pose}"
+            velocity_scale="0.2" acceleration_scale="0.2"
+            ensure_servo_stopped="true"
+            timeout_sec="25.0" />
 
-                <VisualAlign arm_prefix="left" mode="descend"
-                    distance="0.13"
-                    speed="0.04"
-                    ensure_servo_started="true"
-                    timeout_sec="30.0" />
+        <VisualAlign arm_prefix="left" mode="xy"
+            target_x_base="{grasp_x}" target_y_base="{grasp_y}"
+            tolerance_m="0.005"
+            ensure_servo_started="true"
+            timeout_sec="25.0" />
 
-                <SetGripper arm_prefix="left" command="close"
-                    timeout_sec="5.0" finger_position="{finger_pos}" />
+        <VisualAlign arm_prefix="left" mode="yaw"
+            target_yaw="{grasp_yaw}"
+            tolerance_rad="0.10"
+            ensure_servo_started="true"
+            timeout_sec="5.0" />
 
-                <VerifyGrasp arm_prefix="left"
-                    finger_min_position="0.005" timeout_sec="5.0"
-                    finger_position="{finger_pos}" />
+        <AlignLockCheck locked_u="{lu}" locked_v="{lv}"
+            object_name="{object_name}"
+            min_confidence="0.05"
+            tolerance_px="25.0" />
 
-                <AttachObject arm_prefix="left" object_name="cube"
-                    size_x="0.04" size_y="0.04" size_z="0.04"
-                    offset_z="0.02" />
+        <!-- 拾取深度 0.153：力控夹爪下的重标值（0.156 会让杆歪 15.5°，见 M4_2 §15） -->
+        <VisualAlign arm_prefix="left" mode="descend"
+            distance="0.153"
+            speed="0.04"
+            ensure_servo_started="true"
+            timeout_sec="40.0" />
 
-                <VisualAlign arm_prefix="left" mode="lift"
-                    distance="0.10" speed="0.05"
-                    ensure_servo_started="false"
-                    timeout_sec="20.0" />
+        <SetGripper arm_prefix="left" command="close"
+            timeout_sec="10.0" finger_position="{finger_pos}" />
 
-                <!-- ============ 双臂到 handover 位姿 ============ -->
-                <DualMoveToJointState named_pose="dual_handover_ready"
-                    velocity_scale="0.15" acceleration_scale="0.15"
-                    timeout_sec="20.0" />
+        <VerifyGrasp arm_prefix="left"
+            finger_min_position="0.010" timeout_sec="15.0"
+            finger_position="{finger_pos}" />
 
-                <!-- ============ 交接: 严格顺序 ============ -->
-                <!-- 1. 右手咬 (cube 此刻被双夹爪同时夹持) -->
-                <SetGripper arm_prefix="right" command="close" timeout_sec="5.0" />
+        <!-- 长条 Attach：完整 position + orientation（规划 §3.1） -->
+        <AttachObject arm_prefix="left" object_name="{object_name}"
+            size_x="{object_size_x}" size_y="{object_size_y}" size_z="{object_size_z}"
+            pos_x="{left_object_pos_x}" pos_y="{left_object_pos_y}" pos_z="{left_object_pos_z}"
+            quat_x="{left_object_quat_x}" quat_y="{left_object_quat_y}"
+            quat_z="{left_object_quat_z}" quat_w="{left_object_quat_w}"
+            touch_links="{object_touch_links}" />
 
-                <!-- 2. Planning scene 原子转移: left_grasp_frame -> right_grasp_frame -->
-                <TransferObject object_name="cube"
-                    new_arm_prefix="right"
-                    offset_z="0.02"
-                    timeout_sec="3.0" />
+        <VisualAlign arm_prefix="left" mode="lift"
+            distance="0.10" speed="0.05"
+            ensure_servo_started="false"
+            timeout_sec="25.0" />
 
-                <!-- 3. 左手松 (cube 只被右手夹持) -->
-                <SetGripper arm_prefix="left" command="open" timeout_sec="5.0" />
+        <!-- ============ 交接：整段收敛到 HandoverRodOnly 子树（规划 §9/§10/§11）============ -->
+        <SubTree ID="HandoverRodOnly" />
 
-                <!-- ============ 双臂回 home (左臂让路给右臂 place) ============ -->
-                <DualMoveToJointState named_pose="dual_home"
-                    velocity_scale="0.2" acceleration_scale="0.2"
-                    timeout_sec="20.0" />
+        <!-- ============ 收尾：物体已在右手（owner=RIGHT）============ -->
+        <PrintMessage msg="=== M4 PickHandoverPlace: bar transferred to RIGHT ===" />
+        <!-- Place 阶段属于 M5/M6，本树到此结束（物体 attached to right_grasp_frame） -->
+      </Sequence>
 
-                <!-- ============ 右臂 Place ============ -->
-                <GeneratePlaceCandidate arm_prefix="right"
-                    place_pose="{place_pose}"
-                    pre_place_pose="{pre_place_pose}" />
+      <!-- ============ Recovery（ownership-aware，规划 §12）============ -->
+      <Sequence name="Recovery">
+        <PrintMessage msg="=== M4 PickHandoverPlace RECOVERY ===" />
+        <ForceSuccess>
+          <StopServo arm_prefix="left" />
+        </ForceSuccess>
+        <ForceSuccess>
+          <StopServo arm_prefix="right" />
+        </ForceSuccess>
+        <ForceSuccess>
+          <SetGripper arm_prefix="right" command="open" timeout_sec="5.0" />
+        </ForceSuccess>
+        <ForceSuccess>
+          <DualMoveToJointState named_pose="dual_home"
+              velocity_scale="0.2" acceleration_scale="0.2"
+              timeout_sec="25.0" />
+        </ForceSuccess>
+        <PrintMessage msg="=== M4 PickHandoverPlace RECOVERY DONE ===" />
+        <AlwaysFailure />
+      </Sequence>
 
-                <MoveToPose arm_prefix="right" target_pose="{pre_place_pose}"
-                    velocity_scale="0.20" acceleration_scale="0.20"
-                    timeout_sec="20.0"
-                    ensure_servo_stopped="true" />
+    </Fallback>
+  </BehaviorTree>
 
-                <MoveToPose arm_prefix="right" target_pose="{place_pose}"
-                    velocity_scale="0.10" acceleration_scale="0.10"
-                    timeout_sec="15.0"
-                    ensure_servo_stopped="true" />
-
-                <SetGripper arm_prefix="right" command="open" timeout_sec="5.0" />
-
-                <DetachObject arm_prefix="right" object_name="cube"
-                    put_back_in_world="true"
-                    drop_pose="{place_pose}" />
-
-                <VisualAlign arm_prefix="right" mode="lift"
-                    distance="0.10" speed="0.05"
-                    timeout_sec="20.0" />
-
-                <!-- ============ 收尾: 双臂回 home ============ -->
-                <DualMoveToJointState named_pose="dual_home"
-                    velocity_scale="0.3" acceleration_scale="0.3"
-                    timeout_sec="20.0" />
-            </Sequence>
-
-            <!-- ============ Recovery ============ -->
-            <Sequence name="Recovery">
-                <PrintMessage msg="=== ENTERING RECOVERY ===" />
-
-                <!-- Stop 两臂的 servo (可能有一个在跑) -->
-                <ForceSuccess>
-                    <StopServo arm_prefix="left" />
-                </ForceSuccess>
-                <ForceSuccess>
-                    <StopServo arm_prefix="right" />
-                </ForceSuccess>
-
-                <!-- 松开双爪 -->
-                <ForceSuccess>
-                    <SetGripper arm_prefix="left" command="open" timeout_sec="3.0" />
-                </ForceSuccess>
-                <ForceSuccess>
-                    <SetGripper arm_prefix="right" command="open" timeout_sec="3.0" />
-                </ForceSuccess>
-
-                <!-- 清理 cube (无论 attach 在哪只手, 直接删掉) -->
-                <ForceSuccess>
-                    <DetachObject object_name="cube"
-                        put_back_in_world="false"
-                        timeout_sec="3.0" />
-                </ForceSuccess>
-
-                <!-- 双臂回 home -->
-                <ForceSuccess>
-                    <DualMoveToJointState named_pose="dual_home"
-                        velocity_scale="0.2" acceleration_scale="0.2"
-                        timeout_sec="20.0" />
-                </ForceSuccess>
-
-                <PrintMessage msg="=== RECOVERY DONE ===" />
-                <AlwaysFailure />
-            </Sequence>
-
-        </Fallback>
-    </BehaviorTree>
 </root>

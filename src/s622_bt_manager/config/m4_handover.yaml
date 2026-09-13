@@ -1,0 +1,74 @@
+# ============================================================================
+# M4「双臂松耦合交接（长条物体）」参数（规划 §3/§4/§5/§6/§11）
+#
+# 这个文件是交接几何与运动参数的唯一来源：
+#   bt_executor 启动时把 "bb.*" 下的参数灌进 blackboard（见 bt_executor_node.cpp
+#   loadBlackboardFromParams），行为树 XML 里用 {var} 引用，例如
+#       receive_in_object="{receive_in_object}"
+#   数组类参数统一转成 ';' 连接的字符串，BT.CPP 的 vector<double> 端口直接解析。
+#
+# 数值来源：M4_2_S1_仿真夹持力规划.md §13~§17（已验证配方）+ tmp/m4_round/bt_probe.py 标定
+# ============================================================================
+bt_executor:
+  ros__parameters:
+
+    # ---------------- 长条物体（规划 §2/§4）----------------
+    bb.object_name: "handover_bar"
+    bb.object_size_x: 0.03          # 碰撞盒（短边）
+    bb.object_size_y: 0.15          # 长轴
+    bb.object_size_z: 0.03
+    bb.object_margin: 0.010         # δ 安全余量（PRE 阶段用 margin 盒；RECEIVE 前换 exact 盒）
+    # 交接时允许右指/左手与物体接触（dual-touch），其余连杆仍禁止
+    bb.object_touch_links: "left_finger1 left_finger2 left_grasp_frame right_finger1 right_finger2 right_grasp_frame"
+    # {}^{G_L} T_O：物体中心 + 姿态（在 left_grasp_frame 下）。
+    # 两条用途：
+    #   ① Left Pick 阶段 AttachObject 用（规划 §3.1：第一版允许 YAML 标定值）
+    #   ② 交接阶段若 PlanningScene 查不到 attached object，GenerateHandoverCandidate 的回退值
+    # 正常交接路径走 PlanningScene 运行期位姿（AttachObject 真实写入的那个），不依赖这几个数。
+    # 实测标定（2026-09-13 力控夹持抬升后，tmp/m4_round/bt_round.py 的 3c 步骤）
+    bb.left_object_pos_x: -0.0149
+    bb.left_object_pos_y: 0.0003
+    bb.left_object_pos_z: 0.0149
+    bb.left_object_quat_x: 0.7025
+    bb.left_object_quat_y: 0.7081
+    bb.left_object_quat_z: -0.0503
+    bb.left_object_quat_w: 0.0506
+
+    # ---------------- 交接几何（规划 §5/§6）----------------
+    # RECEIVE 相对物体中心的偏移（world 轴对齐 = 已验证配方 ho_verify.py 的
+    #   tgt = rod_c + (-0.0086, -0.054, +0.0009)）：
+    #   x: 指板接触区前置量 8.6mm（使接触面正落在杆心）
+    #   y: 沿杆轴的咬合位置（杆心 -54mm）
+    #   z: 指板中位面修正 0.9mm
+    # 若要用"物体系表达"（姿态随杆倾斜）：
+    #   bb.receive_offset: [-0.054, 0.0086, 0.0009]
+    #   bb.receive_offset_frame: "object"
+    bb.receive_offset: [-0.0086, -0.054, 0.0009]
+    bb.receive_offset_frame: "world"
+    # 进给方向（world +x）：PRE = RECEIVE - d·轴
+    bb.approach_axis: [1.0, 0.0, 0.0]
+    bb.approach_axis_frame: "world"
+    bb.approach_distance: 0.060
+    # 接物姿态（世界系四元数）= FK(R_SOLVED) 姿态；右爪接长条时姿态固定
+    bb.receive_quat: [0.0087, 0.6819, 0.0060, 0.7314]
+    # Right 接物姿态的反解基点（临时/线性进给都只调 j1..j3，j4..j6 固定为这个值）
+    bb.right_receive_base: [0.2856, -1.2598, -1.7115, -3.3161, -1.2915, -1.5708]
+
+    # ---------------- 运动原语参数 ----------------
+    bb.plan_velocity_scale: 0.06    # R→PRE（OMPL）
+    bb.plan_time: 12.0              # allowed_planning_time (sim s)
+    bb.approach_npts: 24            # PRE→RECEIVE 直线采样点
+    bb.approach_secs: 6.0           # 直线段时长 (sim s)
+
+    # ---------------- 退让（规划 §11：Left 先退）----------------
+    bb.left_home: [0.0, -1.5708, 0.0, 0.0, 0.0, 0.0]
+    bb.left_retreat_velocity_scale: 0.15
+    bb.right_retreat_delta: [0.0, 0.0, 0.05]   # 右手带物 +Z 50mm（跟随率判据 ≥90%）
+
+    # ---------------- 判据 ----------------
+    bb.right_finger_min_position: 0.010        # VerifyGrasp 旧判据: 低于此=空夹
+    # 真实咬合判据：|f1|+|f2|（≈指板间隙）应落在这条带里（夹 30mm 杆）
+    bb.right_finger_gap_min: 0.026
+    bb.right_finger_gap_max: 0.034
+    bb.verify_settle_tol: 0.002                # 力控夹爪缓慢漂移 → 稳定阈值放宽
+    bb.verify_min_wait: 5.0                    # 判定前最少等 5 sim s

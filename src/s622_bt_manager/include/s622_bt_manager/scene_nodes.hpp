@@ -44,6 +44,9 @@ namespace s622_bt
                 BT::InputPort<double>("quat_w", 1.0, ""),
                 BT::InputPort<double>("offset_z", 0.02,
                                       "legacy: pose.z in link frame (cube center below TCP)"),
+                // [M4 BT 回填] 运行期算出来的完整位姿（如 GenerateHandoverCandidate 的输出）。
+                // 给了这个端口就优先用它，忽略上面的 pos_*/quat_*/offset_z。
+                BT::InputPort<geometry_msgs::msg::Pose>("pose_in_link_full", ""),
                 // 空格/逗号分隔的 link 名列表；空 = server 默认(按 link 臂前缀过滤)。
                 // 交接阶段需要放行右指接触时显式传左右手指/grasp links。
                 BT::InputPort<std::string>("touch_links", "",
@@ -106,6 +109,8 @@ namespace s622_bt
                 BT::InputPort<double>("quat_w", 1.0, ""),
                 BT::InputPort<double>("offset_z", 0.02,
                                       "legacy: cube pose z in new link frame"),
+                // [M4 BT 回填] 运行期完整位姿 {}^{G_R} T_O（GenerateHandoverCandidate 输出）
+                BT::InputPort<geometry_msgs::msg::Pose>("pose_in_new_link_full", ""),
                 BT::InputPort<std::string>("touch_links", "",
                                            "space/comma separated link names"),
                 BT::InputPort<double>("timeout_sec", 3.0, ""),

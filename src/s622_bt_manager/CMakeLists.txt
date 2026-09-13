@@ -23,6 +23,9 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(trajectory_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
+find_package(moveit_msgs REQUIRED)
 
 
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -52,6 +55,7 @@ add_executable(bt_executor_node
   src/gripper_nodes.cpp
   src/servo_nodes.cpp
   src/scene_nodes.cpp
+  src/handover_nodes.cpp
 )
 target_include_directories(bt_executor_node PRIVATE include)
 ament_target_dependencies(bt_executor_node
@@ -59,6 +63,7 @@ ament_target_dependencies(bt_executor_node
   ament_index_cpp behaviortree_cpp yolov8_obb_msgs
   controller_manager_msgs
   tf2 tf2_ros tf2_geometry_msgs
+  trajectory_msgs control_msgs moveit_msgs
 )
 
 rosidl_get_typesupport_target(cpp_typesupport_target

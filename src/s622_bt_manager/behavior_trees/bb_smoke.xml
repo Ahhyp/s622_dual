@@ -1,0 +1,23 @@
+<root BTCPP_format="4">
+  <BehaviorTree ID="BBSmoke">
+    <Sequence>
+      <PrintMessage msg="--- smoke: GenerateHandoverCandidate + CartesianApproach(delta=0) ---" />
+      <GenerateHandoverCandidate object_name="{object_name}"
+          left_link="left_grasp_frame" world_frame="world"
+          use_scene_pose="true"
+          receive_in_object="{receive_in_object}"
+          approach_axis_in_object="{approach_axis_in_object}"
+          approach_distance="{approach_distance}"
+          receive_quat="{receive_quat}"
+          right_receive_pose="{recv_pose}"
+          right_receive_pre_pose="{pre_pose}"
+          object_pose_world="{object_world}"
+          object_pose_in_right_grasp="{obj_in_right}"
+          object_pose_in_left_grasp_rt="{obj_in_left}"
+          used_scene_pose="{used_scene}" />
+      <CartesianApproach arm_prefix="right" delta="0.0;0.0;0.0" npts="2" secs="1.0"
+          timeout_sec="60.0" log_tag="smoke-noop" />
+      <PrintMessage msg="--- smoke OK ---" />
+    </Sequence>
+  </BehaviorTree>
+</root>

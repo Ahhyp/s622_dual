@@ -554,6 +554,8 @@ def generate_launch_description():
     # ============ 13. BT Executor (双臂公用一份, arm 通过参数切换) ============
     bt_manager_pkg = get_package_share_directory("s622_bt_manager")
     bt_dual_config = os.path.join(bt_manager_pkg, "config", "bt_dual_config.yaml")
+    # [M4 BT 回填] 长条交接参数（bb.* → blackboard，行为树 XML 用 {var} 引用）
+    m4_handover_config = os.path.join(bt_manager_pkg, "config", "m4_handover.yaml")
     tree_file_arg = DeclareLaunchArgument(
         'tree_file', default_value='pick_place_dual.xml',
         description='BT XML file: pick_place_dual.xml | pick_handover_place.xml')
@@ -570,7 +572,9 @@ def generate_launch_description():
                 name="bt_executor",
                 parameters=[
                     bt_dual_config,
+                    m4_handover_config,
                     {
+                        "subtree_files": "handover_rod.xml",
                         "tree_file": LaunchConfiguration('tree_file'),  # ← 改
                         "tree_id":   LaunchConfiguration('tree_id'),    # ← 改
                         "tick_rate_hz": 10,

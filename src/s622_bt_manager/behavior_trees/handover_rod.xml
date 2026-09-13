@@ -1,0 +1,209 @@
+<root BTCPP_format="4">
+
+  <!-- ==========================================================================
+       M4 交接子树：Left 已持长条 → Right 接物 → Transfer → Left 先退 → Right 带物搬运
+       对应规划 §9（正式运动顺序）/§10（握手 invariant）/§11（退让顺序）
+
+       入参（可选，默认取 config/m4_handover.yaml）：
+         object_name / object_size_* / object_margin / receive_in_object /
+         approach_axis_in_object / approach_distance / receive_quat /
+         right_receive_base / plan_time / approach_npts / approach_secs /
+         left_home / right_retreat_delta
+
+       前置条件（由调用者保证，T2/T3/T4 用）：
+         Left 已夹住长条，且 PlanningScene 里已 AttachObject(handover_bar → left_grasp_frame)
+       ========================================================================== -->
+  <BehaviorTree ID="HandoverRodOnly">
+
+    <Fallback name="HandoverWithOwnershipRecovery">
+
+      <!-- ==================== 主任务 ==================== -->
+      <Sequence name="HandoverMain">
+        <CheckSystemReady />
+        <Script code="object_owner := 'LEFT'; right_grasp_verified := false; transfer_success := false" />
+        <PrintMessage msg="=== M4 handover(rod): start, owner=LEFT ===" />
+
+        <!-- 0. 运行期生成接物候选（规划 §5）
+             {}^W T_{G_R}^* = {}^W T_O · {}^O T_{G_R}^*，物体位姿取 PlanningScene 里
+             AttachObject 真实写入的那个（随轮次变化，不是写死的世界坐标） -->
+        <GenerateHandoverCandidate object_name="{object_name}"
+            left_link="left_grasp_frame" world_frame="world"
+            use_scene_pose="true"
+            object_pos_x="0.0" object_pos_y="0.0" object_pos_z="0.010"
+            receive_offset="{receive_offset}"
+            receive_offset_frame="{receive_offset_frame}"
+            approach_axis="{approach_axis}"
+            approach_axis_frame="{approach_axis_frame}"
+            approach_distance="{approach_distance}"
+            receive_quat="{receive_quat}"
+            right_receive_pose="{recv_pose}"
+            right_receive_pre_pose="{pre_pose}"
+            object_pose_world="{object_world}"
+            object_pose_in_right_grasp="{obj_in_right}"
+            object_pose_in_left_grasp_rt="{obj_in_left}"
+            used_scene_pose="{used_scene}" />
+
+        <!-- 1. Right Open（接近前必须开爪，规划 §6） -->
+        <SetGripper arm_prefix="right" command="open" timeout_sec="8.0" />
+        <Wait sec="1.0" />
+
+        <!-- 2. Right → Receive Pre-Pose（OMPL 关节空间，含碰撞检查；Left 完全静止）
+             此时场景里是 margin 盒（LEFT-only 接触），规划器会主动避让长条（规划 §8 / T1） -->
+        <PlanToJoints arm_prefix="right"
+            target_pose="{pre_pose}"
+            base_joint_positions="{right_receive_base}"
+            velocity_scale="{plan_velocity_scale}"
+            planning_time="{plan_time}"
+            timeout_sec="150.0"
+            log_tag="R->PRE" />
+
+        <!-- 2b. 换成 exact 盒 + dual-touch（左右指板允许与长条接触）——
+             对应脚本 ho_verify.py 的 "5a attach exact(dual-touch)"：
+             位姿仍用运行期实测的 {}^{G_L} T_O，只是收紧盒尺寸并放开指板接触，
+             这样最后一段进给时指板可以夹住杆而不是被碰撞检查挡住。 -->
+        <AttachObject arm_prefix="left" object_name="{object_name}"
+            size_x="{object_size_x}" size_y="{object_size_y}" size_z="{object_size_z}"
+            pose_in_link_full="{obj_in_left}"
+            touch_links="{object_touch_links}"
+            timeout_sec="5.0" />
+
+        <!-- 3. Low-Speed Approach（世界空间直线进给，规划 §7 / M4_2 §17） -->
+        <CartesianApproach arm_prefix="right"
+            target_pose="{recv_pose}"
+            base_joint_positions="{right_receive_base}"
+            npts="{approach_npts}" secs="{approach_secs}"
+            timeout_sec="120.0"
+            log_tag="RECEIVE" />
+
+        <!-- 3b. 到位自检（§14 right_object_collision_during_approach / 诊断）：
+             量"物体中心 - 当前 TCP"的世界偏移，应 ≈ receive_offset。
+             偏差大 = 指板没套住杆（接近漂移/杆被推动）→ 此时绝不能合爪。 -->
+        <MeasureObjectInGrasp arm_prefix="right" object_name="{object_name}"
+            left_link="left_grasp_frame" world_frame="world"
+            expected_offset="{receive_offset}"
+            tolerance="0.012"
+            log_tag="before-close"
+            tcp_minus_rod="{tcp_minus_rod}" offset_ok="{approach_offset_ok}" />
+
+        <!-- 4. Right Close + Verify（握手 invariant：Verify 失败 ⇒ 不许 Transfer/LeftOpen）
+             力控夹爪停下后会缓慢漂移 → 稳定阈值放宽到 verify_settle_tol, 最少等 min_wait；
+             咬合判据用 |f1|+|f2|（≈指板间隙）落带, 比单指 f1 稳。 -->
+        <SetGripper arm_prefix="right" command="close" timeout_sec="10.0"
+            finger_position="{right_f1}" />
+        <Wait sec="25.0" />
+        <VerifyGrasp arm_prefix="right"
+            finger_min_position="{right_finger_min_position}"
+            gap_min="{right_finger_gap_min}" gap_max="{right_finger_gap_max}"
+            settle_tol="{verify_settle_tol}" min_wait_sec="{verify_min_wait}"
+            timeout_sec="60.0" finger_position="{right_f1}" finger_gap="{right_gap}" />
+        <Script code="right_grasp_verified := true; object_owner := 'BOTH_PHYSICAL'" />
+        <PrintMessage msg="Right grasp VERIFIED -> owner=BOTH_PHYSICAL" />
+
+        <!-- 5. PlanningScene 原子转移 Left → Right（用运行期算出的 {}^{G_R} T_O） -->
+        <TransferObject object_name="{object_name}"
+            new_arm_prefix="right"
+            pose_in_new_link_full="{obj_in_right}"
+            timeout_sec="5.0" />
+        <Script code="transfer_success := true; object_owner := 'RIGHT'" />
+        <PrintMessage msg="TransferObject SUCCESS -> owner=RIGHT" />
+
+        <!-- 6. Left Open（物体只被 Right 夹持） -->
+        <SetGripper arm_prefix="left" command="open" timeout_sec="8.0" />
+        <Wait sec="1.0" />
+
+        <!-- 7. Left Retreat（规划 §11：必须先让 Left 退开，否则指板挡路把杆刮掉） -->
+        <PlanToJoints arm_prefix="left"
+            joint_positions="{left_home}"
+            velocity_scale="{left_retreat_velocity_scale}"
+            planning_time="{plan_time}"
+            timeout_sec="150.0"
+            log_tag="L retreat" />
+
+        <!-- 8. Right Retreat（带物 +Z，判据：跟随率 ≥90%） -->
+        <CartesianApproach arm_prefix="right"
+            delta="{right_retreat_delta}"
+            npts="12" secs="4.0"
+            timeout_sec="90.0"
+            log_tag="R carry" />
+
+        <Script code="object_owner := 'RIGHT'" />
+        <PrintMessage msg="=== M4 handover(rod) SUCCESS (owner=RIGHT, bar with Right) ===" />
+      </Sequence>
+
+      <!-- ==================== Ownership-aware Recovery（规划 §12）==================== -->
+      <Sequence name="OwnershipRecovery">
+        <PrintMessage msg="=== M4 RECOVERY (ownership-aware) ===" />
+        <ForceSuccess>
+          <StopServo arm_prefix="left" />
+        </ForceSuccess>
+        <ForceSuccess>
+          <StopServo arm_prefix="right" />
+        </ForceSuccess>
+
+        <Fallback name="OwnerDispatch">
+
+          <!-- BOTH_PHYSICAL：双爪都咬住但 transfer 失败 → 禁止运动；先开右手、确认后回 LEFT -->
+          <Sequence name="RecoverBothPhysical">
+            <ScriptCondition code="object_owner == 'BOTH_PHYSICAL'" />
+            <PrintMessage msg="RECOVERY[BOTH_PHYSICAL]: both hold, NO motion; open right first" />
+            <ForceSuccess>
+              <SetGripper arm_prefix="right" command="open" timeout_sec="5.0" />
+            </ForceSuccess>
+            <ForceSuccess>
+              <Wait sec="1.0" />
+            </ForceSuccess>
+            <Inverter>
+              <VerifyGrasp arm_prefix="right"
+                  finger_min_position="{right_finger_min_position}" timeout_sec="8.0" />
+            </Inverter>
+            <Script code="object_owner := 'LEFT'; right_grasp_verified := false" />
+            <PrintMessage msg="RECOVERY[BOTH_PHYSICAL]: right open confirmed -> owner=LEFT, retreat" />
+            <ForceSuccess>
+              <PlanToJoints arm_prefix="right" joint_positions="{right_receive_base}"
+                  velocity_scale="0.10" planning_time="{plan_time}" timeout_sec="150.0" />
+            </ForceSuccess>
+          </Sequence>
+
+          <!-- RIGHT：transfer 成功但后续失败 → Right 持物，确保 Left 开 + 撤离 -->
+          <Sequence name="RecoverRight">
+            <ScriptCondition code="object_owner == 'RIGHT'" />
+            <PrintMessage msg="RECOVERY[RIGHT]: right holds bar; ensure left open; left retreat" />
+            <ForceSuccess>
+              <SetGripper arm_prefix="left" command="open" timeout_sec="5.0" />
+            </ForceSuccess>
+            <ForceSuccess>
+              <PlanToJoints arm_prefix="left" joint_positions="{left_home}"
+                  velocity_scale="0.15" planning_time="{plan_time}" timeout_sec="150.0" />
+            </ForceSuccess>
+          </Sequence>
+
+          <!-- UNKNOWN：状态不明 → 双方保持，禁止自动松手/运动 -->
+          <Sequence name="RecoverUnknown">
+            <ScriptCondition code="object_owner == 'UNKNOWN'" />
+            <PrintMessage msg="RECOVERY[UNKNOWN]: both hold; NO auto open/motion; MANUAL" />
+          </Sequence>
+
+          <!-- LEFT / 默认：Verify 或接近失败，物体仍在 Left → Right 开 + 撤回到安全位 -->
+          <Sequence name="RecoverLeft">
+            <ScriptCondition code="object_owner != 'BOTH_PHYSICAL'
+                                    &amp;&amp; object_owner != 'RIGHT'
+                                    &amp;&amp; object_owner != 'UNKNOWN'" />
+            <PrintMessage msg="RECOVERY[LEFT]: left holds bar; open+retreat right arm" />
+            <ForceSuccess>
+              <SetGripper arm_prefix="right" command="open" timeout_sec="5.0" />
+            </ForceSuccess>
+            <ForceSuccess>
+              <PlanToJoints arm_prefix="right" joint_positions="{right_receive_base}"
+                  velocity_scale="0.10" planning_time="{plan_time}" timeout_sec="150.0" />
+            </ForceSuccess>
+          </Sequence>
+
+        </Fallback>
+        <PrintMessage msg="=== M4 RECOVERY DONE ===" />
+        <AlwaysFailure />
+      </Sequence>
+
+    </Fallback>
+  </BehaviorTree>
+
+</root>

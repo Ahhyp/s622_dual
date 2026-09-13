@@ -34,10 +34,18 @@ namespace s622_bt
 
     // [M4 rod] 组装物体在 link 系中的 pose：pos_x/y/z 优先；pos_z 缺失(NaN)时回退 offset_z；
     // 四元数默认 identity，非单位时归一化。
+    // [M4 BT 回填] 若给了 pose_in_link_full（full_port 非空），直接用它（运行期生成）。
     static geometry_msgs::msg::Pose object_pose_from_ports(
-        BT::TreeNode &node, const std::string &offset_port)
+        BT::TreeNode &node, const std::string &offset_port,
+        const std::string &full_port = "")
     {
         geometry_msgs::msg::Pose p;
+        if (!full_port.empty())
+        {
+            auto full = node.getInput<geometry_msgs::msg::Pose>(full_port);
+            if (full.has_value())
+                return full.value();
+        }
         double ox = node.getInput<double>(offset_port).value_or(0.02);
         double x = node.getInput<double>("pos_x").value_or(0.0);
         double y = node.getInput<double>("pos_y").value_or(0.0);
@@ -108,7 +116,7 @@ namespace s622_bt
         req->size.x = getInput<double>("size_x").value_or(0.04);
         req->size.y = getInput<double>("size_y").value_or(0.04);
         req->size.z = getInput<double>("size_z").value_or(0.04);
-        req->pose_in_link = object_pose_from_ports(*this, "offset_z");
+        req->pose_in_link = object_pose_from_ports(*this, "offset_z", "pose_in_link_full");
         auto touch_raw = getInput<std::string>("touch_links").value_or("");
         if (!touch_raw.empty())
             req->touch_links = split_touch_links(touch_raw);
@@ -246,7 +254,7 @@ namespace s622_bt
         auto req = std::make_shared<s622_bt_manager::srv::TransferObject::Request>();
         req->object_name = getInput<std::string>("object_name").value_or("cube");
         req->new_link_name = new_link;
-        req->pose_in_new_link = object_pose_from_ports(*this, "offset_z");
+        req->pose_in_new_link = object_pose_from_ports(*this, "offset_z", "pose_in_new_link_full");
         auto touch_raw = getInput<std::string>("touch_links").value_or("");
         if (!touch_raw.empty())
             req->touch_links = split_touch_links(touch_raw);

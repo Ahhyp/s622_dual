@@ -52,7 +52,15 @@ namespace s622_bt
                 BT::InputPort<std::string>("feedback_joint", "", ""),
                 BT::InputPort<std::string>("arm_prefix", "", "'' | 'left' | 'right'"),  
                 BT::InputPort<float>("timeout_sec", 2.0f, ""),
+                // [M4 BT 回填] 真实咬合判据：|f1|+|f2| ≈ 指板间隙（比单指 f1 稳）。
+                // gap_min/gap_max 均 >0 时启用；否则沿用旧的三段 f1 判定。
+                BT::InputPort<float>("gap_min", 0.0f, "|f1|+|f2| 下限(m)，>0 启用"),
+                BT::InputPort<float>("gap_max", 0.0f, "|f1|+|f2| 上限(m)"),
+                // 力控夹爪停下后会缓慢漂移 → 稳定阈值可放宽（默认保留旧值 5e-4）
+                BT::InputPort<float>("settle_tol", 5e-4f, "帧间变化阈值(m)"),
+                BT::InputPort<float>("min_wait_sec", 1.5f, "最小等待(sim s)"),
                 BT::OutputPort<float>("finger_position"),
+                BT::OutputPort<float>("finger_gap", "[M4] |f1|+|f2|"),
             };
         }
         BT::NodeStatus tick() override;
