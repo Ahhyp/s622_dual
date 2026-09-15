@@ -23,15 +23,10 @@
         <Script code="object_owner := 'LEFT'; right_grasp_verified := false; transfer_success := false" />
         <PrintMessage msg="=== M4 handover(rod): start, owner=LEFT ===" />
 
-        <!-- [T5 故障注入] mode=unknown: 先把 ownership 置成 UNKNOWN（后面再触发一次失败） -->
-        <Fallback name="InjectUnknownOwner">
-          <Sequence>
-            <ScriptCondition code="fail_inject == 'unknown'" />
-            <Script code="object_owner := 'UNKNOWN'" />
-            <PrintMessage msg="[T5] injected ownership = UNKNOWN" />
-          </Sequence>
-          <AlwaysSuccess />
-        </Fallback>
+        <!-- [T5 故障注入] 端口式（子树 blackboard 与根 blackboard 不同，
+             ScriptCondition 读不到根上预载的变量会抛异常打死进程）:
+             unknown 模式 → 先把 ownership 置 UNKNOWN -->
+        <InjectFailure inject="{fail_inject}" owner_modes="unknown" owner_value="UNKNOWN" />
 
         <!-- 0. 运行期生成接物候选（规划 §5）
              {}^W T_{G_R}^* = {}^W T_O · {}^O T_{G_R}^*，物体位姿取 PlanningScene 里
@@ -105,13 +100,8 @@
             clamp_force="{right_close_force_gentle}"
             finger_position="{right_f1}" />
         <Wait sec="12.0" />
-        <!-- [T5 故障注入 pre-verify] 命中 bb.fail_inject=verify_pre/unknown 时在此强制失败 → 走 ownership Recovery -->
-        <Fallback name="InjectFailPreVerify">
-          <ScriptCondition code="fail_inject != 'verify_pre' &amp;&amp; fail_inject != 'unknown'" />
-          <ForceFailure>
-            <AlwaysSuccess />
-          </ForceFailure>
-        </Fallback>
+        <!-- [T5 故障注入 pre-verify] verify_pre/unknown → 在此强制失败 → 走 ownership Recovery -->
+        <InjectFailure inject="{fail_inject}" fail_modes="verify_pre,unknown" />
         <VerifyGrasp arm_prefix="right"
             finger_min_position="{right_finger_min_position}"
             gap_min="{right_finger_gap_min}" gap_max="{right_finger_gap_max}"
@@ -121,13 +111,8 @@
         <PrintMessage msg="Right grasp VERIFIED -> owner=BOTH_PHYSICAL" />
 
         <!-- 5. PlanningScene 原子转移 Left → Right（用运行期算出的 {}^{G_R} T_O） -->
-        <!-- [T5 故障注入 transfer] 命中 bb.fail_inject=transfer 时在此强制失败 → 走 ownership Recovery -->
-        <Fallback name="InjectFailTransfer">
-          <ScriptCondition code="fail_inject != 'transfer'" />
-          <ForceFailure>
-            <AlwaysSuccess />
-          </ForceFailure>
-        </Fallback>
+        <!-- [T5 故障注入 transfer] transfer → 在此强制失败 → 走 ownership Recovery -->
+        <InjectFailure inject="{fail_inject}" fail_modes="transfer" />
         <TransferObject object_name="{object_name}"
             new_arm_prefix="right"
             pose_in_new_link_full="{obj_in_right}"
@@ -143,26 +128,26 @@
              轨迹追踪（M4_2 §18.6）显示：左爪一松，杆会在右指板间滑落 13mm。
              A 用来区分"力衰减/被位置控制器覆盖" vs "过盈不足"。
              置 bb.refresh_right_close: false 可整体关掉本步做对照。 -->
-        <ScriptCondition code="refresh_right_close != false" />
-        <SetGripper arm_prefix="right" command="close" timeout_sec="10.0"
-            clamp_force="{right_close_force_hard}"
-            finger_position="{right_f1b}" />
-        <Wait sec="6.0" />
-        <!-- 左爪松开后**再验一次**（这是"松手"这个动态事件之后真正该验的位置）：
-             力控右爪在左爪放手的瞬间会让杆在指板间落座（实测 11~14mm，见 M4_2 §18.8），
-             落座后重新合爪并复检咬合；不通过就绝不动臂（进 Recovery）。 -->
-        <!-- [T5 故障注入 post-release verify] 命中 bb.fail_inject=verify_post 时在此强制失败 → 走 ownership Recovery -->
-        <Fallback name="InjectFailPostVerify">
-          <ScriptCondition code="fail_inject != 'verify_post'" />
-          <ForceFailure>
-            <AlwaysSuccess />
-          </ForceFailure>
+        <!-- [子树安全] 用**端口**读 refresh_right_close：子树 blackboard 里没有根上预载的变量，
+             ScriptCondition 会抛 "Variable not found" 把 bt_executor 打死（实测踩过）。
+             结构：Fallback( 条件通过 → 补 close + 松手后复验 ; 否则 → 整块跳过 ) -->
+        <Fallback name="MaybeRefreshClose">
+          <Sequence>
+            <InjectFailure inject="{refresh_right_close}" fail_modes="false,0" />
+            <SetGripper arm_prefix="right" command="close" timeout_sec="10.0"
+                clamp_force="{right_close_force_hard}"
+                finger_position="{right_f1b}" />
+            <Wait sec="6.0" />
+            <!-- 左爪松开后**再验一次**（松手是动态事件，这里才是该验的位置） -->
+            <InjectFailure inject="{fail_inject}" fail_modes="verify_post" />
+            <VerifyGrasp arm_prefix="right"
+                finger_min_position="{right_finger_min_position}"
+                gap_min="{right_finger_gap_min}" gap_max="{right_finger_gap_max}"
+                settle_tol="{verify_settle_tol}" min_wait_sec="{verify_min_wait}"
+                timeout_sec="60.0" finger_position="{right_f1c}" finger_gap="{right_gap2}" />
+          </Sequence>
+          <AlwaysSuccess />
         </Fallback>
-        <VerifyGrasp arm_prefix="right"
-            finger_min_position="{right_finger_min_position}"
-            gap_min="{right_finger_gap_min}" gap_max="{right_finger_gap_max}"
-            settle_tol="{verify_settle_tol}" min_wait_sec="{verify_min_wait}"
-            timeout_sec="60.0" finger_position="{right_f1c}" finger_gap="{right_gap2}" />
 
         <!-- 7. Left Retreat（规划 §11：必须先让 Left 退开，否则指板挡路把杆刮掉） -->
         <PlanToJoints arm_prefix="left"

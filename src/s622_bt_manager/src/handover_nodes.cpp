@@ -1174,6 +1174,43 @@ namespace s622_bt
         return BT::NodeStatus::SUCCESS;
     }
 
+    BT::NodeStatus InjectFailureNode::tick()
+    {
+        const std::string inject = getInput<std::string>("inject").value_or("");
+        const std::string fail_modes = getInput<std::string>("fail_modes").value_or("");
+        const std::string owner_modes = getInput<std::string>("owner_modes").value_or("");
+        auto hit = [](const std::string &modes, const std::string &m)
+        {
+            if (m.empty())
+                return false;
+            std::stringstream ss(modes);
+            std::string tok;
+            while (std::getline(ss, tok, ' '))
+            {
+                std::stringstream s2(tok);
+                std::string item;
+                while (std::getline(s2, item, ','))
+                    if (!item.empty() && item == m)
+                        return true;
+            }
+            return false;
+        };
+        if (hit(owner_modes, inject))
+        {
+            const std::string v = getInput<std::string>("owner_value").value_or("UNKNOWN");
+            config().blackboard->set("object_owner", v);
+            RCLCPP_INFO(rclcpp::get_logger("InjectFailure"),
+                        "[T5] inject=%s → object_owner=%s", inject.c_str(), v.c_str());
+        }
+        if (hit(fail_modes, inject))
+        {
+            RCLCPP_WARN(rclcpp::get_logger("InjectFailure"),
+                        "[T5] inject=%s → 强制 FAILURE（走 ownership Recovery）", inject.c_str());
+            return BT::NodeStatus::FAILURE;
+        }
+        return BT::NodeStatus::SUCCESS;
+    }
+
     void registerHandoverNodes(BT::BehaviorTreeFactory &factory,
                                RosContextPtr ros,
                                rclcpp::Node::SharedPtr node)
@@ -1190,6 +1227,10 @@ namespace s622_bt
             "CartesianApproach",
             [node](const std::string &name, const BT::NodeConfig &config)
             { return std::make_unique<CartesianApproachNode>(name, config, node); });
+        factory.registerBuilder<InjectFailureNode>(
+            "InjectFailure",
+            [](const std::string &name, const BT::NodeConfig &config)
+            { return std::make_unique<InjectFailureNode>(name, config); });
         factory.registerBuilder<GenerateLeftGraspCandidateNode>(
             "GenerateLeftGraspCandidate",
             [ros](const std::string &name, const BT::NodeConfig &config)

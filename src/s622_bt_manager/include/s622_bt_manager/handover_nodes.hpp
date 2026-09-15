@@ -196,6 +196,31 @@ namespace s622_bt
         RosContextPtr ros_;
     };
 
+    // ------------------------------------------------------------------
+    // InjectFailure：T5 故障注入（**用端口读 blackboard**，不用 ScriptCondition——
+    // 主树的 SubTree 有自己的 blackboard，根 blackboard 上预载的变量在子树里"不存在"，
+    // ScriptCondition 会抛 Variable not found 并把 bt_executor 打死，实测踩过）。
+    //   inject       : 当前注入模式（端口引用 {fail_inject}，缺省为空串 = 不注入）
+    //   fail_modes   : 命中任一模式 → 本节点返回 FAILURE
+    //   owner_modes  : 命中任一模式 → 把 object_owner 置为 owner_value
+    // ------------------------------------------------------------------
+    class InjectFailureNode : public BT::SyncActionNode
+    {
+    public:
+        InjectFailureNode(const std::string &name, const BT::NodeConfig &config)
+            : BT::SyncActionNode(name, config) {}
+        static BT::PortsList providedPorts()
+        {
+            return {
+                BT::InputPort<std::string>("inject", "", "当前注入模式"),
+                BT::InputPort<std::string>("fail_modes", "", "命中则 FAILURE（空格/逗号分隔）"),
+                BT::InputPort<std::string>("owner_modes", "", "命中则设置 ownership"),
+                BT::InputPort<std::string>("owner_value", "UNKNOWN", ""),
+            };
+        }
+        BT::NodeStatus tick() override;
+    };
+
     void registerHandoverNodes(BT::BehaviorTreeFactory &factory,
                                RosContextPtr ros,
                                rclcpp::Node::SharedPtr node);

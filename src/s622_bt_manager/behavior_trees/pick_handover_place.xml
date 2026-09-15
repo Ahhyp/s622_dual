@@ -86,7 +86,11 @@
             timeout_sec="150.0" log_tag="L rise" />
 
         <!-- ============ 交接：整段收敛到 HandoverRodOnly 子树（规划 §9/§10/§11）============ -->
-        <SubTree ID="HandoverRodOnly" />
+        <!-- _autoremap="true"：BT.CPP 的 SubTree **有自己的 blackboard**，
+             不 autoremap 的话子树里 {object_name}/{receive_offset}/... 全部解析成空串
+             （实测 T6 首跑：object_name='' → 场景查不到物体 + receive_offset 为 0 个元素 → 节点失败）。
+             autoremap 让子树的未设端口自动回退到父 blackboard ✓ -->
+        <SubTree ID="HandoverRodOnly" _autoremap="true" />
 
         <!-- ============ 收尾：物体已在右手（owner=RIGHT）============ -->
         <PrintMessage msg="=== M4 PickHandoverPlace: bar transferred to RIGHT ===" />
