@@ -92,7 +92,10 @@ bt_executor:
     bb.object_size_margin_z: 0.05
 
     # [2026-09-15] 两次合爪的力：轻合爪(贴上, 不楔出杆) → 松手后重合爪(夹牢)
-    bb.right_close_force_gentle: 5.0
+    # ⚠️ 实测 2026-09-15：轻合爪(5N)并不能阻止下滑，反而让杆在松手后用 5N 状态多滑一段，
+    # 搬运跟随率掉到 66%（单次 60N 时是 100~105%）→ 默认恢复"两次都用 60N"（=原配方行为），
+    # 机制保留，需要时再试别的力值组合。
+    bb.right_close_force_gentle: 60.0
     bb.right_close_force_hard: 60.0
     # 判据用轻力下的咬合带会更宽（5N 下指板可能只轻贴）
     # [修法 A] 左爪张开后是否补一次右爪 close（见 handover_rod.xml 注释）
