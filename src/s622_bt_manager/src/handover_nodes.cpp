@@ -1066,6 +1066,94 @@ namespace s622_bt
         return ok ? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;
     }
 
+    // ==================================================================
+    // GenerateLeftGraspCandidate
+    // ==================================================================
+    BT::PortsList GenerateLeftGraspCandidateNode::providedPorts()
+    {
+        return {
+            BT::InputPort<std::string>("world_frame", "world", ""),
+            BT::InputPort<std::vector<double>>(
+                "object_pos_world", std::vector<double>{0.04, 0.0, 0.0155},
+                "长条物体中心的世界坐标（YAML 标定；后续换视觉/场景来源）"),
+            BT::InputPort<double>("pregrasp_height", 0.165,
+                                  "pregrasp 相对物体中心的高度(m)（配方 0.18-0.0155）"),
+            BT::InputPort<std::vector<double>>(
+                "pregrasp_quat", std::vector<double>{1.0, 0.0, 0.0, 0.0},
+                "pregrasp 姿态（world 四元数 x;y;z;w，左爪朝下 = roll π）"),
+            BT::InputPort<double>("descend_distance", 0.153,
+                                  "servo descend 距离(m)（力控下重标值）"),
+            BT::InputPort<std::vector<double>>(
+                "object_pose_in_left_grasp", std::vector<double>{-0.0148, -0.0002, 0.0139},
+                "物体中心在 left_grasp_frame 下的位置（YAML 标定，给 AttachObject）"),
+            BT::InputPort<std::vector<double>>(
+                "object_quat_in_left_grasp", std::vector<double>{-0.7040, -0.7101, 0.0005, 0.0079},
+                "同上姿态四元数"),
+            BT::OutputPort<geometry_msgs::msg::PoseStamped>("pregrasp_pose"),
+            BT::OutputPort<double>("descend_distance_out"),
+            BT::OutputPort<geometry_msgs::msg::Pose>("object_pose_in_left_grasp_pose"),
+        };
+    }
+
+    GenerateLeftGraspCandidateNode::GenerateLeftGraspCandidateNode(
+        const std::string &name, const BT::NodeConfig &config, RosContextPtr ros)
+        : BT::SyncActionNode(name, config), ros_(ros)
+    {
+    }
+
+    BT::NodeStatus GenerateLeftGraspCandidateNode::tick()
+    {
+        std::string world_frame;
+        std::vector<double> obj, quat, lpos, lquat;
+        double h = 0.165, descend = 0.153;
+        getInput("world_frame", world_frame);
+        getInput("object_pos_world", obj);
+        getInput("pregrasp_height", h);
+        getInput("pregrasp_quat", quat);
+        getInput("descend_distance", descend);
+        getInput("object_pose_in_left_grasp", lpos);
+        getInput("object_quat_in_left_grasp", lquat);
+        const auto log = ros_->node->get_logger();
+        if (obj.size() != 3 || quat.size() != 4)
+        {
+            RCLCPP_ERROR(log, "GenerateLeftGraspCandidate: object_pos_world(3)/pregrasp_quat(4) 缺失");
+            return BT::NodeStatus::FAILURE;
+        }
+        geometry_msgs::msg::PoseStamped pg;
+        pg.header.frame_id = world_frame;
+        pg.header.stamp = ros_->node->now();
+        pg.pose.position.x = obj[0];
+        pg.pose.position.y = obj[1];
+        pg.pose.position.z = obj[2] + h;
+        pg.pose.orientation.x = quat[0];
+        pg.pose.orientation.y = quat[1];
+        pg.pose.orientation.z = quat[2];
+        pg.pose.orientation.w = quat[3];
+        setOutput("pregrasp_pose", pg);
+        setOutput("descend_distance_out", descend);
+        geometry_msgs::msg::Pose lp;
+        if (lpos.size() == 3)
+        {
+            lp.position.x = lpos[0];
+            lp.position.y = lpos[1];
+            lp.position.z = lpos[2];
+        }
+        if (lquat.size() == 4)
+        {
+            lp.orientation.x = lquat[0];
+            lp.orientation.y = lquat[1];
+            lp.orientation.z = lquat[2];
+            lp.orientation.w = lquat[3];
+        }
+        setOutput("object_pose_in_left_grasp_pose", lp);
+        RCLCPP_INFO(log,
+                    "GenerateLeftGraspCandidate: obj_world=(%.4f, %.4f, %.4f) → pregrasp=(%.4f, %.4f, %.4f) "
+                    "descend=%.3f  {}^{G_L}T_O=(%.4f, %.4f, %.4f)",
+                    obj[0], obj[1], obj[2], pg.pose.position.x, pg.pose.position.y,
+                    pg.pose.position.z, descend, lp.position.x, lp.position.y, lp.position.z);
+        return BT::NodeStatus::SUCCESS;
+    }
+
     void registerHandoverNodes(BT::BehaviorTreeFactory &factory,
                                RosContextPtr ros,
                                rclcpp::Node::SharedPtr node)
@@ -1082,6 +1170,10 @@ namespace s622_bt
             "CartesianApproach",
             [node](const std::string &name, const BT::NodeConfig &config)
             { return std::make_unique<CartesianApproachNode>(name, config, node); });
+        factory.registerBuilder<GenerateLeftGraspCandidateNode>(
+            "GenerateLeftGraspCandidate",
+            [ros](const std::string &name, const BT::NodeConfig &config)
+            { return std::make_unique<GenerateLeftGraspCandidateNode>(name, config, ros); });
         factory.registerBuilder<MeasureObjectInGraspNode>(
             "MeasureObjectInGrasp",
             [ros](const std::string &name, const BT::NodeConfig &config)

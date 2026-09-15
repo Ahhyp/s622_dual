@@ -177,6 +177,25 @@ namespace s622_bt
         RosContextPtr ros_;
     };
 
+    // ------------------------------------------------------------------
+    // GenerateLeftGraspCandidate：左臂"已知物体世界位姿"的拾取候选（T6 结构版：
+    // 先不依赖视觉，用 YAML 里标定的长条位置算 pregrasp/descend，把主树
+    // PickHandoverPlace 的整条链路（Left Pick → SubTree 交接）在 BT 里跑通；
+    // 之后把 object_pos_world 换成视觉/场景来源即可升级为 T6 视觉版）。
+    // ------------------------------------------------------------------
+    class GenerateLeftGraspCandidateNode : public BT::SyncActionNode
+    {
+    public:
+        GenerateLeftGraspCandidateNode(const std::string &name,
+                                       const BT::NodeConfig &config,
+                                       RosContextPtr ros);
+        static BT::PortsList providedPorts();
+        BT::NodeStatus tick() override;
+
+    private:
+        RosContextPtr ros_;
+    };
+
     void registerHandoverNodes(BT::BehaviorTreeFactory &factory,
                                RosContextPtr ros,
                                rclcpp::Node::SharedPtr node);

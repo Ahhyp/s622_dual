@@ -89,6 +89,12 @@ class GripperService(Node):
         self._direct_close = bool(self.get_parameter('finger_direct_close').value)
         self._force_mode = bool(self.get_parameter('finger_force_mode').value)
         self._clamp_force = float(self.get_parameter('clamp_force').value)
+        # [修法 B / 2026-09-15] 力控合爪后再补一次"过盈"位置指令（停位 − squeeze_mm），
+        # 对应 §7.19 的 hold_at_stall 思路（力控模式下被丢掉了）。
+        # 0 = 原行为（只施力，指板停在"贴合"位置 → 几乎零过盈 → 杆会滑）。
+        if not self.has_parameter('squeeze_mm'):
+            self.declare_parameter('squeeze_mm', 0.0)
+        self._squeeze_mm = float(self.get_parameter('squeeze_mm').value)
         self._open_force = float(self.get_parameter('open_force').value)
         self._force_topic_tpl = self.get_parameter('force_topic_template').value
         self._gripper_action = gripper_controller_action
@@ -167,14 +173,15 @@ class GripperService(Node):
                 f'[M4/Plan B\'] finger_force_mode=True 生效: close=施加 {self._clamp_force}N 闭合恒力, '
                 f'open=施加 {self._open_force}N 张开力; 位置伺服将被旁路(仿真专用)')
 
-    def _force_grip(self, opening: bool) -> bool:
+    def _force_grip(self, opening: bool, force_override: float = 0.0) -> bool:
         """[M4_2 / Plan B'] 纯力控：把(开/合)恒力发到 gz apply_joint_force 插件。
         插件会把关节变成力控（位置伺服失效）——这正是气动模型的要点。"""
         if not self._force_pubs:
             return False
         from std_msgs.msg import Float64
         for jn, (pub, sgn) in self._force_pubs.items():
-            mag = self._open_force if opening else self._clamp_force
+            mag = self._open_force if opening else (
+                force_override if force_override > 0.0 else self._clamp_force)
             msg = Float64()
             msg.data = float(sgn * mag) if opening else float(-sgn * mag)
             pub.publish(msg)
@@ -230,7 +237,51 @@ class GripperService(Node):
         except ValueError:
             return float('nan')
 
+    def _apply_squeeze(self, squeeze_mm: float) -> bool:
+        """[修法 B] 等指板停稳 → 直接给 hand controller 发"停位 − 挤压量"的位置轨迹。
+        力控模式下位置指令与力指令互斥（gz JointForceCmd vs JointVelocityCmd），
+        所以这一步会把指板**真正压进杆里 squeeze_mm**（产生真实过盈/摩擦）。"""
+        t0 = time.monotonic()
+        g1 = g2 = None
+        last = None
+        stable = 0
+        while time.monotonic() - t0 < 8.0:
+            g1 = self._read_joint(self._joint_names[0])
+            g2 = self._read_joint(self._joint_names[1])
+            if g1 is None or g2 is None:
+                time.sleep(0.1)
+                continue
+            gap = abs(g1) + abs(g2)
+            if gap < 0.005:
+                self.get_logger().warn(
+                    f'[修法B] 停位间隙仅 {gap*1000:.1f}mm，疑似空夹，跳过过盈')
+                return True
+            if last is not None and abs(gap - last) < 2e-4:
+                stable += 1
+                if stable >= 5:
+                    break
+            else:
+                stable = 0
+            last = gap
+            time.sleep(0.1)
+        gap = abs(g1) + abs(g2)
+        k = max(0.3, (gap - squeeze_mm / 1000.0) / gap)
+        self.get_logger().info(
+            f'[修法B] 过盈合爪: 停位间隙={gap*1000:.1f}mm → 目标={(gap*k)*1000:.1f}mm '
+            f'(压 {squeeze_mm:.1f}mm)')
+        return self._direct_gripper_traj([g1 * k, g2 * k])
+
+    def _read_joint(self, name):
+        js = self._latest_js
+        if js is None:
+            return None
+        try:
+            return float(js.position[list(js.name).index(name)])
+        except (ValueError, IndexError):
+            return None
+
     def _on_set_gripper(self, request, response):
+        ov = float(getattr(request, 'clamp_force_override', 0.0) or 0.0)
         if request.command == 'open':
             if self._force_mode:
                 ok = self._force_grip(opening=True)
@@ -239,7 +290,9 @@ class GripperService(Node):
                     open_gripper=True, action_name='SetGripper open')
         elif request.command == 'close':
             if self._force_mode:
-                ok = self._force_grip(opening=False)
+                if ov > 0.0:
+                    self.get_logger().info(f'[M4] close 使用本次夹持力 {ov}N（覆盖默认 {self._clamp_force}N）')
+                ok = self._force_grip(opening=False, force_override=ov)
             elif self._direct_close:
                 # [M4_2 / A''] 仿真：绕过 MoveIt 直发（目标=close_positions=[0,0]，被关节限位挡住）
                 ok = self._direct_gripper_traj(self._close)
@@ -250,6 +303,9 @@ class GripperService(Node):
             response.success = False
             response.error_msg = f'unknown command: {request.command}'
             return response
+
+        if ok and request.command == 'close' and self._force_mode and self._squeeze_mm > 0.0:
+            ok = self._apply_squeeze(self._squeeze_mm)
 
         self.get_logger().info(f'set_gripper: {request.command} -> {"ok" if ok else "FAILED"}')
         time.sleep(self._settle)

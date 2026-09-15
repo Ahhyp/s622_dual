@@ -26,6 +26,7 @@ namespace s622_bt
     BT::NodeStatus SetGripperNode::tick()
     {
         std::string cmd, arm_prefix;
+        float clamp_force = 0.0f;
         if (!getInput("command", cmd))
         {
             RCLCPP_ERROR(node_->get_logger(), "SetGripper: missing command");
@@ -34,6 +35,7 @@ namespace s622_bt
         getInput("arm_prefix", arm_prefix);
         float timeout = 5.0f;
         getInput("timeout_sec", timeout);
+        getInput("clamp_force", clamp_force);
 
         // ---- 懒建/重建 client ----
         if (arm_prefix != client_arm_prefix_)
@@ -55,6 +57,7 @@ namespace s622_bt
 
         auto req = std::make_shared<s622_bt_manager::srv::SetGripper::Request>();
         req->command = cmd;
+        req->clamp_force_override = clamp_force;
         auto future = client_->async_send_request(req);
 
         auto deadline = node_->now() + rclcpp::Duration::from_seconds(timeout);

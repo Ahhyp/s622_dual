@@ -23,6 +23,16 @@
         <Script code="object_owner := 'LEFT'; right_grasp_verified := false; transfer_success := false" />
         <PrintMessage msg="=== M4 handover(rod): start, owner=LEFT ===" />
 
+        <!-- [T5 故障注入] mode=unknown: 先把 ownership 置成 UNKNOWN（后面再触发一次失败） -->
+        <Fallback name="InjectUnknownOwner">
+          <Sequence>
+            <ScriptCondition code="fail_inject == 'unknown'" />
+            <Script code="object_owner := 'UNKNOWN'" />
+            <PrintMessage msg="[T5] injected ownership = UNKNOWN" />
+          </Sequence>
+          <AlwaysSuccess />
+        </Fallback>
+
         <!-- 0. 运行期生成接物候选（规划 §5）
              {}^W T_{G_R}^* = {}^W T_O · {}^O T_{G_R}^*，物体位姿取 PlanningScene 里
              AttachObject 真实写入的那个（随轮次变化，不是写死的世界坐标） -->
@@ -88,9 +98,20 @@
         <!-- 4. Right Close + Verify（握手 invariant：Verify 失败 ⇒ 不许 Transfer/LeftOpen）
              力控夹爪停下后会缓慢漂移 → 稳定阈值放宽到 verify_settle_tol, 最少等 min_wait；
              咬合判据用 |f1|+|f2|（≈指板间隙）落带, 比单指 f1 稳。 -->
+        <!-- [2026-09-15] 第一次合爪用**轻力**：重合爪的楔出力会把杆从左爪里顶出 9~14mm
+             （轨迹实测，M4_2 §18.10）。轻合爪只"贴上"杆，杆不动；等左爪松开、杆定了位，
+             再用 full 夹持力重合爪（见下面的 refresh close）。 -->
         <SetGripper arm_prefix="right" command="close" timeout_sec="10.0"
+            clamp_force="{right_close_force_gentle}"
             finger_position="{right_f1}" />
         <Wait sec="12.0" />
+        <!-- [T5 故障注入 pre-verify] 命中 bb.fail_inject=verify_pre/unknown 时在此强制失败 → 走 ownership Recovery -->
+        <Fallback name="InjectFailPreVerify">
+          <ScriptCondition code="fail_inject != 'verify_pre' &amp;&amp; fail_inject != 'unknown'" />
+          <ForceFailure>
+            <AlwaysSuccess />
+          </ForceFailure>
+        </Fallback>
         <VerifyGrasp arm_prefix="right"
             finger_min_position="{right_finger_min_position}"
             gap_min="{right_finger_gap_min}" gap_max="{right_finger_gap_max}"
@@ -100,6 +121,13 @@
         <PrintMessage msg="Right grasp VERIFIED -> owner=BOTH_PHYSICAL" />
 
         <!-- 5. PlanningScene 原子转移 Left → Right（用运行期算出的 {}^{G_R} T_O） -->
+        <!-- [T5 故障注入 transfer] 命中 bb.fail_inject=transfer 时在此强制失败 → 走 ownership Recovery -->
+        <Fallback name="InjectFailTransfer">
+          <ScriptCondition code="fail_inject != 'transfer'" />
+          <ForceFailure>
+            <AlwaysSuccess />
+          </ForceFailure>
+        </Fallback>
         <TransferObject object_name="{object_name}"
             new_arm_prefix="right"
             pose_in_new_link_full="{obj_in_right}"
@@ -117,11 +145,19 @@
              置 bb.refresh_right_close: false 可整体关掉本步做对照。 -->
         <ScriptCondition code="refresh_right_close != false" />
         <SetGripper arm_prefix="right" command="close" timeout_sec="10.0"
+            clamp_force="{right_close_force_hard}"
             finger_position="{right_f1b}" />
         <Wait sec="6.0" />
         <!-- 左爪松开后**再验一次**（这是"松手"这个动态事件之后真正该验的位置）：
              力控右爪在左爪放手的瞬间会让杆在指板间落座（实测 11~14mm，见 M4_2 §18.8），
              落座后重新合爪并复检咬合；不通过就绝不动臂（进 Recovery）。 -->
+        <!-- [T5 故障注入 post-release verify] 命中 bb.fail_inject=verify_post 时在此强制失败 → 走 ownership Recovery -->
+        <Fallback name="InjectFailPostVerify">
+          <ScriptCondition code="fail_inject != 'verify_post'" />
+          <ForceFailure>
+            <AlwaysSuccess />
+          </ForceFailure>
+        </Fallback>
         <VerifyGrasp arm_prefix="right"
             finger_min_position="{right_finger_min_position}"
             gap_min="{right_finger_gap_min}" gap_max="{right_finger_gap_max}"

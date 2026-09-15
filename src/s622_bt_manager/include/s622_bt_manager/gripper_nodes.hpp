@@ -26,6 +26,10 @@ namespace s622_bt
                 BT::InputPort<std::string>("arm_prefix", "", "'' | 'left' | 'right'"),
                 BT::InputPort<std::string>("command", "open|close"),
                 BT::InputPort<float>("timeout_sec", 5.0f, ""),
+                // [M4 2026-09-15] 本次 close 的夹持力(N)：0=用服务端默认。
+                // 用途：先"轻合爪"贴上杆（不产生楔出力），松手后再"重合爪"夹牢
+                // —— 实测重合爪会把杆从左爪里楔出 9~14mm（M4_2 §18.10）。
+                BT::InputPort<float>("clamp_force", 0.0f, "0=服务端默认"),
                 BT::OutputPort<float>("finger_position"),
             };
         }

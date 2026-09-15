@@ -1,4 +1,5 @@
 string command       # "open" | "close"
+float64 clamp_force_override   # [M4] >0 时本次 close 用这个夹持力(N)，0=用节点参数默认
 ---
 bool success
 float32 finger_position

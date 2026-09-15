@@ -30,75 +30,59 @@
             velocity_scale="0.3" acceleration_scale="0.3"
             timeout_sec="20.0" />
 
-        <!-- ============ 左臂 Pick（视觉；与 M1.7 单臂流程一致）============ -->
+        <!-- ============ 左臂 Pick ============
+             [T6 结构版 2026-09-15] 用 YAML 标定的长条世界位姿算 pregrasp/descend，
+             把整条 Pick→Handover 链路放进行为树（不依赖视觉）。
+             视觉版（M1.7 链）保留在 git 历史与本文件下方注释里：
+               DetectObject → GenerateGraspCandidate → LockTargetPixel → MoveToPose(pregrasp)
+               → VisualAlign(xy) → VisualAlign(yaw) → AlignLockCheck → VisualAlign(descend)
+             ================================================================== -->
         <SetGripper arm_prefix="left" command="open" timeout_sec="8.0" />
 
-        <RetryUntilSuccessful num_attempts="5">
-          <Sequence>
-            <DetectObject object_name="{object_name}" min_confidence="0.10" max_age_sec="1.0"
-                output_u="{u}" output_v="{v}"
-                output_yaw="{obj_yaw}" output_confidence="{conf}" />
-            <GenerateGraspCandidate arm_prefix="left"
-                u="{u}" v="{v}" object_yaw="{obj_yaw}"
-                tcp_grasp_pose="{grasp_pose}"
-                tcp_pregrasp_pose="{pregrasp_pose}"
-                grasp_yaw="{grasp_yaw}"
-                grasp_pose_x="{grasp_x}"
-                grasp_pose_y="{grasp_y}" />
-          </Sequence>
-        </RetryUntilSuccessful>
-
-        <LockTargetPixel input_u="{u}" input_v="{v}"
-            locked_u="{lu}" locked_v="{lv}" />
+        <GenerateLeftGraspCandidate
+            object_pos_world="{left_pick_object_world}"
+            pregrasp_height="{left_pregrasp_height}"
+            pregrasp_quat="{left_pregrasp_quat}"
+            descend_distance="{left_descend_distance}"
+            object_pose_in_left_grasp="{left_object_pos_v}"
+            object_quat_in_left_grasp="{left_object_quat_v}"
+            pregrasp_pose="{pregrasp_pose}"
+            descend_distance_out="{descend_d}"
+            object_pose_in_left_grasp_pose="{obj_in_left}" />
 
         <MoveToPose arm_prefix="left" target_pose="{pregrasp_pose}"
-            velocity_scale="0.2" acceleration_scale="0.2"
+            velocity_scale="0.35" acceleration_scale="0.35"
             ensure_servo_stopped="true"
-            timeout_sec="25.0" />
+            timeout_sec="40.0" />
 
-        <VisualAlign arm_prefix="left" mode="xy"
-            target_x_base="{grasp_x}" target_y_base="{grasp_y}"
-            tolerance_m="0.005"
-            ensure_servo_started="true"
-            timeout_sec="25.0" />
-
-        <VisualAlign arm_prefix="left" mode="yaw"
-            target_yaw="{grasp_yaw}"
-            tolerance_rad="0.10"
-            ensure_servo_started="true"
-            timeout_sec="5.0" />
-
-        <AlignLockCheck locked_u="{lu}" locked_v="{lv}"
-            object_name="{object_name}"
-            min_confidence="0.05"
-            tolerance_px="25.0" />
-
-        <!-- 拾取深度 0.153：力控夹爪下的重标值（0.156 会让杆歪 15.5°，见 M4_2 §15） -->
         <VisualAlign arm_prefix="left" mode="descend"
-            distance="0.153"
-            speed="0.04"
+            distance="{descend_d}"
+            speed="0.07"
             ensure_servo_started="true"
             timeout_sec="40.0" />
 
         <SetGripper arm_prefix="left" command="close"
             timeout_sec="10.0" finger_position="{finger_pos}" />
-
+        <Wait sec="10.0" />
         <VerifyGrasp arm_prefix="left"
-            finger_min_position="0.010" timeout_sec="15.0"
-            finger_position="{finger_pos}" />
+            finger_min_position="{right_finger_min_position}"
+            gap_min="{left_finger_gap_min}" gap_max="{left_finger_gap_max}"
+            settle_tol="{verify_settle_tol}" min_wait_sec="{verify_min_wait}"
+            timeout_sec="60.0" finger_position="{finger_pos}" finger_gap="{left_gap}" />
 
-        <!-- 长条 Attach：完整 position + orientation（规划 §3.1） -->
+        <!-- 长条 Attach：完整 position + orientation；PRE 阶段用 margin 盒 -->
         <AttachObject arm_prefix="left" object_name="{object_name}"
-            size_x="{object_size_x}" size_y="{object_size_y}" size_z="{object_size_z}"
-            pos_x="{left_object_pos_x}" pos_y="{left_object_pos_y}" pos_z="{left_object_pos_z}"
-            quat_x="{left_object_quat_x}" quat_y="{left_object_quat_y}"
-            quat_z="{left_object_quat_z}" quat_w="{left_object_quat_w}"
+            size_x="{object_size_margin_x}" size_y="{object_size_margin_y}"
+            size_z="{object_size_margin_z}"
+            pose_in_link_full="{obj_in_left}"
             touch_links="{object_touch_links}" />
 
-        <VisualAlign arm_prefix="left" mode="lift"
-            distance="0.10" speed="0.05"
-            ensure_servo_started="false"
-            timeout_sec="25.0" />
+        <!-- 抬升必须 ompl 关节空间（servo lift 会掉杆，M4_2 §9.1）：
+             用 PlanToJoints 到 YAML 里标定的 hold 关节角 -->
+        <PlanToJoints arm_prefix="left"
+            joint_positions="{left_hold_joints}"
+            velocity_scale="0.30" planning_time="{plan_time}"
+            timeout_sec="150.0" log_tag="L rise" />
 
         <!-- ============ 交接：整段收敛到 HandoverRodOnly 子树（规划 §9/§10/§11）============ -->
         <SubTree ID="HandoverRodOnly" />

@@ -72,8 +72,34 @@ bt_executor:
     bb.right_retreat_delta: [0.0, 0.0, 0.05]   # 右手带物 +Z 50mm（跟随率判据 ≥90%）
 
     # ---------------- 判据 ----------------
+    # ---------------- 左臂拾取（T6 结构版：已知物体世界位姿，不依赖视觉）----------------
+    bb.left_pick_object_world: [0.04, 0.0, 0.0155]   # 长条 spawn 位置
+    bb.left_pregrasp_height: 0.165                   # pregrasp 相对物体中心高度（0.18-0.0155）
+    bb.left_pregrasp_quat: [1.0, 0.0, 0.0, 0.0]      # roll π（左爪朝下）
+    bb.left_descend_distance: 0.153                  # servo descend（力控重标）
+    # 左爪咬合判据（同右爪口径）
+    bb.left_finger_gap_min: 0.026
+    bb.left_finger_gap_max: 0.034
+    # {}^{G_L}T_O（向量形式，给 GenerateLeftGraspCandidate 的端口用；与上面的标量一致）
+    bb.left_object_pos_v: [-0.0148, -0.0002, 0.0139]
+    bb.left_object_quat_v: [-0.7040, -0.7101, 0.0005, 0.0079]
+    # 抬升目标（左臂 hold 关节角 = 已验证配方 ELEV_L）
+    bb.left_hold_joints: [0.3353, -1.5739, -0.9095, -2.2290, 1.5708, -1.2355]
+
+    # margin 盒尺寸（PRE 阶段用；RECEIVE 前换成 exact）
+    bb.object_size_margin_x: 0.05
+    bb.object_size_margin_y: 0.17
+    bb.object_size_margin_z: 0.05
+
+    # [2026-09-15] 两次合爪的力：轻合爪(贴上, 不楔出杆) → 松手后重合爪(夹牢)
+    bb.right_close_force_gentle: 5.0
+    bb.right_close_force_hard: 60.0
+    # 判据用轻力下的咬合带会更宽（5N 下指板可能只轻贴）
     # [修法 A] 左爪张开后是否补一次右爪 close（见 handover_rod.xml 注释）
     bb.refresh_right_close: true
+    # [T5 故障注入] "" | verify_pre | transfer | verify_post | unknown
+    #   命中时在对应位置强制失败，用来验证 ownership-aware Recovery 不导致掉件（§12）
+    bb.fail_inject: ""
     bb.right_finger_min_position: 0.010        # VerifyGrasp 旧判据: 低于此=空夹
     # 真实咬合判据：|f1|+|f2|（≈指板间隙）应落在这条带里（夹 30mm 杆）
     bb.right_finger_gap_min: 0.026
