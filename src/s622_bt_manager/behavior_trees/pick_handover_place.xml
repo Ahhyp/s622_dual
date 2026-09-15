@@ -40,6 +40,7 @@
         <SetGripper arm_prefix="left" command="open" timeout_sec="8.0" />
 
         <GenerateLeftGraspCandidate
+            world_frame="world" output_frame="left_base_link"
             object_pos_world="{left_pick_object_world}"
             pregrasp_height="{left_pregrasp_height}"
             pregrasp_quat="{left_pregrasp_quat}"

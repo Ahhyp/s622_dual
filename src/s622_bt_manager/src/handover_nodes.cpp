@@ -1073,6 +1073,9 @@ namespace s622_bt
     {
         return {
             BT::InputPort<std::string>("world_frame", "world", ""),
+            // 输出坐标系：move_to_pose_server **不解析 header.frame_id**（当 base 系用），
+            // 所以这里必须用 TF 把 world 目标转成 <arm>_base_link。
+            BT::InputPort<std::string>("output_frame", "left_base_link", ""),
             BT::InputPort<std::vector<double>>(
                 "object_pos_world", std::vector<double>{0.04, 0.0, 0.0155},
                 "长条物体中心的世界坐标（YAML 标定；后续换视觉/场景来源）"),
@@ -1103,10 +1106,11 @@ namespace s622_bt
 
     BT::NodeStatus GenerateLeftGraspCandidateNode::tick()
     {
-        std::string world_frame;
+        std::string world_frame, out_frame;
         std::vector<double> obj, quat, lpos, lquat;
         double h = 0.165, descend = 0.153;
         getInput("world_frame", world_frame);
+        getInput("output_frame", out_frame);
         getInput("object_pos_world", obj);
         getInput("pregrasp_height", h);
         getInput("pregrasp_quat", quat);
@@ -1129,6 +1133,22 @@ namespace s622_bt
         pg.pose.orientation.y = quat[1];
         pg.pose.orientation.z = quat[2];
         pg.pose.orientation.w = quat[3];
+        // world → output_frame（move_to_pose_server 只认 base 系坐标）
+        try
+        {
+            const auto tf = ros_->tf_buffer->lookupTransform(
+                out_frame, world_frame, tf2::TimePointZero, tf2::durationFromSec(3.0));
+            geometry_msgs::msg::PoseStamped pg_out;
+            pg_out.header = tf.header;
+            tf2::doTransform(pg.pose, pg_out.pose, tf);
+            pg = pg_out;
+        }
+        catch (const tf2::TransformException &e)
+        {
+            RCLCPP_ERROR(log, "GenerateLeftGraspCandidate: TF %s<-%s 失败: %s",
+                         out_frame.c_str(), world_frame.c_str(), e.what());
+            return BT::NodeStatus::FAILURE;
+        }
         setOutput("pregrasp_pose", pg);
         setOutput("descend_distance_out", descend);
         geometry_msgs::msg::Pose lp;
