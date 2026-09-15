@@ -17,8 +17,10 @@ from ament_index_python.packages import get_package_share_directory
 from moveit_configs_utils import MoveItConfigsBuilder
 from launch_param_builder import load_xacro  # noqa: E402
 from launch.actions import IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.actions import DeclareLaunchArgument
+from launch.substitutions import PythonExpression
 from launch.substitutions import LaunchConfiguration
 from manipulation_common.launch_utils.yaml_loader import load_yaml
 
@@ -36,13 +38,23 @@ def generate_launch_description():
     )
 
     # ============ 1. Gazebo + world ============
+    # [M4 提速] gui:=false → gz 只跑 server（-s）。GUI 实测吃 ~2.2 核,
+    # 被杀时还会带走 server（同一进程组）→ 做批量实验时一律 headless。
+    gui_arg = DeclareLaunchArgument(
+        'gui', default_value='true', description='gz GUI（false=只跑 server, 省 ~2 核）')
+    rviz_arg = DeclareLaunchArgument(
+        'rviz', default_value='true', description='rviz2（false=不启动, 省 ~2 核）')
     world_file = os.path.join(this_pkg, "worlds", "dual_arm_world.sdf")
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory("ros_gz_sim"),
                          "launch", "gz_sim.launch.py")
         ),
-        launch_arguments=[("gz_args", world_file + " -r")],
+        launch_arguments=[("gz_args", [
+            world_file + " -r",
+            PythonExpression(
+                ["' -s' if '", LaunchConfiguration('gui'), "' == 'false' else ''"]),
+        ])],
     )
 
     # ============ 2. Bridges ============
@@ -428,6 +440,7 @@ def generate_launch_description():
                 package="rviz2",
                 executable="rviz2",
                 arguments=["-d", rviz_config],
+                condition=IfCondition(LaunchConfiguration('rviz')),
                 parameters=[
                     moveit_config.robot_description,
                     moveit_config.robot_description_semantic,
@@ -623,7 +636,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        set_model_path, tree_file_arg, tree_id_arg,
+        set_model_path, tree_file_arg, tree_id_arg, gui_arg, rviz_arg,
         robot_spawn_delay, controller_spawn_delay, gripper_close_stop_gap, gripper_direct_close,
         gripper_force_mode, gripper_clamp_force, gripper_open_force,
         gazebo, clock_bridge, camera_bridge, wrist_camera_bridge, gripper_force_bridge,
