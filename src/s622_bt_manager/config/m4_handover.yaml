@@ -39,11 +39,15 @@ bt_executor:
     #   tgt = rod_c + (-0.0086, -0.054, +0.0009)）：
     #   x: 指板接触区前置量 8.6mm（使接触面正落在杆心）
     #   y: 沿杆轴的咬合位置（杆心 -54mm）
-    #   z: 指板中位面修正 0.9mm
+    #   z: 指板中位面修正（实测落座 +15.0mm，原来的 0.9mm 是左爪标定值/不适用）
     # 若要用"物体系表达"（姿态随杆倾斜）：
     #   bb.receive_offset: [-0.054, 0.0086, 0.0009]
     #   bb.receive_offset_frame: "object"
-    bb.receive_offset: [-0.0086, -0.054, 0.0009]
+    # [2026-09-15 实测修正] 杆在右爪里的"落座"关系（稳定夹持、搬运 1:1 跟随的状态）实测
+    #   tcp - rod = (-5.2, -54.0, +15.0) mm
+    # 原值 (-0.0086,-0.054,+0.0009) 的 z 少 14mm ⇒ 杆进爪时偏上 14mm，左爪一松就往下掉 14mm
+    # 落座（见 M4_2 §18.8）。这里改成实测落座值。
+    bb.receive_offset: [-0.0086, -0.054, 0.0030]
     bb.receive_offset_frame: "world"
     # 进给方向（world +x）：PRE = RECEIVE - d·轴
     bb.approach_axis: [1.0, 0.0, 0.0]
@@ -55,17 +59,21 @@ bt_executor:
     bb.right_receive_base: [0.2856, -1.2598, -1.7115, -3.3161, -1.2915, -1.5708]
 
     # ---------------- 运动原语参数 ----------------
-    bb.plan_velocity_scale: 0.06    # R→PRE（OMPL）
+    # [提速 2026-09-15] R→PRE 原 0.06（110s/轮，占 38%）。
+    # ⚠️ 实测 0.30 会让右臂**高速扫到杆**（轨迹追踪：t=2~7s 杆被拖 −23mm）→ 退回 0.15 折中。
+    bb.plan_velocity_scale: 0.15
     bb.plan_time: 12.0              # allowed_planning_time (sim s)
-    bb.approach_npts: 24            # PRE→RECEIVE 直线采样点
-    bb.approach_secs: 6.0           # 直线段时长 (sim s)
+    bb.approach_npts: 16            # PRE→RECEIVE 直线采样点（每点要 15 次 FK 反解）
+    bb.approach_secs: 2.5           # 直线段时长 (sim s)；60mm/2.5s = 24mm/s（原来 6s=10mm/s）
 
     # ---------------- 退让（规划 §11：Left 先退）----------------
     bb.left_home: [0.0, -1.5708, 0.0, 0.0, 0.0, 0.0]
-    bb.left_retreat_velocity_scale: 0.15
+    bb.left_retreat_velocity_scale: 0.30
     bb.right_retreat_delta: [0.0, 0.0, 0.05]   # 右手带物 +Z 50mm（跟随率判据 ≥90%）
 
     # ---------------- 判据 ----------------
+    # [修法 A] 左爪张开后是否补一次右爪 close（见 handover_rod.xml 注释）
+    bb.refresh_right_close: true
     bb.right_finger_min_position: 0.010        # VerifyGrasp 旧判据: 低于此=空夹
     # 真实咬合判据：|f1|+|f2|（≈指板间隙）应落在这条带里（夹 30mm 杆）
     bb.right_finger_gap_min: 0.026

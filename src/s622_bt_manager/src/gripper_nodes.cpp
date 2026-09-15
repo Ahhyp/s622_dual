@@ -127,7 +127,9 @@ namespace s622_bt
         auto t_start = node_->now();
         auto deadline = t_start + rclcpp::Duration::from_seconds(timeout);
         const double min_wait = min_wait_sec;
-        float last_pos = -1.0f;
+        float last_pos = 0.0f;
+        bool have_last = false;   // [修] 不能用 last_pos>=0 判"有没有上一帧":
+                                  // 力控遥测常在 ~0（甚至 -1e-6）→ 稳定性永远判不出来(实测卡 293s)
         int stable_count = 0;
         float last_gap = -1.0f;
         int seen = 0;
@@ -164,14 +166,14 @@ namespace s622_bt
                     if (elapsed < min_wait)
                     {
                         last_pos = pos;
+                        have_last = true;
                         last_gap = gap;
                         std::this_thread::sleep_for(50ms);
                         continue; // 还在最小等待期内, 不判定
                     }
 
                     // 稳定判据（力控夹爪会缓慢漂移 → 阈值可放宽, 见 settle_tol 端口）
-                    const bool stable =
-                        (last_pos >= 0.0f && std::abs(pos - last_pos) < settle_tol);
+                    const bool stable = (have_last && std::abs(pos - last_pos) < settle_tol);
                     if (stable)
                         ++stable_count;
                     else
@@ -217,6 +219,7 @@ namespace s622_bt
                         return BT::NodeStatus::SUCCESS;
                     }
                     last_pos = pos;
+                    have_last = true;
                     last_gap = gap;
                 }
             }
