@@ -569,12 +569,17 @@ namespace s622_bt
         pre.pose.position.y -= appr_world.y() * approach_distance;
         pre.pose.position.z -= appr_world.z() * approach_distance;
 
-        // ---- 4. {}^{G_R} T_O = ({}^W T_O)^{-1} · {}^W T_{G_R}^* ----
+        // ---- 4. {}^{G_R} T_O = ({}^W T_{G_R}^*)^{-1} · {}^W T_O ----
+        // ⚠️ 2026-09-17 修正：原写成 (W_T_O)^{-1}·W_T_GR（即 {}^O T_{G_R}，方向反了），
+        //    导致 TransferObject 把**逆变换**当作"物体在右爪系的位姿"写进 PlanningScene ——
+        //    场景里的杆位姿与真值差 ~83mm / ~124°（T0R 检查实测；M4_2 §18.21.4）。
+        //    物理上不影响：合爪/咬合/搬运都不查场景位姿，且每轮候选位姿都从**左爪**的
+        //    场景位姿重新生成；但"Transfer 后场景位姿不应跳变"这条 DoD 被违反。
         tf2::Transform W_T_O, W_T_GR;
         tf2::fromMsg(w_o.pose, W_T_O);
         tf2::fromMsg(recv.pose, W_T_GR);
         const geometry_msgs::msg::Pose obj_in_right =
-            pose_from_tf(W_T_O.inverseTimes(W_T_GR));
+            pose_from_tf(W_T_GR.inverseTimes(W_T_O));
 
         setOutput("right_receive_pose", recv);
         setOutput("right_receive_pre_pose", pre);
