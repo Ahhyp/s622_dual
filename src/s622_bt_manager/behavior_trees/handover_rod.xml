@@ -149,6 +149,11 @@
           <AlwaysSuccess />
         </Fallback>
 
+        <!-- [T5 故障注入 retreat / 2026-09-16] 在 MaybeRefreshClose **之后**注入：
+             该 Fallback 内部失败会被 AlwaysSuccess 吞掉（局部自愈），所以 post-transfer 的
+             ownership Recovery（RIGHT 分支）只能在这里触发。fail_inject 为空时惰性。 -->
+        <InjectFailure inject="{fail_inject}" fail_modes="retreat" />
+
         <!-- 7. Left Retreat（规划 §11：必须先让 Left 退开，否则指板挡路把杆刮掉） -->
         <PlanToJoints arm_prefix="left"
             joint_positions="{left_home}"
