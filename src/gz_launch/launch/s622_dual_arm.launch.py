@@ -263,6 +263,38 @@ def generate_launch_description():
         ],
     )
 
+    # ============ 5b. Spawn M5 regrasp fixture（§2：正式实验不依赖 tmp 手工 spawn）============
+    # 标称位姿 (0.10, -0.20, 0) 已做右臂可达性验证（tmp/m5_round/fixture_solve.py：
+    # 四个目标位姿残差 ≤0.11mm/0.00°，限位裕度 45.6~67.1°）。
+    # 夹具模型建在局部系（原点=落地中心，杆长轴=局部 Y），换位只改下面三个参数。
+    fixture_enable_arg = DeclareLaunchArgument(
+        'spawn_regrasp_fixture', default_value='true',
+        description='[M5] 是否生成重抓夹具')
+    fixture_x_arg = DeclareLaunchArgument('fixture_x', default_value='0.10')
+    fixture_y_arg = DeclareLaunchArgument('fixture_y', default_value='-0.20')
+    fixture_yaw_arg = DeclareLaunchArgument('fixture_yaw', default_value='0.0')
+
+    spawn_fixture = TimerAction(
+        period=7.5,   # 略晚于 target_box，避免同时打 Gazebo 的 create 服务
+        actions=[
+            Node(
+                package="ros_gz_sim",
+                executable="create",
+                arguments=[
+                    "-world", "dual_arm_world",
+                    "-file", os.path.join(this_pkg, "models", "regrasp_fixture", "model.sdf"),
+                    "-name", "regrasp_fixture",
+                    "-x", LaunchConfiguration('fixture_x'),
+                    "-y", LaunchConfiguration('fixture_y'),
+                    "-z", "0.0",
+                    "-R", "0", "-P", "0",
+                    "-Y", LaunchConfiguration('fixture_yaw'),
+                ],
+                condition=IfCondition(LaunchConfiguration('spawn_regrasp_fixture')),
+            )
+        ],
+    )
+
     # ============ 6. robot_state_publisher ============
     robot_state_pub = Node(
         package="robot_state_publisher",
@@ -569,6 +601,8 @@ def generate_launch_description():
     bt_dual_config = os.path.join(bt_manager_pkg, "config", "bt_dual_config.yaml")
     # [M4 BT 回填] 长条交接参数（bb.* → blackboard，行为树 XML 用 {var} 引用）
     m4_handover_config = os.path.join(bt_manager_pkg, "config", "m4_handover.yaml")
+    # [M5] §15：夹具/Anchor/运动原语参数唯一来源
+    m5_task_config = os.path.join(bt_manager_pkg, "config", "m5_task.yaml")
     tree_file_arg = DeclareLaunchArgument(
         'tree_file', default_value='pick_place_dual.xml',
         description='BT XML file: pick_place_dual.xml | pick_handover_place.xml')
@@ -586,8 +620,9 @@ def generate_launch_description():
                 parameters=[
                     bt_dual_config,
                     m4_handover_config,
+                    m5_task_config,
                     {
-                        "subtree_files": "handover_rod.xml",
+                        "subtree_files": "handover_rod.xml,m5_fixture_place_test.xml",
                         "tree_file": LaunchConfiguration('tree_file'),  # ← 改
                         "tree_id":   LaunchConfiguration('tree_id'),    # ← 改
                         "tick_rate_hz": 10,
@@ -638,9 +673,10 @@ def generate_launch_description():
     return LaunchDescription([
         set_model_path, tree_file_arg, tree_id_arg, gui_arg, rviz_arg,
         robot_spawn_delay, controller_spawn_delay, gripper_close_stop_gap, gripper_direct_close,
+        fixture_enable_arg, fixture_x_arg, fixture_y_arg, fixture_yaw_arg,
         gripper_force_mode, gripper_clamp_force, gripper_open_force,
         gazebo, clock_bridge, camera_bridge, wrist_camera_bridge, gripper_force_bridge,
-        spawn_robot, spawn_box,
+        spawn_robot, spawn_box, spawn_fixture,
         robot_state_pub,
         jsb_spawner, arm_hand_spawner,
         planning_scene,
