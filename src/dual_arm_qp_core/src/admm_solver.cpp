@@ -10,6 +10,10 @@
 
 #include "dual_arm_qp_core/admm_solver.hpp"
 
+#ifdef DUAL_ARM_QP_HAVE_OSQP
+#include "dual_arm_qp_core/osqp_solver.hpp"
+#endif
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -118,7 +122,13 @@ QpSolution AdmmSolver::solve(const QpProblem& problem) {
     return solution;
 }
 
-QpSolverPtr makeDefaultSolver() { return std::make_shared<AdmmSolver>(); }
+QpSolverPtr makeDefaultSolver() {
+#ifdef DUAL_ARM_QP_HAVE_OSQP
+    return std::make_shared<OsqpSolver>();
+#else
+    return std::make_shared<AdmmSolver>();
+#endif
+}
 
 bool hasOsqpBackend() {
 #ifdef DUAL_ARM_QP_HAVE_OSQP

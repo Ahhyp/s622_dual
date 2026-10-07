@@ -16,13 +16,19 @@ find_package(Eigen3 REQUIRED)
 find_package(dual_arm_kinematics REQUIRED)
 
 # ---------------------------------------------------------------------------
-# Solver backend (decision D6).
-#   v1: built-in ADMM reference backend (always available, dependency-free).
-#   TODO: add the OSQP backend once osqp is installed
-#         (e.g. `sudo apt install ros-humble-osqp-vendor`), then implement
-#         src/osqp_solver.cpp and enable it here.
+# Solver backend (decision D6):
+#   - ADMM reference backend: always built (dependency-free)
+#   - OSQP backend: built when the osqp package is found
+#     (install with: sudo apt install ros-humble-osqp-vendor)
 # ---------------------------------------------------------------------------
+find_package(osqp QUIET)
 set(QP_SOURCES src/admm_solver.cpp src/dual_arm_qp.cpp)
+if(osqp_FOUND)
+  list(APPEND QP_SOURCES src/osqp_solver.cpp)
+  message(STATUS "dual_arm_qp_core: OSQP found -> OSQP backend enabled")
+else()
+  message(STATUS "dual_arm_qp_core: OSQP not found -> ADMM backend only")
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${QP_SOURCES})
 target_include_directories(${PROJECT_NAME}
@@ -33,6 +39,10 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   PUBLIC Eigen3::Eigen dual_arm_kinematics::dual_arm_kinematics
 )
+if(osqp_FOUND)
+  target_link_libraries(${PROJECT_NAME} PUBLIC osqp::osqp)
+  target_compile_definitions(${PROJECT_NAME} PUBLIC DUAL_ARM_QP_HAVE_OSQP=1)
+endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 install(DIRECTORY include/ DESTINATION include)
@@ -49,6 +59,10 @@ if(BUILD_TESTING)
   target_link_libraries(test_admm_solver ${PROJECT_NAME})
   ament_add_gtest(test_dual_arm_qp test/test_dual_arm_qp.cpp)
   target_link_libraries(test_dual_arm_qp ${PROJECT_NAME})
+  if(osqp_FOUND)
+    ament_add_gtest(test_solver_cross_check test/test_solver_cross_check.cpp)
+    target_link_libraries(test_solver_cross_check ${PROJECT_NAME})
+  endif()
 endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
