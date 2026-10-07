@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<!-- s622_mock_dual_arm.urdf.xacro
+     Dual-arm mock plant for the QP controller (ros2_control mock_components).
+     - reuses the project's own arm macro (same kinematics as real/Gazebo)
+     - TWO <ros2_control> systems (left_ / right_), position command interfaces
+     - only the 12 ARM joints have interfaces; fingers are left unclaimed
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="s622_dual_arm_mock">
+    <xacro:property name="M_PI" value="3.14159265358979323846" />
+
+    <!-- world root -->
+    <link name="world" />
+
+    <!-- arm macro (M2.3 macro-ised) -->
+    <xacro:include
+        filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
+    <xacro:property name="instantiate" value="false" />
+
+    <!-- Left arm: (0.35, 0, 0), yaw = pi -->
+    <xacro:s622_arm prefix="left_" attach_world="false" />
+    <joint name="left_mount_joint" type="fixed">
+        <parent link="world" />
+        <child link="left_base_link" />
+        <origin xyz="0.35 0 0" rpy="0 0 ${M_PI}" />
+    </joint>
+
+    <!-- Right arm: (-0.35, 0, 0), yaw = 0 -->
+    <xacro:s622_arm prefix="right_" attach_world="false" />
+    <joint name="right_mount_joint" type="fixed">
+        <parent link="world" />
+        <child link="right_base_link" />
+        <origin xyz="-0.35 0 0" rpy="0 0 0" />
+    </joint>
+
+    <!-- mock hardware: one GenericSystem per arm, position command + position state -->
+    <xacro:macro name="mock_arm_control" params="name prefix q1 q2 q3 q4 q5 q6">
+        <ros2_control name="${name}" type="system">
+            <hardware>
+                <plugin>mock_components/GenericSystem</plugin>
+            </hardware>
+            <joint name="${prefix}j1">
+                <command_interface name="position" />
+                <state_interface name="position">
+                    <param name="initial_value">${q1}</param>
+                </state_interface>
+            </joint>
+            <joint name="${prefix}j2">
+                <command_interface name="position" />
+                <state_interface name="position">
+                    <param name="initial_value">${q2}</param>
+                </state_interface>
+            </joint>
+            <joint name="${prefix}j3">
+                <command_interface name="position" />
+                <state_interface name="position">
+                    <param name="initial_value">${q3}</param>
+                </state_interface>
+            </joint>
+            <joint name="${prefix}j4">
+                <command_interface name="position" />
+                <state_interface name="position">
+                    <param name="initial_value">${q4}</param>
+                </state_interface>
+            </joint>
+            <joint name="${prefix}j5">
+                <command_interface name="position" />
+                <state_interface name="position">
+                    <param name="initial_value">${q5}</param>
+                </state_interface>
+            </joint>
+            <joint name="${prefix}j6">
+                <command_interface name="position" />
+                <state_interface name="position">
+                    <param name="initial_value">${q6}</param>
+                </state_interface>
+            </joint>
+        </ros2_control>
+    </xacro:macro>
+
+    <xacro:mock_arm_control name="LeftMockSystem" prefix="left_"
+                            q1="0.0" q2="-1.05" q3="1.05" q4="-1.05" q5="-0.8" q6="0.0" />
+    <xacro:mock_arm_control name="RightMockSystem" prefix="right_"
+                            q1="0.0" q2="-1.05" q3="1.05" q4="-1.05" q5="-0.8" q6="0.0" />
+</robot>

@@ -40,8 +40,10 @@ target_link_libraries(${PROJECT_NAME}
   PUBLIC Eigen3::Eigen dual_arm_kinematics::dual_arm_kinematics
 )
 if(osqp_FOUND)
-  target_link_libraries(${PROJECT_NAME} PUBLIC osqp::osqp)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC DUAL_ARM_QP_HAVE_OSQP=1)
+  # OSQP is an implementation detail (only used inside osqp_solver.cpp), so it
+  # is a PRIVATE dependency and does not leak to downstream packages.
+  target_link_libraries(${PROJECT_NAME} PRIVATE osqp::osqp)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE DUAL_ARM_QP_HAVE_OSQP=1)
 endif()
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
