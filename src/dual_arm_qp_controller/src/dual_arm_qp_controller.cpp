@@ -52,6 +52,8 @@ CallbackReturn DualArmQpController::on_init() {
     declareIfNeeded<double>("test_sweep_amp_m", 0.0);
     declareIfNeeded<double>("test_sweep_period_s", 4.0);
     declareIfNeeded<double>("period_fault_factor", 2.0);
+    declareIfNeeded<double>("collision_d_stop", 0.0);
+    declareIfNeeded<double>("collision_link_radius", 0.06);
 
     const auto joints = get_node()->get_parameter("joints").as_string_array();
     if (joints.size() != kNumJoints) {
@@ -82,6 +84,8 @@ CallbackReturn DualArmQpController::on_configure(
     test_sweep_amp_m_ = get_node()->get_parameter("test_sweep_amp_m").as_double();
     test_sweep_period_s_ = get_node()->get_parameter("test_sweep_period_s").as_double();
     period_fault_factor_ = get_node()->get_parameter("period_fault_factor").as_double();
+    collision_d_stop_ = get_node()->get_parameter("collision_d_stop").as_double();
+    collision_link_radius_ = get_node()->get_parameter("collision_link_radius").as_double();
 
     StreamHealthParams hp;
     hp.tracking_error_limit = get_node()->get_parameter("tracking_error_limit").as_double();
@@ -107,6 +111,10 @@ CallbackReturn DualArmQpController::on_configure(
     qp_params.v_max = v_max_;
 
     kinematics_ = std::make_unique<dual_arm::DualArmKinematics>();
+    if (collision_d_stop_ > 0.0) {
+        collision_ = std::make_unique<dual_arm_collision::DualArmCollisionModel>(
+            *kinematics_, collision_link_radius_);
+    }
     qp_ = std::make_unique<dual_arm_qp::DualArmQp>(*kinematics_, qp_params);
     qp_->setWarmStart(true);
 
@@ -160,6 +168,21 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     // C2.R2: measure the REAL control period; a deadline overrun is a global
     // (both-arm) D7 hold, so scheduler stalls become part of health monitoring.
     const bool deadline_fault = period_monitor_.update(period.seconds());
+
+    // C2.7c: INDEPENDENT hard safety layer.  This does not rely on the QP or on
+    // the CBF row being feasible -- it stops both arms as soon as the measured
+    // arm-arm distance drops below the hard threshold.
+    if (collision_ != nullptr) {
+        const auto info = collision_->distance(q_state_);
+        if (info.distance < collision_d_stop_) {
+            hold_active_ = true;
+            writeCommand(q_cmd_);
+            RCLCPP_ERROR_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 500,
+                                  "SAFETY: arm-arm distance %.4f m < %.4f m -> HOLD",
+                                  info.distance, collision_d_stop_);
+            return return_type::OK;
+        }
+    }
 
     // D7 health interlock: any single-arm problem -> hold BOTH arms.
     const StreamHealth health = health_.evaluate(elapsed, q_state_, q_cmd_,

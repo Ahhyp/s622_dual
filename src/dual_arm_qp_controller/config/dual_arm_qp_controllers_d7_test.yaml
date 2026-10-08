@@ -37,5 +37,7 @@ dual_arm_qp_controller:
     stall_inject_arm: 1
     stall_inject_start_s: 5.0
     stall_inject_duration_s: 1.5
+    collision_d_stop: 0.0
+    collision_link_radius: 0.06
     test_sweep_amp_m: 0.05
     test_sweep_period_s: 4.0

@@ -40,6 +40,10 @@ dual_arm_qp_controller:
     stall_inject_arm: -1          # -1 off, 0 left, 1 right
     stall_inject_start_s: -1.0
     stall_inject_duration_s: 0.0
+    # ---- C2.7c independent safety layer (0 = disabled) ----
+    # hard arm-arm distance stop; FCL capsules built from DH link frames
+    collision_d_stop: 0.0
+    collision_link_radius: 0.06
     # test-only relative-pose stimulus (0 = off)
     test_sweep_amp_m: 0.0
     test_sweep_period_s: 4.0

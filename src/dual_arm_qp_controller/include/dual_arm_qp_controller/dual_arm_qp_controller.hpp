@@ -22,6 +22,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_lifecycle/state.hpp>
 
+#include "dual_arm_collision/dual_arm_collision.hpp"
 #include "dual_arm_kinematics/dual_arm_kinematics.hpp"
 #include "dual_arm_qp_core/dual_arm_qp.hpp"
 #include "dual_arm_qp_controller/period_monitor.hpp"
@@ -55,6 +56,7 @@ private:
     std::vector<std::string> state_iface_names_;
 
     std::unique_ptr<dual_arm::DualArmKinematics> kinematics_;
+    std::unique_ptr<dual_arm_collision::DualArmCollisionModel> collision_;
     std::unique_ptr<dual_arm_qp::DualArmQp> qp_;
 
     Vec12 q_state_ = Vec12::Zero();
@@ -83,6 +85,9 @@ private:
     double test_sweep_amp_m_ = 0.0;
     double test_sweep_period_s_ = 4.0;
     double period_fault_factor_ = 2.0;
+    // C2.7c: independent safety layer (NOT the QP/CBF path)
+    double collision_d_stop_ = 0.0;      // 0 = disabled
+    double collision_link_radius_ = 0.06;
 
     template <typename T>
     void declareIfNeeded(const std::string& name, const T& default_value) {
