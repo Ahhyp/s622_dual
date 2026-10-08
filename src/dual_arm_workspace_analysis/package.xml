@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd"
+            schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dual_arm_workspace_analysis</name>
+  <version>0.1.0</version>
+  <description>
+    C4.1: dual-arm workspace and manipulability analysis.  Samples the 12-DOF
+    configuration space with a Halton low-discrepancy sequence, filters
+    self-colliding configurations through the C2.7 capsule distance model, and
+    records, per accepted sample: TCP positions, the relative pose/rotation,
+    arm and relative manipulability, the minimum singular value of J_rel and its
+    numerical rank.  Pure C++/Eigen (no ROS runtime); the CSVs/binaries feed the
+    Python plotting pipeline and C4.2.
+  </description>
+
+  <maintainer email="1056651817@qq.com">Ahhyp</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>eigen</depend>
+  <depend>dual_arm_kinematics</depend>
+  <depend>dual_arm_collision</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

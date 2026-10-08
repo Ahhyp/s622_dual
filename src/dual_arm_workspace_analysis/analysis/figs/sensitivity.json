@@ -1,0 +1,32 @@
+{
+  "rank_tol_1e-4": {
+    "accepted": 2777990,
+    "rank_defect": 0,
+    "acceptance_rate": 0.277799,
+    "rejected_floor": 7160843
+  },
+  "rank_tol_1e-6": {
+    "accepted": 2777990,
+    "rank_defect": 0,
+    "acceptance_rate": 0.277799,
+    "rejected_floor": 7160843
+  },
+  "rank_tol_1e-8": {
+    "accepted": 2777990,
+    "rank_defect": 0,
+    "acceptance_rate": 0.277799,
+    "rejected_floor": 7160843
+  },
+  "d_min_0.05": {
+    "accepted": 2750261,
+    "rank_defect": 0,
+    "acceptance_rate": 0.275026,
+    "rejected_floor": 7160843
+  },
+  "z_floor_disabled": {
+    "accepted": 9853956,
+    "rank_defect": 0,
+    "acceptance_rate": 0.985396,
+    "rejected_floor": 0
+  }
+}

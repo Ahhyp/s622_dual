@@ -1,0 +1,114 @@
+{
+  "accepted": 2777990,
+  "manifest": {
+    "requested": 10000000,
+    "evaluated": 10000000,
+    "rejected_floor": 7160843,
+    "rejected_distance": 61167,
+    "accepted": 2777990,
+    "rank_defect": 0,
+    "acceptance_rate": 0.277799,
+    "rank_defect_rate": 0,
+    "wall_seconds": 21.4651
+  },
+  "params": {
+    "num_samples": 10000000,
+    "num_threads": 16,
+    "link_radius": 0.06,
+    "d_min": 0.02,
+    "use_z_floor": true,
+    "z_floor": 0,
+    "rank_tol": 1e-06,
+    "seed_offset": 0,
+    "joint_lower": [
+      -3.0543,
+      -4.6251,
+      -2.8274,
+      -4.6251,
+      -3.0543,
+      -3.0543
+    ],
+    "joint_upper": [
+      3.0543,
+      1.4835,
+      2.8274,
+      1.4835,
+      3.0543,
+      3.0543
+    ]
+  },
+  "common_reachable": {
+    "voxel_m": 0.02,
+    "left_xy_voxels": 4693,
+    "right_xy_voxels": 4691,
+    "crw_xy_voxels": 2063,
+    "crw_xz_voxels": 1318,
+    "crw_xy_area_m2": 0.8251999999999999,
+    "voxel3_m": 0.02,
+    "left_3d_voxels": 147454,
+    "right_3d_voxels": 147553,
+    "crw_3d_voxels": 53606,
+    "crw_over_left_3d": 0.36354388487257044,
+    "left_3d_volume_m3": 1.1796320000000002,
+    "crw_3d_volume_m3": 0.42884800000000006,
+    "crw_bbox_xyz": [
+      [
+        -0.416,
+        0.404
+      ],
+      [
+        -0.688,
+        0.692
+      ],
+      [
+        0.0,
+        0.82
+      ]
+    ],
+    "note": "occupancy means >=1 accepted sample in the voxel; task-space density is NOT uniform under joint-space sampling (it is weighted by the Jacobian), so counts are not volumes."
+  },
+  "handover": {
+    "0.25m": {
+      "samples": 36020,
+      "frac_of_accepted": 0.012966209381603245
+    },
+    "0.35m": {
+      "samples": 107320,
+      "frac_of_accepted": 0.03863224849621489
+    },
+    "0.45m": {
+      "samples": 240458,
+      "frac_of_accepted": 0.08655826694840514
+    }
+  },
+  "relative_manipulability": {
+    "w_rel_p5": 0.3680781126022339,
+    "w_rel_p50": 0.9633882641792297,
+    "w_rel_p95": 2.178241717815399,
+    "smin_rel_body_p1": 0.11116001583635807,
+    "smin_rel_body_p5": 0.15494519472122192,
+    "smin_rel_body_p50": 0.2704480290412903,
+    "frame_note": "w_rel = prod(sigma) is frame-invariant (det Ad = 1); sigma_min is NOT -- always quote its frame. Main = BodyR.",
+    "vs_weakest_arm": {
+      "w_spearman": 0.23458264210494081,
+      "w_ratio_p50": 455.335693359375,
+      "smin_spearman": 0.055868980250574976,
+      "smin_ratio_p50": 9.376781463623047
+    }
+  },
+  "nullspace": {
+    "rank_histogram": {
+      "6": 2777990
+    },
+    "dim_ker_histogram": {
+      "6": 2777990
+    },
+    "note": "rank(J_rel) is frame-invariant; exact rank deficiency is a measure-zero set, so the informative degradation measure is sigma_min(J_rel) -- see fig3 right."
+  },
+  "figures": [
+    "fig1_common_reachable.png",
+    "fig2_relative_manipulability.png",
+    "fig3_nullspace_rank.png",
+    "fig4_arm_manipulability.png"
+  ]
+}
