@@ -59,6 +59,7 @@ def generate_launch_description():
             "gripper_stop_block": "false",
             "gripper_force_plugins": "false",
             "arm_command_mode": "position",
+            "arm_position_gain": os.environ.get("QP_ARM_POSITION_GAIN", "20.0"),
             "controllers_yaml": controllers_yaml,
         },
     ).replace("package://s622_moveit_descriptions", desc_share)

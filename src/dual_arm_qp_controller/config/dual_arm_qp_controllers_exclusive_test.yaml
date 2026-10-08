@@ -1,0 +1,70 @@
+# QP profile (decision D2): position command interfaces + the QP controller.
+# This is deliberately SEPARATE from the velocity JTC profiles
+# (dual_arm_controllers.yaml / real_controllers.yaml); never load both for the
+# same arm joints.
+controller_manager:
+  ros__parameters:
+    update_rate: 125  # Hz == QP dt 0.008 s
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    dual_arm_qp_controller:
+      type: dual_arm_qp_controller/DualArmQpController
+    # --- C2.9b probes (must NOT be able to activate) ---
+    left_arm_jtc_probe:
+      type: joint_trajectory_controller/JointTrajectoryController
+    left_arm_jtc_vel_probe:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+dual_arm_qp_controller:
+  ros__parameters:
+    # 12 joint names, order = [left_j1..left_j6, right_j1..right_j6]
+    joints:
+      - left_j1
+      - left_j2
+      - left_j3
+      - left_j4
+      - left_j5
+      - left_j6
+      - right_j1
+      - right_j2
+      - right_j3
+      - right_j4
+      - right_j5
+      - right_j6
+    dt: 0.008
+    kp_rel: 10.0
+    w_rel: 1.0
+    w_slack: 1000.0
+    w_center: 0.01
+    w_reg: 0.000001
+    v_max: 2.5
+    # D7 stream health
+    tracking_error_limit: 0.0     # 0 disables this check
+    solve_failure_limit: 5
+    stall_inject_arm: -1          # -1 off, 0 left, 1 right
+    stall_inject_start_s: -1.0
+    stall_inject_duration_s: 0.0
+    # ---- C2.7c independent safety layer (0 = disabled) ----
+    # hard arm-arm distance stop; FCL capsules built from DH link frames
+    collision_d_stop: 0.0
+    collision_link_radius: 0.06
+    # test-only relative-pose stimulus (0 = off)
+    test_sweep_amp_m: 0.0
+    test_sweep_period_s: 4.0
+
+# probe 1: same joints + same (position) command interfaces as the QP -> conflict
+left_arm_jtc_probe:
+  ros__parameters:
+    joints: [left_j1, left_j2, left_j3, left_j4, left_j5, left_j6]
+    command_interfaces: [position]
+    state_interfaces: [position]
+    allow_partial_joints_goal: true
+
+# probe 2: asks for a velocity command interface that does not exist in this profile
+left_arm_jtc_vel_probe:
+  ros__parameters:
+    joints: [left_j1, left_j2, left_j3, left_j4, left_j5, left_j6]
+    command_interfaces: [velocity]
+    state_interfaces: [position]
+    allow_partial_joints_goal: true

@@ -13,6 +13,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(controller_interface REQUIRED)
 find_package(hardware_interface REQUIRED)
@@ -42,6 +43,9 @@ target_link_libraries(${PROJECT_NAME}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+add_executable(dual_arm_qp_monitor src/dual_arm_qp_monitor.cpp)
+target_link_libraries(dual_arm_qp_monitor rclcpp::rclcpp sensor_msgs::sensor_msgs_library dual_arm_kinematics::dual_arm_kinematics)
+
 pluginlib_export_plugin_description_file(controller_interface dual_arm_qp_controller_plugin.xml)
 
 install(DIRECTORY include/ DESTINATION include)
@@ -51,6 +55,7 @@ install(TARGETS ${PROJECT_NAME}
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
+install(TARGETS dual_arm_qp_monitor RUNTIME DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY scripts DESTINATION share/${PROJECT_NAME})
 

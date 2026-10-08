@@ -20,6 +20,8 @@
     <!-- [C2.9a] arm command interface: velocity (JTC profile, default) or
          position (QP profile, 125 Hz) -->
     <xacro:arg name="arm_command_mode" default="velocity" />
+    <!-- gz position-servo gain [1/s] (only used when arm_command_mode=position) -->
+    <xacro:arg name="arm_position_gain" default="1.0" />
     <!-- [C2.9a] controllers yaml loaded by the gz_ros2_control plugin -->
     <xacro:arg name="controllers_yaml"
         default="$(find s622_moveit_config)/config/dual_arm_controllers.yaml" />
@@ -175,12 +177,14 @@
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"
         initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
-        prefix="left_" arm_command_mode="$(arg arm_command_mode)" />
+        prefix="left_" arm_command_mode="$(arg arm_command_mode)"
+        arm_position_gain="$(arg arm_position_gain)" />
 
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"
         initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
-        prefix="right_" arm_command_mode="$(arg arm_command_mode)" />
+        prefix="right_" arm_command_mode="$(arg arm_command_mode)"
+        arm_position_gain="$(arg arm_position_gain)" />
 
     <!-- ============ [M2] 全局俯视相机（默认关） ============
          world 相机（0,0.5,0.9 俯视）是旧视觉伺服用；M2 标定用腕部 wrist_camera，
