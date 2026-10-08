@@ -17,3 +17,7 @@ compile_commands.json
 .codegraph/
 tmp/
 src/hand_eye_calibration/calib/
+
+# C4.1 workspace analysis data products (large binaries; regenerate with
+# src/dual_arm_workspace_analysis/analysis/run_c41.sh)
+src/dual_arm_workspace_analysis/analysis/data/
