@@ -61,6 +61,20 @@ struct DualArmQpParams {
     double w_null_clear = 0.0;   // arm-arm clearance proxy (elbow/wrist)
     double null_step = 0.005;    // max |dq_center| per step [rad]
 
+    // ---- singularity / poor-conditioning handling (C2.6) ------------------
+    // Continuous degradation driven by sigma_min(J_rel): no hard threshold
+    // switch.  f = smoothstep(sigma_critical -> sigma_safe) in [0,1].
+    bool enable_singularity = false;
+    double sigma_critical = 0.06;   // below this: maximum degradation
+    double sigma_safe = 0.20;       // above this: no degradation
+    double damp_max = 50.0;         // w_reg multiplier at f = 0
+    double slack_relax = 0.9;       // w_slack scaled by (1 - relax*(1-f))
+    double vel_scale_min = 0.5;     // v_max scaled by min + (1-min)*f
+    // The first-order error map (edot ~= -J dq) is only valid for small |e|;
+    // near |e| ~ pi it breaks down.  Derate continuously with the error norm.
+    double e_safe = 1.2;      // |e| below this: no derating
+    double e_critical = 2.4;  // |e| above this: maximum derating
+
     Vec12 q_min;
     Vec12 q_max;
     Vec12 v_max;
@@ -86,6 +100,9 @@ struct DualArmQpResult {
     double solve_time_ms = 0.0;
     double relative_error_norm = 0.0;  // ||e_rel|| at the linearization point
     double object_error_norm = 0.0;    // ||e_obj|| at the linearization point
+    double sigma_min_rel = 0.0;        // sigma_min(J_rel) at the linearization point
+    double singularity_factor = 1.0;   // 1 = healthy, 0 = maximum degradation
+    double error_factor = 1.0;         // 1 = small error, 0 = |e| beyond e_critical
     std::string solver_name;
 };
 

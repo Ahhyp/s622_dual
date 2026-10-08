@@ -13,6 +13,11 @@ namespace dual_arm_qp {
 
 namespace {
 
+double smoothstep01(double x) {
+    const double t = std::min(1.0, std::max(0.0, x));
+    return t * t * (3.0 - 2.0 * t);
+}
+
 /// sigma_min of the relative Jacobian (dual-arm task capability metric).
 double sigmaMinRel(const DualArmKinematics& kin, const Q12& q) {
     const dual_arm::Mat6x12 J = kin.relativeJacobian(q, dual_arm::RelativeFrame::BodyR);
@@ -112,7 +117,37 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
     const Vec6 e_obj = kin_.objectError(q, world_T_object_target);
     result.object_error_norm = e_obj.norm();
 
+    // ---- C2.6: continuous singularity degradation --------------------------
+    const double sigma_min_rel = sigmaMinRel(kin_, q);
+    result.sigma_min_rel = sigma_min_rel;
+    double f_sigma = 1.0;
+    double f_err_rel = 1.0;
+    double f_err_obj = 1.0;
+    if (params_.enable_singularity) {
+        const double denom = std::max(1e-9, params_.sigma_safe - params_.sigma_critical);
+        f_sigma = smoothstep01((sigma_min_rel - params_.sigma_critical) / denom);
+        const double e_denom = std::max(1e-9, params_.e_critical - params_.e_safe);
+        f_err_rel = smoothstep01((params_.e_critical - e_rel.norm()) / e_denom);
+        f_err_obj = smoothstep01((params_.e_critical - e_obj.norm()) / e_denom);
+    }
+    const double f = std::min({f_sigma, f_err_rel, f_err_obj});
+    result.singularity_factor = f_sigma;
+    result.error_factor = std::min(f_err_rel, f_err_obj);
+    // effective (degraded) knobs -- continuous in f, no hard switch
+    const double w_reg_eff =
+        params_.w_reg * (1.0 + params_.damp_max * (1.0 - f));
+    const double w_slack_eff =
+        params_.w_slack * std::max(0.05, 1.0 - params_.slack_relax * (1.0 - f));
+    const double vel_scale =
+        params_.vel_scale_min + (1.0 - params_.vel_scale_min) * f;
+
     const double dt = params_.dt;
+    // NOTE (C2.6): we deliberately do NOT derate the feedback gain here.
+    // Stopping the push when |e| is large was measured to be counter-productive
+    // (it freezes the error instead of reducing it).  The correct fix for large
+    // |e| is the exact SE(3) right-Jacobian inverse in the error map; that is
+    // documented as future work.  What we degrade continuously is authority:
+    // damping up, task slack relaxed, velocity bound scaled down.
     const double alpha_rel = params_.kp_rel * dt;
     const double alpha_obj = params_.kp_obj * dt;
     const bool object_on = params_.w_obj > 0.0;
@@ -187,18 +222,18 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
         dq_center_scratch_ = params_.dq_center;
     }
 
-    P_.block<12, 12>(0, 0) += (params_.w_center + params_.w_reg) * I12;
-    P_.block<6, 6>(kSRel0, kSRel0) += params_.w_slack * I6;
+    P_.block<12, 12>(0, 0) += (params_.w_center + w_reg_eff) * I12;
+    P_.block<6, 6>(kSRel0, kSRel0) += w_slack_eff * I6;
     P_.block<6, 6>(kSObj0, kSObj0) += params_.w_slack_obj * I6;
     q_cost_.head<12>() -= params_.w_center * dq_center_scratch_;
 
     // ---- box constraints on dq -------------------------------------------
     for (int i = 0; i < 12; ++i) {
-        double lo = std::max(-params_.v_max[i] * dt, params_.q_min[i] - q[i]);
-        double hi = std::min(params_.v_max[i] * dt, params_.q_max[i] - q[i]);
+        const double vlim = params_.v_max[i] * vel_scale * dt;
+        double lo = std::max(-vlim, params_.q_min[i] - q[i]);
+        double hi = std::min(vlim, params_.q_max[i] - q[i]);
         if (lo > hi) {
-            const double v = (q[i] > params_.q_max[i]) ? -params_.v_max[i] * dt
-                                                       : params_.v_max[i] * dt;
+            const double v = (q[i] > params_.q_max[i]) ? -vlim : vlim;
             lo = hi = v;
         }
         lower_[i] = lo;
