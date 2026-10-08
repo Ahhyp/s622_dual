@@ -51,6 +51,7 @@ CallbackReturn DualArmQpController::on_init() {
     // test-only stimulus (0 = off)
     declareIfNeeded<double>("test_sweep_amp_m", 0.0);
     declareIfNeeded<double>("test_sweep_period_s", 4.0);
+    declareIfNeeded<double>("period_fault_factor", 2.0);
 
     const auto joints = get_node()->get_parameter("joints").as_string_array();
     if (joints.size() != kNumJoints) {
@@ -80,6 +81,7 @@ CallbackReturn DualArmQpController::on_configure(
     v_max_default_ = get_node()->get_parameter("v_max").as_double();
     test_sweep_amp_m_ = get_node()->get_parameter("test_sweep_amp_m").as_double();
     test_sweep_period_s_ = get_node()->get_parameter("test_sweep_period_s").as_double();
+    period_fault_factor_ = get_node()->get_parameter("period_fault_factor").as_double();
 
     StreamHealthParams hp;
     hp.tracking_error_limit = get_node()->get_parameter("tracking_error_limit").as_double();
@@ -88,6 +90,7 @@ CallbackReturn DualArmQpController::on_configure(
     hp.stall_start_s = get_node()->get_parameter("stall_inject_start_s").as_double();
     hp.stall_duration_s = get_node()->get_parameter("stall_inject_duration_s").as_double();
     health_.configure(hp);
+    period_monitor_.configure(dt_, period_fault_factor_);
 
     dual_arm_qp::defaultS622Limits(&q_min_, &q_max_, &v_max_);
     if (v_max_default_ > 0.0) v_max_.setConstant(v_max_default_);
@@ -109,7 +112,7 @@ CallbackReturn DualArmQpController::on_configure(
 
     RCLCPP_INFO(get_node()->get_logger(),
                 "configured: 12-DOF QP, dt=%.4fs, kp_rel=%.2f, solver=%s", dt_, kp_rel_,
-                qp_->lastProblem().P.rows() ? "ready" : "ready");
+                qp_->solverName().c_str());
     return CallbackReturn::SUCCESS;
 }
 
@@ -125,6 +128,8 @@ CallbackReturn DualArmQpController::on_activate(
     solve_fail_streak_ = 0;
     hold_active_ = false;
     health_.reset();
+    period_monitor_.reset();
+    stats_counter_ = 0;
     activated_ = true;
     writeCommand(q_cmd_);
 
@@ -142,7 +147,7 @@ CallbackReturn DualArmQpController::on_deactivate(
 }
 
 return_type DualArmQpController::update(const rclcpp::Time& time,
-                                        const rclcpp::Duration& /*period*/) {
+                                        const rclcpp::Duration& period) {
     if (!activated_) return return_type::OK;
     if (!readState()) {
         RCLCPP_ERROR_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 1000,
@@ -152,9 +157,13 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
 
     const double elapsed = (time - activate_time_).seconds();
 
+    // C2.R2: measure the REAL control period; a deadline overrun is a global
+    // (both-arm) D7 hold, so scheduler stalls become part of health monitoring.
+    const bool deadline_fault = period_monitor_.update(period.seconds());
+
     // D7 health interlock: any single-arm problem -> hold BOTH arms.
-    const StreamHealth health =
-        health_.evaluate(elapsed, q_state_, q_cmd_, solve_fail_streak_);
+    const StreamHealth health = health_.evaluate(elapsed, q_state_, q_cmd_,
+                                                 solve_fail_streak_, deadline_fault);
     if (!health.healthy) {
         if (!hold_active_) {
             RCLCPP_WARN(get_node()->get_logger(),
@@ -188,6 +197,16 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     q_cmd_ += result.dq;
     clampToLimits(&q_cmd_);
     writeCommand(q_cmd_);
+
+    // C2.R2 statistics (low rate: every 10 s at 125 Hz)
+    if (++stats_counter_ % 1250 == 0) {
+        RCLCPP_INFO(get_node()->get_logger(),
+                    "period ms: mean=%.3f P95=%.3f P99=%.3f max=%.3f | overruns=%lld/%lld "
+                    "| solver P99=%.3f ms",
+                    period_monitor_.meanMs(), period_monitor_.percentileMs(0.95),
+                    period_monitor_.percentileMs(0.99), period_monitor_.maxMs(),
+                    period_monitor_.faults(), period_monitor_.count(), result.solve_time_ms);
+    }
     return return_type::OK;
 }
 

@@ -37,29 +37,27 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) 
         kin_.relativeJacobian(q, dual_arm::RelativeFrame::BodyR);
 
     constexpr int kNumVars = 18;  // [dq(12); slack(6)]
+    (void)kNumVars;
     const double dt = params_.dt;
     const double alpha = params_.kp_rel * dt;
 
-    // ---- cost -------------------------------------------------------------
-    Eigen::MatrixXd A_task(6, kNumVars);
-    A_task.setZero();
-    A_task.leftCols<12>() = J;
-    A_task.rightCols<6>() = -Eigen::Matrix<double, 6, 6>::Identity();
+    // ---- cost (pre-allocated scratch, no heap allocation) ------------------
+    A_task_.setZero();
+    A_task_.leftCols<12>() = J;
+    A_task_.rightCols<6>() = -Eigen::Matrix<double, 6, 6>::Identity();
 
-    Eigen::MatrixXd P = params_.w_rel * (A_task.transpose() * A_task);
     // Task residual r = J_rel dq - alpha*e - s, with alpha = kp_rel*dt.
     // (edot ~= -J_rel dq, so J_rel dq = +alpha*e drives e -> 0.)
     const Vec6 task_bias = -alpha * e;
-    Eigen::VectorXd q_cost = params_.w_rel * (A_task.transpose() * task_bias);
+    P_.noalias() = params_.w_rel * (A_task_.transpose() * A_task_);
+    q_cost_.noalias() = params_.w_rel * (A_task_.transpose() * task_bias);
 
-    P.topLeftCorner<12, 12>() +=
+    P_.topLeftCorner<12, 12>() +=
         (params_.w_center + params_.w_reg) * Eigen::Matrix<double, 12, 12>::Identity();
-    P.bottomRightCorner<6, 6>() += params_.w_slack * Eigen::Matrix<double, 6, 6>::Identity();
-    q_cost.head<12>() -= params_.w_center * params_.dq_center;
+    P_.bottomRightCorner<6, 6>() += params_.w_slack * Eigen::Matrix<double, 6, 6>::Identity();
+    q_cost_.head<12>() -= params_.w_center * params_.dq_center;
 
     // ---- box constraints on dq -------------------------------------------
-    Eigen::VectorXd lower(12);
-    Eigen::VectorXd upper(12);
     for (int i = 0; i < 12; ++i) {
         double lo = std::max(-params_.v_max[i] * dt, params_.q_min[i] - q[i]);
         double hi = std::min(params_.v_max[i] * dt, params_.q_max[i] - q[i]);
@@ -69,29 +67,32 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) 
                                                        : params_.v_max[i] * dt;
             lo = hi = v;
         }
-        lower[i] = lo;
-        upper[i] = hi;
+        lower_[i] = lo;
+        upper_[i] = hi;
     }
 
     const int k = static_cast<int>(params_.C_ineq.rows());
-    Eigen::MatrixXd A(12 + k, kNumVars);
-    Eigen::VectorXd l(12 + k);
-    Eigen::VectorXd u(12 + k);
-    A.topRows(12).setZero();
-    A.topRows(12).leftCols<12>() = Eigen::Matrix<double, 12, 12>::Identity();
-    l.head(12) = lower;
-    u.head(12) = upper;
+    const int m = 12 + k;
+    if (A_scratch_.rows() != m || A_scratch_.cols() != kNumVars) {
+        A_scratch_.resize(m, kNumVars);
+        l_scratch_.resize(m);
+        u_scratch_.resize(m);
+    }
+    A_scratch_.topRows(12).setZero();
+    A_scratch_.topRows(12).leftCols<12>() = Eigen::Matrix<double, 12, 12>::Identity();
+    l_scratch_.head(12) = lower_;
+    u_scratch_.head(12) = upper_;
     if (k > 0) {
-        A.bottomRows(k) = params_.C_ineq;
-        l.tail(k).setConstant(-std::numeric_limits<double>::infinity());
-        u.tail(k) = params_.d_ineq;
+        A_scratch_.bottomRows(k) = params_.C_ineq;
+        l_scratch_.tail(k).setConstant(-std::numeric_limits<double>::infinity());
+        u_scratch_.tail(k) = params_.d_ineq;
     }
 
-    last_problem_.P = P;
-    last_problem_.q = q_cost;
-    last_problem_.A = A;
-    last_problem_.l = l;
-    last_problem_.u = u;
+    last_problem_.P = P_;
+    last_problem_.q = q_cost_;
+    last_problem_.A = A_scratch_;
+    last_problem_.l = l_scratch_;
+    last_problem_.u = u_scratch_;
     if (warm_start_enabled_ && warm_start_.size() == kNumVars) {
         last_problem_.x0 = warm_start_;
     }
@@ -109,8 +110,13 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) 
 
     // Safety clamp: the solver tolerances are ~1e-6, but the joint box is a
     // hard constraint, so project dq onto it before it ever reaches hardware.
-    for (int i = 0; i < 12; ++i) {
-        result.dq[i] = std::min(upper[i], std::max(lower[i], result.dq[i]));
+    // NOTE (C2.R3): this element-wise projection is exact ONLY for the box.
+    // It is skipped when general inequality rows (e.g. CBF) are present,
+    // because it does not preserve C*dq <= d in general.
+    if (k == 0) {
+        for (int i = 0; i < 12; ++i) {
+            result.dq[i] = std::min(upper_[i], std::max(lower_[i], result.dq[i]));
+        }
     }
 
     if (warm_start_enabled_) {

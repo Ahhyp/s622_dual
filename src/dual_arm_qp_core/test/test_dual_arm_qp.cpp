@@ -128,6 +128,32 @@ TEST(DualArmQp, SlackActivatesForUnreachableTarget) {
     EXPECT_GT(r_far.slack.norm(), 10.0 * r_ok.slack.norm());
 }
 
+TEST(DualArmQp, GeneralInequalityPreservedWhenClampIsSkipped) {
+    // C2.R3: with a general inequality row present, the element-wise box clamp
+    // must NOT be applied (it would break C*dq <= d).  This row has d < 0, so
+    // the origin is infeasible and an origin-scaling projection would break it
+    // too -- the solver result must be returned as-is.
+    DualArmKinematics kin;
+    DualArmQpParams params;
+    params.C_ineq = Eigen::MatrixXd::Zero(1, 18);
+    params.C_ineq(0, 0) = 1.0;                       // dq_0 <= -0.01
+    params.d_ineq = Eigen::VectorXd::Constant(1, -0.01);
+    DualArmQp qp(kin, params);
+
+    std::mt19937 rng(3u);
+    const Q12 q = randomQ12(rng);
+    const Iso3 target = kin.leftTright(q);
+    const auto r = qp.solve(q, target);
+
+    ASSERT_TRUE(r.converged);
+    EXPECT_LE(r.dq[0], -0.01 + 1e-6) << "general inequality row violated by post-solve handling";
+    // and the box is still respected (by the solver itself)
+    EXPECT_GE(r.dq[0], -params.v_max[0] * params.dt - 1e-6);
+    EXPECT_LE(r.dq[0], params.v_max[0] * params.dt + 1e-6);
+    std::printf("[QP] general ineq: dq0=%.6f (C dq <= -0.01), converged=%d\n", r.dq[0],
+                static_cast<int>(r.converged));
+}
+
 TEST(DualArmQp, SolverTimingReport) {
     DualArmKinematics kin;
     DualArmQpParams params;

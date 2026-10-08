@@ -1,82 +1,176 @@
 // src/osqp_solver.cpp
-// OSQP (0.6.x) backend.  P is passed as its upper triangle (OSQP convention),
-// A and q as dense->CSC.  Warm start uses QpProblem::x0.
+// Persistent-workspace OSQP backend (C2.R1).
+//
+// Steady state (structure unchanged): update P/A values + q/l/u, warm start,
+// osqp_solve().  osqp_setup()/osqp_cleanup() and malloc/free happen only when
+// the problem structure (n, m) changes.
+//
+// Sparsity patterns are FIXED:
+//   P = dense upper triangle (n(n+1)/2 entries, explicit zeros allowed)
+//   A = dense              (m*n entries)
+// which keeps osqp_update_P_A valid for every cycle.
 
 #include "dual_arm_qp_core/osqp_solver.hpp"
 
 #include <chrono>
 #include <cstdlib>
-#include <vector>
 
 #include "cs.h"
 #include "osqp.h"
 
 namespace dual_arm_qp {
 
-namespace {
+struct OsqpSolver::Impl {
+    OsqpOptions options;
 
-/// Dense -> CSC, upper triangle only (for P).
-csc* denseUpperToCsc(const Eigen::MatrixXd& M) {
-    const int n = static_cast<int>(M.rows());
-    std::vector<c_int> p(n + 1, 0);
-    std::vector<c_int> rows;
-    std::vector<double> vals;
-    rows.reserve(n * 2);
-    vals.reserve(n * 2);
-    for (int j = 0; j < n; ++j) {
-        p[j] = static_cast<c_int>(rows.size());
-        for (int i = 0; i <= j; ++i) {
-            const double v = M(i, j);
-            if (v != 0.0) {
-                rows.push_back(static_cast<c_int>(i));
-                vals.push_back(v);
+    OSQPWorkspace* work = nullptr;
+    csc* P = nullptr;
+    csc* A = nullptr;
+    c_float* q = nullptr;
+    c_float* l = nullptr;
+    c_float* u = nullptr;
+    c_float* x0 = nullptr;
+    int n = 0;
+    int m = 0;
+    int setup_count = 0;
+
+    ~Impl() { reset(); }
+
+    void reset() {
+        if (work != nullptr) {
+            osqp_cleanup(work);
+            work = nullptr;
+        }
+        if (P != nullptr) {
+            csc_spfree(P);
+            P = nullptr;
+        }
+        if (A != nullptr) {
+            csc_spfree(A);
+            A = nullptr;
+        }
+        std::free(q);
+        q = nullptr;
+        std::free(l);
+        l = nullptr;
+        std::free(u);
+        u = nullptr;
+        std::free(x0);
+        x0 = nullptr;
+        n = 0;
+        m = 0;
+    }
+
+    bool allocStructure(int n_in, int m_in) {
+        reset();
+        n = n_in;
+        m = m_in;
+        const int p_nnz = n * (n + 1) / 2;
+        const int a_nnz = m * n;
+
+        P = csc_spalloc(n, n, p_nnz, 1, 0);
+        A = csc_spalloc(m, n, a_nnz, 1, 0);
+        q = static_cast<c_float*>(std::malloc(sizeof(c_float) * n));
+        l = static_cast<c_float*>(std::malloc(sizeof(c_float) * m));
+        u = static_cast<c_float*>(std::malloc(sizeof(c_float) * m));
+        x0 = static_cast<c_float*>(std::malloc(sizeof(c_float) * n));
+        if (P == nullptr || A == nullptr || q == nullptr || l == nullptr || u == nullptr ||
+            x0 == nullptr) {
+            reset();
+            return false;
+        }
+
+        // P upper triangle, column-major (fixed pattern)
+        int k = 0;
+        for (int j = 0; j < n; ++j) {
+            P->p[j] = k;
+            for (int i = 0; i <= j; ++i) {
+                P->i[k] = i;
+                P->x[k] = 0.0;
+                ++k;
             }
         }
-    }
-    p[n] = static_cast<c_int>(rows.size());
-    const int nnz = static_cast<int>(rows.size());
-    csc* out = csc_spalloc(n, n, nnz > 0 ? nnz : 1, 1, 0);
-    for (int j = 0; j <= n; ++j) out->p[j] = p[j];
-    for (int k = 0; k < nnz; ++k) {
-        out->i[k] = rows[k];
-        out->x[k] = vals[k];
-    }
-    out->nz = -1;
-    return out;
-}
+        P->p[n] = k;
+        P->nz = -1;
 
-/// Dense -> CSC, full matrix (for A).
-csc* denseFullToCsc(const Eigen::MatrixXd& M) {
-    const int m = static_cast<int>(M.rows());
-    const int n = static_cast<int>(M.cols());
-    std::vector<c_int> p(n + 1, 0);
-    std::vector<c_int> rows;
-    std::vector<double> vals;
-    for (int j = 0; j < n; ++j) {
-        p[j] = static_cast<c_int>(rows.size());
+        // A dense, column-major (fixed pattern)
+        k = 0;
+        for (int j = 0; j < n; ++j) {
+            A->p[j] = k;
+            for (int i = 0; i < m; ++i) {
+                A->i[k] = i;
+                A->x[k] = 0.0;
+                ++k;
+            }
+        }
+        A->p[n] = k;
+        A->nz = -1;
+
+        return true;
+    }
+
+    bool osqpSetup() {
+        OSQPData data;
+        data.n = n;
+        data.m = m;
+        data.P = P;
+        data.A = A;
+        data.q = q;
+        data.l = l;
+        data.u = u;
+
+        OSQPSettings settings;
+        osqp_set_default_settings(&settings);
+        settings.verbose = options.verbose ? 1 : 0;
+        settings.eps_abs = static_cast<c_float>(options.eps_abs);
+        settings.eps_rel = static_cast<c_float>(options.eps_rel);
+        settings.max_iter = options.max_iter;
+        settings.polish = options.polish ? 1 : 0;
+        settings.warm_start = options.warm_start ? 1 : 0;
+
+        if (osqp_setup(&work, &data, &settings) != 0) {
+            work = nullptr;
+            reset();
+            return false;
+        }
+        ++setup_count;
+        return true;
+    }
+
+    void updateValues(const QpProblem& p) {
+        int k = 0;
+        for (int j = 0; j < n; ++j) {
+            for (int i = 0; i <= j; ++i) {
+                P->x[k++] = static_cast<c_float>(p.P(i, j));
+            }
+        }
+        k = 0;
+        for (int j = 0; j < n; ++j) {
+            for (int i = 0; i < m; ++i) {
+                A->x[k++] = static_cast<c_float>(p.A(i, j));
+            }
+        }
+        for (int i = 0; i < n; ++i) q[i] = static_cast<c_float>(p.q[i]);
         for (int i = 0; i < m; ++i) {
-            const double v = M(i, j);
-            if (v != 0.0) {
-                rows.push_back(static_cast<c_int>(i));
-                vals.push_back(v);
-            }
+            l[i] = static_cast<c_float>(p.l[i]);
+            u[i] = static_cast<c_float>(p.u[i]);
         }
     }
-    p[n] = static_cast<c_int>(rows.size());
-    const int nnz = static_cast<int>(rows.size());
-    csc* out = csc_spalloc(m, n, nnz > 0 ? nnz : 1, 1, 0);
-    for (int j = 0; j <= n; ++j) out->p[j] = p[j];
-    for (int k = 0; k < nnz; ++k) {
-        out->i[k] = rows[k];
-        out->x[k] = vals[k];
-    }
-    out->nz = -1;
-    return out;
+};
+
+OsqpSolver::OsqpSolver(OsqpOptions options) : impl_(std::make_unique<Impl>()) {
+    impl_->options = options;
 }
 
-}  // namespace
+OsqpSolver::~OsqpSolver() = default;
 
-OsqpSolver::OsqpSolver(OsqpOptions options) : options_(options) {}
+void OsqpSolver::setOptions(const OsqpOptions& options) { impl_->options = options; }
+
+OsqpOptions OsqpSolver::options() const { return impl_->options; }
+
+int OsqpSolver::setupCount() const { return impl_->setup_count; }
+
+void OsqpSolver::reset() { impl_->reset(); }
 
 QpSolution OsqpSolver::solve(const QpProblem& problem) {
     QpSolution solution;
@@ -86,67 +180,42 @@ QpSolution OsqpSolver::solve(const QpProblem& problem) {
     const int m = problem.num_constraints();
     const auto t_start = std::chrono::steady_clock::now();
 
-    csc* P = denseUpperToCsc(problem.P);
-    csc* A = denseFullToCsc(problem.A);
-    c_float* q = static_cast<c_float*>(std::malloc(sizeof(c_float) * n));
-    c_float* l = static_cast<c_float*>(std::malloc(sizeof(c_float) * m));
-    c_float* u = static_cast<c_float*>(std::malloc(sizeof(c_float) * m));
-    for (int i = 0; i < n; ++i) q[i] = static_cast<c_float>(problem.q[i]);
-    for (int i = 0; i < m; ++i) {
-        l[i] = static_cast<c_float>(problem.l[i]);
-        u[i] = static_cast<c_float>(problem.u[i]);
+    if (impl_->work == nullptr || impl_->n != n || impl_->m != m) {
+        // Structure (re)setup: allocate the fixed patterns, fill the REAL
+        // numerical data, then call osqp_setup() once.
+        if (!impl_->allocStructure(n, m)) return solution;
+        impl_->updateValues(problem);
+        if (!impl_->osqpSetup()) return solution;
+    } else {
+        impl_->updateValues(problem);
+    }
+    if (osqp_update_P_A(impl_->work, impl_->P->x, nullptr, 0, impl_->A->x, nullptr, 0) != 0 ||
+        osqp_update_lin_cost(impl_->work, impl_->q) != 0 ||
+        osqp_update_lower_bound(impl_->work, impl_->l) != 0 ||
+        osqp_update_upper_bound(impl_->work, impl_->u) != 0) {
+        impl_->reset();  // force a clean setup next time
+        return solution;
     }
 
-    OSQPData data;
-    data.n = n;
-    data.m = m;
-    data.P = P;
-    data.A = A;
-    data.q = q;
-    data.l = l;
-    data.u = u;
-
-    OSQPSettings settings;
-    osqp_set_default_settings(&settings);
-    settings.verbose = options_.verbose ? 1 : 0;
-    settings.eps_abs = static_cast<c_float>(options_.eps_abs);
-    settings.eps_rel = static_cast<c_float>(options_.eps_rel);
-    settings.max_iter = options_.max_iter;
-    settings.polish = options_.polish ? 1 : 0;
-    settings.warm_start = options_.warm_start ? 1 : 0;
-
-    OSQPWorkspace* work = nullptr;
-    const c_int setup_rc = osqp_setup(&work, &data, &settings);
-    if (setup_rc == 0 && work != nullptr) {
-        if (options_.warm_start && problem.x0.size() == n) {
-            c_float* x0 = static_cast<c_float*>(std::malloc(sizeof(c_float) * n));
-            for (int i = 0; i < n; ++i) x0[i] = static_cast<c_float>(problem.x0[i]);
-            osqp_warm_start_x(work, x0);
-            std::free(x0);
-        }
-        const c_int solve_rc = osqp_solve(work);
-        OSQPInfo* info = work->info;
-        const bool solved = (info->status_val == OSQP_SOLVED ||
-                             info->status_val == OSQP_SOLVED_INACCURATE);
-        if (solve_rc == 0 && solved) {
-            solution.x.resize(n);
-            for (int i = 0; i < n; ++i) {
-                solution.x[i] = static_cast<double>(work->solution->x[i]);
-            }
-            solution.converged = true;
-        }
-        solution.iterations = static_cast<int>(info->iter);
-        solution.primal_res = static_cast<double>(info->pri_res);
-        solution.dual_res = static_cast<double>(info->dua_res);
-        osqp_cleanup(work);
+    if (impl_->options.warm_start && problem.x0.size() == n) {
+        for (int i = 0; i < n; ++i) impl_->x0[i] = static_cast<c_float>(problem.x0[i]);
+        osqp_warm_start_x(impl_->work, impl_->x0);
     }
 
-    csc_spfree(P);
-    csc_spfree(A);
-    std::free(q);
-    std::free(l);
-    std::free(u);
-
+    const c_int rc = osqp_solve(impl_->work);
+    OSQPInfo* info = impl_->work->info;
+    const bool solved = (info->status_val == OSQP_SOLVED ||
+                         info->status_val == OSQP_SOLVED_INACCURATE);
+    if (rc == 0 && solved) {
+        solution.x.resize(n);
+        for (int i = 0; i < n; ++i) {
+            solution.x[i] = static_cast<double>(impl_->work->solution->x[i]);
+        }
+        solution.converged = true;
+    }
+    solution.iterations = static_cast<int>(info->iter);
+    solution.primal_res = static_cast<double>(info->pri_res);
+    solution.dual_res = static_cast<double>(info->dua_res);
     solution.solve_time_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_start)
             .count();

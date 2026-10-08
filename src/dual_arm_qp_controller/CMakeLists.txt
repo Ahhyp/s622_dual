@@ -8,7 +8,7 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+  add_compile_options(-Wall -Wextra -Wpedantic -O3)  # keep parity with fairino_planning_core
 endif()
 
 find_package(ament_cmake REQUIRED)
@@ -56,6 +56,8 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_stream_health test/test_stream_health.cpp)
   target_link_libraries(test_stream_health ${PROJECT_NAME})
+  ament_add_gtest(test_period_monitor test/test_period_monitor.cpp)
+  target_link_libraries(test_period_monitor ${PROJECT_NAME})
 endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
