@@ -51,6 +51,23 @@ dual_arm::Vec6 randomTwist(std::mt19937& rng, double scale) {
 
 }  // namespace
 
+TEST(Step0Relative, ExpLogRoundTripWithLargeTranslation) {
+    // Guards against the J_l^-1 / J_r^-1 swap that the small-step FD tests miss.
+    std::mt19937 rng(20261014u);
+    std::normal_distribution<double> gauss(0.0, 1.0);
+    double max_err = 0.0;
+    for (int n = 0; n < 200; ++n) {
+        dual_arm::Vec6 xi;
+        for (int i = 0; i < 6; ++i) xi[i] = gauss(rng);
+        xi.tail<3>() *= 0.8;                  // rotations up to ~2 rad
+        const dual_arm::Iso3 T = dual_arm::expSE3(xi);
+        const dual_arm::Vec6 back = dual_arm::logSE3(T);
+        max_err = std::max(max_err, (back - xi).cwiseAbs().maxCoeff());
+    }
+    std::printf("[S0.3] expSE3/logSE3 round trip: max abs err = %.3e\n", max_err);
+    EXPECT_LT(max_err, 1e-10);
+}
+
 TEST(Step0Relative, BodyRelativeJacobianMatchesFiniteDifference) {
     dual_arm::DualArmKinematics kin;
     std::mt19937 rng(20261001u);

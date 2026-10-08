@@ -62,6 +62,70 @@ Mat6 DualArmKinematics::spatialJacobianWorld(Arm a, const JointConfig& q) const 
     return adjoint(worldTgrasp(a, q)) * jacobianBody(a, q);
 }
 
+Mat6 DualArmKinematics::jacobianWorldPoint(Arm a, const JointConfig& q) const {
+    const Mat3 R_wg = worldTgrasp(a, q).linear();
+    Mat6 R6 = Mat6::Zero();
+    R6.topLeftCorner<3, 3>() = R_wg;
+    R6.bottomRightCorner<3, 3>() = R_wg;
+    return R6 * jacobianBody(a, q);
+}
+
+Iso3 DualArmKinematics::worldTobject(const Q12& q12) const {
+    JointConfig ql, qr;
+    split(q12, &ql, &qr);
+    const Iso3 W_T_L = worldTgrasp(Arm::Left, ql);
+    const Iso3 W_T_R = worldTgrasp(Arm::Right, qr);
+
+    Iso3 W_T_O = Iso3::Identity();
+    W_T_O.translation() = 0.5 * (W_T_L.translation() + W_T_R.translation());
+    const Mat3 A = W_T_L.linear().transpose() * W_T_R.linear();
+    W_T_O.linear() = W_T_L.linear() * expSO3(0.5 * logSO3(A));
+    return W_T_O;
+}
+
+Mat6x12 DualArmKinematics::objectJacobianWorld(const Q12& q12) const {
+    JointConfig ql, qr;
+    split(q12, &ql, &qr);
+
+    const Mat6 J_L = jacobianWorldPoint(Arm::Left, ql);
+    const Mat6 J_R = jacobianWorldPoint(Arm::Right, qr);
+
+    const Mat3 R_L = worldTgrasp(Arm::Left, ql).linear();
+    const Mat3 R_R = worldTgrasp(Arm::Right, qr).linear();
+    const Vec3 xi = logSO3(R_L.transpose() * R_R);
+
+    // w_O = w_L + G (w_R - w_L)
+    const Mat3 G = R_L * leftJacobianSO3(0.5 * xi) * 0.5 * leftJacobianInverseSO3(xi) *
+                   R_L.transpose();
+
+    Mat6x12 J = Mat6x12::Zero();
+    J.topRows<3>().leftCols<6>() = 0.5 * J_L.topRows<3>();
+    J.topRows<3>().rightCols<6>() = 0.5 * J_R.topRows<3>();
+    J.bottomRows<3>().leftCols<6>() = (Mat3::Identity() - G) * J_L.bottomRows<3>();
+    J.bottomRows<3>().rightCols<6>() = G * J_R.bottomRows<3>();
+    return J;
+}
+
+Mat6x12 DualArmKinematics::objectJacobianBody(const Q12& q12) const {
+    const Mat3 R_wo_T = worldTobject(q12).linear().transpose();
+    Mat6x12 J = objectJacobianWorld(q12);  // axes world, ref object origin
+    J.topRows<3>() = R_wo_T * J.topRows<3>();
+    J.bottomRows<3>() = R_wo_T * J.bottomRows<3>();
+    return J;
+}
+
+Vec6 DualArmKinematics::objectError(const Q12& q12, const Iso3& target) const {
+    const Iso3 T_err = worldTobject(q12).inverse() * target;
+    return logSE3(T_err);
+}
+
+Mat6x12 DualArmKinematics::objectErrorJacobian(const Q12& q12, const Iso3& target) const {
+    const Iso3 T_err = worldTobject(q12).inverse() * target;
+    const Mat6x12 J_obj = objectJacobianBody(q12);
+    // small-error approximation, same convention as relativeErrorJacobian()
+    return -adjoint(T_err.inverse()) * J_obj;
+}
+
 Q12 DualArmKinematics::stack(const JointConfig& q_left, const JointConfig& q_right) {
     Q12 out;
     out.head<6>() = q_left;
