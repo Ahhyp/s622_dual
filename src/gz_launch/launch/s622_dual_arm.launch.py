@@ -17,8 +17,10 @@ from ament_index_python.packages import get_package_share_directory
 from moveit_configs_utils import MoveItConfigsBuilder
 from launch_param_builder import load_xacro  # noqa: E402
 from launch.actions import IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.actions import DeclareLaunchArgument
+from launch.substitutions import PythonExpression
 from launch.substitutions import LaunchConfiguration
 from manipulation_common.launch_utils.yaml_loader import load_yaml
 
@@ -36,13 +38,23 @@ def generate_launch_description():
     )
 
     # ============ 1. Gazebo + world ============
+    # [M4 提速] gui:=false → gz 只跑 server（-s）。GUI 实测吃 ~2.2 核,
+    # 被杀时还会带走 server（同一进程组）→ 做批量实验时一律 headless。
+    gui_arg = DeclareLaunchArgument(
+        'gui', default_value='true', description='gz GUI（false=只跑 server, 省 ~2 核）')
+    rviz_arg = DeclareLaunchArgument(
+        'rviz', default_value='true', description='rviz2（false=不启动, 省 ~2 核）')
     world_file = os.path.join(this_pkg, "worlds", "dual_arm_world.sdf")
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory("ros_gz_sim"),
                          "launch", "gz_sim.launch.py")
         ),
-        launch_arguments=[("gz_args", world_file + " -r")],
+        launch_arguments=[("gz_args", [
+            world_file + " -r",
+            PythonExpression(
+                ["' -s' if '", LaunchConfiguration('gui'), "' == 'false' else ''"]),
+        ])],
     )
 
     # ============ 2. Bridges ============
@@ -57,6 +69,23 @@ def generate_launch_description():
         arguments=["/world/dual_arm_world/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"],
         parameters=[{"use_sim_time": True}],
         remappings=[("/world/dual_arm_world/clock", "/clock")],
+    )
+
+    # [M4_2 / Plan B'] 夹爪"夹持力"通道：ROS std_msgs/Float64 → gz Double（apply_joint_force 插件）
+    # 语法（见 `ros2 run ros_gz_bridge parameter_bridge --help`）：
+    #   <topic@ROS类型@GZ类型>，方向符号紧跟 ROS 类型：@双向 / [ = GZ→ROS / ] = ROS→GZ
+    # 本机 bridge 0.244.x 用 gz.msgs.* 命名（不是 ignition.msgs.*）。
+    # 仅在仿真启用（GRIPPER_FORCE_PLUGINS=1 时插件才订阅；桥本身无害）
+    _force_bridge_topics = [
+        f"/model/s622_dual_arm/joint/{arm}_finger{i}_joint/cmd_force"
+        for arm in ("left", "right")
+        for i in (1, 2)
+    ]
+    gripper_force_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        arguments=[f"{t}@std_msgs/msg/Float64]gz.msgs.Double" for t in _force_bridge_topics],
+        parameters=[{"use_sim_time": True}],
     )
 
     camera_bridge = Node(
@@ -107,6 +136,22 @@ def generate_launch_description():
     #   docs/2026-08-27_双臂控制器启动竞态），恢复 robotarm 对齐时序。
     robot_spawn_delay = DeclareLaunchArgument('robot_spawn_delay', default_value='5.0')
     controller_spawn_delay = DeclareLaunchArgument('controller_spawn_delay', default_value='8.0')
+    # [M4 §7.21] 仿真侧夹爪"机械限位"（等效真机拧螺丝定的最小闭合间隙）。
+    # 默认 0.0 = 原行为（close 压到 close_positions=[0,0]）；跑长条交接时传
+    #   gripper_close_stop_gap:=0.029   （30mm 杆留 1mm 过盈）
+    gripper_close_stop_gap = DeclareLaunchArgument(
+        'gripper_close_stop_gap', default_value='0.0',
+        description='[sim] 夹爪最小闭合间隙(m), 0=不启用(原行为)')
+    # [M4_2 / A''] 仿真专用：close 绕过 MoveIt 直发（配合 GRIPPER_STOP_GAP 关节限位产生夹持力）
+    gripper_direct_close = DeclareLaunchArgument(
+        'gripper_direct_close', default_value='false',
+        description='[sim] true=close 绕过 MoveIt 直发轨迹(A\'\'方案)')
+    # [M4_2 / Plan B'] 仿真纯力控夹爪（气动模型）；默认关闭
+    gripper_force_mode = DeclareLaunchArgument(
+        'gripper_force_mode', default_value='false',
+        description='[sim] true=夹爪力控(close 施闭合恒力/open 施张开力)')
+    gripper_clamp_force = DeclareLaunchArgument('gripper_clamp_force', default_value='5.0')
+    gripper_open_force = DeclareLaunchArgument('gripper_open_force', default_value='2.0')
     rv_spawn_delay = LaunchConfiguration('robot_spawn_delay')
     ctrl_spawn_delay = LaunchConfiguration('controller_spawn_delay')
 
@@ -135,6 +180,15 @@ def generate_launch_description():
                 "include_global_camera": _m2_global,
                 "include_wrist_camera": _m2_wrist,
                 "calibration_arm": _m2_calib,
+                # [M4_2 / A''] 夹爪"关节限位"路线（已证会与初始位冲突导致 finger1 锁死，默认关闭）。
+                # 注意：与下面 S3 的限位块用【不同】环境变量，避免误开。
+                "finger_stop_gap": os.environ.get("GRIPPER_JOINT_LIMIT_GAP", "0.0"),
+                # [M4_2 / S3] 夹爪"物理限位块"（推荐路线；默认关闭）
+                #   GRIPPER_STOP_BLOCK=1 GRIPPER_STOP_GAP=0.028 → 两爪各加一个挡块
+                "gripper_stop_block": os.environ.get("GRIPPER_STOP_BLOCK", "false"),
+                "gripper_stop_gap": os.environ.get("GRIPPER_STOP_GAP", "0.028"),
+                # [M4_2 / Plan B'] 启用 gz 关节力插件（=仿真夹持力来源）
+                "gripper_force_plugins": os.environ.get("GRIPPER_FORCE_PLUGINS", "false"),
             },
         )
         .robot_description_semantic(file_path="config/s622_dual_arm.srdf")
@@ -205,6 +259,38 @@ def generate_launch_description():
                     "-x", "0.6", "-y", "0.3", "-z", "0.05",
                     "-R", "0", "-P", "0", "-Y", "0.0",
                 ],
+            )
+        ],
+    )
+
+    # ============ 5b. Spawn M5 regrasp fixture（§2：正式实验不依赖 tmp 手工 spawn）============
+    # 标称位姿 (0.10, -0.20, 0) 已做右臂可达性验证（tmp/m5_round/fixture_solve.py：
+    # 四个目标位姿残差 ≤0.11mm/0.00°，限位裕度 45.6~67.1°）。
+    # 夹具模型建在局部系（原点=落地中心，杆长轴=局部 Y），换位只改下面三个参数。
+    fixture_enable_arg = DeclareLaunchArgument(
+        'spawn_regrasp_fixture', default_value='true',
+        description='[M5] 是否生成重抓夹具')
+    fixture_x_arg = DeclareLaunchArgument('fixture_x', default_value='0.10')
+    fixture_y_arg = DeclareLaunchArgument('fixture_y', default_value='-0.20')
+    fixture_yaw_arg = DeclareLaunchArgument('fixture_yaw', default_value='0.0')
+
+    spawn_fixture = TimerAction(
+        period=7.5,   # 略晚于 target_box，避免同时打 Gazebo 的 create 服务
+        actions=[
+            Node(
+                package="ros_gz_sim",
+                executable="create",
+                arguments=[
+                    "-world", "dual_arm_world",
+                    "-file", os.path.join(this_pkg, "models", "regrasp_fixture", "model.sdf"),
+                    "-name", "regrasp_fixture",
+                    "-x", LaunchConfiguration('fixture_x'),
+                    "-y", LaunchConfiguration('fixture_y'),
+                    "-z", "0.0",
+                    "-R", "0", "-P", "0",
+                    "-Y", LaunchConfiguration('fixture_yaw'),
+                ],
+                condition=IfCondition(LaunchConfiguration('spawn_regrasp_fixture')),
             )
         ],
     )
@@ -386,6 +472,7 @@ def generate_launch_description():
                 package="rviz2",
                 executable="rviz2",
                 arguments=["-d", rviz_config],
+                condition=IfCondition(LaunchConfiguration('rviz')),
                 parameters=[
                     moveit_config.robot_description,
                     moveit_config.robot_description_semantic,
@@ -476,6 +563,14 @@ def generate_launch_description():
                         'launch', 'arm_actions_dual.launch.py'
                     )
                 ),
+                # [M4 §7.21] 把仿真限位透传给 left/right gripper_service
+                launch_arguments={
+                    'gripper_close_stop_gap': LaunchConfiguration('gripper_close_stop_gap'),
+                    'gripper_direct_close': LaunchConfiguration('gripper_direct_close'),
+                    'gripper_force_mode': LaunchConfiguration('gripper_force_mode'),
+                    'gripper_clamp_force': LaunchConfiguration('gripper_clamp_force'),
+                    'gripper_open_force': LaunchConfiguration('gripper_open_force'),
+                }.items(),
             )
         ],
     )
@@ -504,6 +599,10 @@ def generate_launch_description():
     # ============ 13. BT Executor (双臂公用一份, arm 通过参数切换) ============
     bt_manager_pkg = get_package_share_directory("s622_bt_manager")
     bt_dual_config = os.path.join(bt_manager_pkg, "config", "bt_dual_config.yaml")
+    # [M4 BT 回填] 长条交接参数（bb.* → blackboard，行为树 XML 用 {var} 引用）
+    m4_handover_config = os.path.join(bt_manager_pkg, "config", "m4_handover.yaml")
+    # [M5] §15：夹具/Anchor/运动原语参数唯一来源
+    m5_task_config = os.path.join(bt_manager_pkg, "config", "m5_task.yaml")
     tree_file_arg = DeclareLaunchArgument(
         'tree_file', default_value='pick_place_dual.xml',
         description='BT XML file: pick_place_dual.xml | pick_handover_place.xml')
@@ -520,7 +619,10 @@ def generate_launch_description():
                 name="bt_executor",
                 parameters=[
                     bt_dual_config,
+                    m4_handover_config,
+                    m5_task_config,
                     {
+                        "subtree_files": "handover_rod.xml,m5_fixture_place_test.xml",
                         "tree_file": LaunchConfiguration('tree_file'),  # ← 改
                         "tree_id":   LaunchConfiguration('tree_id'),    # ← 改
                         "tick_rate_hz": 10,
@@ -569,10 +671,12 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        set_model_path, tree_file_arg, tree_id_arg,
-        robot_spawn_delay, controller_spawn_delay,
-        gazebo, clock_bridge, camera_bridge, wrist_camera_bridge,
-        spawn_robot, spawn_box,
+        set_model_path, tree_file_arg, tree_id_arg, gui_arg, rviz_arg,
+        robot_spawn_delay, controller_spawn_delay, gripper_close_stop_gap, gripper_direct_close,
+        fixture_enable_arg, fixture_x_arg, fixture_y_arg, fixture_yaw_arg,
+        gripper_force_mode, gripper_clamp_force, gripper_open_force,
+        gazebo, clock_bridge, camera_bridge, wrist_camera_bridge, gripper_force_bridge,
+        spawn_robot, spawn_box, spawn_fixture,
         robot_state_pub,
         jsb_spawner, arm_hand_spawner,
         planning_scene,

@@ -1,0 +1,131 @@
+<?xml version="1.0"?>
+<!--
+  regrasp_fixture —— M5 重抓夹具（§4/P0）
+
+  ===== 设计依据（全部来自项目内已核实的实测/几何，非估算）=====
+
+  1) 杆与夹爪朝向（由 M4 标定值反解；tmp/m5_round/wg_measure.py + 位姿解算）：
+       grasp_frame x (指板张合方向) -> world -Z   （竖直！一指向下、一指向上）
+       grasp_frame y (杆长轴)      -> world +Y
+       grasp_frame z (接近方向)    -> world +X
+     ⇒ 下指板要从杆的**下方**伸上去，夹具在重抓区下方必须让开。
+
+  2) 包络（finger1/2.STL 实测，grasp_frame 系）：
+       沿杆轴(y) 20.61mm ｜ 接近向(z) 41.5mm ｜ 张合向(x) 70.37mm
+     下指板最低点 ≈ 杆心 -50mm。
+
+  3) 抓取区（M4 m4_handover.yaml receive_offset y=-0.054）：
+       交接区 object-x=-54mm，占 y ∈ [-64.3,-43.7]mm；重抓区 +54mm，占 [+43.7,+64.3]mm
+     杆长 150mm ⟹ 两端各仅剩 10.7mm，放不下支座
+     ⇒ 两支撑必须放**中段**（两抓取区之间），取 y = ±20mm。
+
+  ===== 为什么是平底+挡边，而不是 V 槽（2026-09-18 实测修正）=====
+
+  第一版用 90° V 槽，实测杆落座在 z=0.1288，而非设计的 0.1200。
+  原因：杆是**无滚转**被放进去的（quat 为纯 yaw 90°），因此没有转到"角朝下"，
+  而是两个底角搭在两侧 45° 壁上。验算壁面 x+z=0.1988、杆底角 (0.085, cz-0.015)
+  ⟹ cz=0.1288，与实测完全吻合。
+
+  即：90° V 槽对**正方形截面**存在两个相差 8.8mm 的稳定高度：
+      角朝下 杆心 = V尖 + 21.2mm ｜ 边朝下 杆心 = V尖 + 30.0mm
+  取决于放入时是否发生滚转 —— 与 M4 的"落座量不可控"同源，是 §13 T4
+  "Fixture Repeatability" 要避免的。
+
+  而方案 B 已确认正方形截面绕长轴 90° 几何等价 ⟹ V 槽对 roll 的约束**没有收益**，
+  只带来高度双值。故改为**平底支撑 + 侧挡边**：
+      高度唯一（杆以面朝下就位）：杆心 = 支撑面 + 15mm
+      侧挡边提供轴向外（x 向）保持与偏航粗约束
+      roll 不约束（对正方截面无几何意义）
+
+  ===== 几何 =====
+  局部系：原点在夹具落地中心，杆长轴 = 局部 Y。
+  支撑面 z=0.105 ⟹ 杆心 0.120m。
+  下指板最低点 = 0.120-0.050 = 0.070m；底板顶 0.020m ⟹ 净空 50mm ✓
+  两支撑 y=±0.020（各占 y∈[±0.014,±0.026]），距两抓取区边缘 17.7mm ✓
+
+  预期（待 clearance sweep 验证）：
+    允许 rod ↔ 支撑面接触；right finger/gripper/wrist/forearm ↔ fixture 必须无接触。
+-->
+<sdf version="1.7">
+  <model name="regrasp_fixture">
+    <static>true</static>
+
+    <link name="fixture">
+      <!-- 底板 -->
+      <collision name="base_collision">
+        <pose>0 0 0.01 0 0 0</pose>
+        <geometry><box><size>0.12 0.14 0.02</size></box></geometry>
+        <surface><friction><ode><mu>3.0</mu><mu2>3.0</mu2></ode></friction></surface>
+      </collision>
+      <visual name="base_visual">
+        <pose>0 0 0.01 0 0 0</pose>
+        <geometry><box><size>0.12 0.14 0.02</size></box></geometry>
+        <material><ambient>0.35 0.35 0.38 1</ambient><diffuse>0.35 0.35 0.38 1</diffuse></material>
+      </visual>
+
+      <!-- 支撑台 ×2（顶面 z=0.105 = 杆的支撑面，杆心 0.120） -->
+      <collision name="pedestal_m">
+        <pose>0 -0.020 0.0625 0 0 0</pose>
+        <geometry><box><size>0.046 0.012 0.085</size></box></geometry>
+        <surface><friction><ode><mu>3.0</mu><mu2>3.0</mu2></ode></friction></surface>
+      </collision>
+      <collision name="pedestal_p">
+        <pose>0 0.020 0.0625 0 0 0</pose>
+        <geometry><box><size>0.046 0.012 0.085</size></box></geometry>
+        <surface><friction><ode><mu>3.0</mu><mu2>3.0</mu2></ode></friction></surface>
+      </collision>
+      <visual name="pedestal_m_v">
+        <pose>0 -0.020 0.0625 0 0 0</pose>
+        <geometry><box><size>0.046 0.012 0.085</size></box></geometry>
+        <material><ambient>0.75 0.55 0.15 1</ambient><diffuse>0.75 0.55 0.15 1</diffuse></material>
+      </visual>
+      <visual name="pedestal_p_v">
+        <pose>0 0.020 0.0625 0 0 0</pose>
+        <geometry><box><size>0.046 0.012 0.085</size></box></geometry>
+        <material><ambient>0.75 0.55 0.15 1</ambient><diffuse>0.75 0.55 0.15 1</diffuse></material>
+      </visual>
+
+      <!-- 侧挡边 ×4（内表面 x=±0.018，比杆宽 30mm 每侧留 3mm；顶 z=0.120 达杆心线） -->
+      <collision name="lip_m_neg">
+        <pose>-0.021 -0.020 0.070 0 0 0</pose>
+        <geometry><box><size>0.006 0.012 0.100</size></box></geometry>
+        <surface><friction><ode><mu>3.0</mu><mu2>3.0</mu2></ode></friction></surface>
+      </collision>
+      <collision name="lip_m_pos">
+        <pose>0.021 -0.020 0.070 0 0 0</pose>
+        <geometry><box><size>0.006 0.012 0.100</size></box></geometry>
+        <surface><friction><ode><mu>3.0</mu><mu2>3.0</mu2></ode></friction></surface>
+      </collision>
+      <collision name="lip_p_neg">
+        <pose>-0.021 0.020 0.070 0 0 0</pose>
+        <geometry><box><size>0.006 0.012 0.100</size></box></geometry>
+        <surface><friction><ode><mu>3.0</mu><mu2>3.0</mu2></ode></friction></surface>
+      </collision>
+      <collision name="lip_p_pos">
+        <pose>0.021 0.020 0.070 0 0 0</pose>
+        <geometry><box><size>0.006 0.012 0.100</size></box></geometry>
+        <surface><friction><ode><mu>3.0</mu><mu2>3.0</mu2></ode></friction></surface>
+      </collision>
+      <visual name="lip_m_neg_v">
+        <pose>-0.021 -0.020 0.070 0 0 0</pose>
+        <geometry><box><size>0.006 0.012 0.100</size></box></geometry>
+        <material><ambient>0.85 0.65 0.25 1</ambient><diffuse>0.85 0.65 0.25 1</diffuse></material>
+      </visual>
+      <visual name="lip_m_pos_v">
+        <pose>0.021 -0.020 0.070 0 0 0</pose>
+        <geometry><box><size>0.006 0.012 0.100</size></box></geometry>
+        <material><ambient>0.85 0.65 0.25 1</ambient><diffuse>0.85 0.65 0.25 1</diffuse></material>
+      </visual>
+      <visual name="lip_p_neg_v">
+        <pose>-0.021 0.020 0.070 0 0 0</pose>
+        <geometry><box><size>0.006 0.012 0.100</size></box></geometry>
+        <material><ambient>0.85 0.65 0.25 1</ambient><diffuse>0.85 0.65 0.25 1</diffuse></material>
+      </visual>
+      <visual name="lip_p_pos_v">
+        <pose>0.021 0.020 0.070 0 0 0</pose>
+        <geometry><box><size>0.006 0.012 0.100</size></box></geometry>
+        <material><ambient>0.85 0.65 0.25 1</ambient><diffuse>0.85 0.65 0.25 1</diffuse></material>
+      </visual>
+    </link>
+  </model>
+</sdf>

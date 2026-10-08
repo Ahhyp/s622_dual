@@ -4,9 +4,25 @@
     <xacro:property name="M_PI" value="3.14159265358979323846" />
 
     <xacro:arg name="instantiate" default="false" />   <!-- ← 加这行 -->
+    <!-- [M4_2 / S1] 是否给 finger 关节挂"夹持力"注入插件（ApplyJointForce）。
+         true=挂上（默认；插件在收到 cmd_force 前完全惰性）
+         false=完全不挂（A/B 对照用：排查插件是否干扰 position 控制） -->
+    <xacro:arg name="gripper_force_plugins" default="false" />
+    <!-- [M4_2 / A''] 夹爪"螺丝限位"（最小闭合间隙, m）。0.0=不启用(真机原始行程)。
+         仿真跑长条交接时由 launch 从环境变量 GRIPPER_STOP_GAP 传入，例如 0.029。 -->
+    <xacro:arg name="finger_stop_gap" default="0.0" />
+    <!-- [M4_2 / S3] 夹爪"物理限位块"（推荐路线；默认关闭）。见下方 macro 注释。 -->
+    <xacro:arg name="gripper_stop_block" default="false" />
+    <xacro:arg name="gripper_stop_gap" default="0.028" />
     <!-- 2026-08-25 对齐单臂/robotarm：include_camera_visual=false（默认）=
          简化几何体，RViz 不卡；true=真实 mesh（d435.dae） -->
     <xacro:arg name="include_camera_visual" default="false" />
+    <!-- [C2.9a] arm command interface: velocity (JTC profile, default) or
+         position (QP profile, 125 Hz) -->
+    <xacro:arg name="arm_command_mode" default="velocity" />
+    <!-- [C2.9a] controllers yaml loaded by the gz_ros2_control plugin -->
+    <xacro:arg name="controllers_yaml"
+        default="$(find s622_moveit_config)/config/dual_arm_controllers.yaml" />
 
     <!-- ============ world 根 link ============ -->
     <link name="world" />
@@ -15,7 +31,7 @@
     <gazebo>
         <plugin filename="gz_ros2_control-system"
             name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-            <parameters>$(find s622_moveit_config)/config/dual_arm_controllers.yaml</parameters>
+            <parameters>$(arg controllers_yaml)</parameters>
         </plugin>
 
         <plugin filename="gz-sim-joint-state-publisher-system"
@@ -32,6 +48,36 @@
             name="ignition::gazebo::systems::Sensors">
             <render_engine>ogre2</render_engine>
         </plugin>
+
+        <!-- ==================================================================
+             [M4_2 / S1-P0] 夹爪"气压"等效：给 finger 关节注入常值夹持力。
+             真机：气动夹爪的夹持力由调压阀提供（软件只有开/关阀）；
+             仿真：gz_ros2_control 的 position 命令是"速度 ∝ 位置误差"的P型伺服，
+                   误差归零后夹持力=0（见 M4_0 §7.21）。故用 gz 原生插件在
+                   "被控对象层"补上这个力 —— 不改 ros2_control、不加控制器、
+                   不动真机任何文件。
+             接口：Double 消息 → /model/s622_dual_arm/joint/<joint>/cmd_force
+                   未收到消息前完全惰性（不影响既有行为）。
+             符号：沿关节轴。finger1 正=张开 → 夹持取负；finger2 反号。
+             ================================================================== -->
+        <xacro:if value="$(arg gripper_force_plugins)">
+        <plugin filename="ignition-gazebo-apply-joint-force-system"
+            name="gz::sim::systems::ApplyJointForce">
+            <joint_name>right_finger1_joint</joint_name>
+        </plugin>
+        <plugin filename="ignition-gazebo-apply-joint-force-system"
+            name="gz::sim::systems::ApplyJointForce">
+            <joint_name>right_finger2_joint</joint_name>
+        </plugin>
+        <plugin filename="ignition-gazebo-apply-joint-force-system"
+            name="gz::sim::systems::ApplyJointForce">
+            <joint_name>left_finger1_joint</joint_name>
+        </plugin>
+        <plugin filename="ignition-gazebo-apply-joint-force-system"
+            name="gz::sim::systems::ApplyJointForce">
+            <joint_name>left_finger2_joint</joint_name>
+        </plugin>
+        </xacro:if>
     </gazebo>
 
     <!-- ============ 引入 arm macro (M2.3 已 macro 化) ============ -->
@@ -39,7 +85,7 @@
         filename="$(find s622_moveit_descriptions)/urdf/s622_moveit_descriptions.urdf.xacro" />
     <xacro:property name="instantiate" value="false" />
     <!-- ============ Left Arm: (0.35, 0, 0), yaw=π ============ -->
-    <xacro:s622_arm prefix="left_" attach_world="false" />
+    <xacro:s622_arm prefix="left_" attach_world="false" finger_stop_gap="$(arg finger_stop_gap)" />
     <joint name="left_mount_joint" type="fixed">
         <parent link="world" />
         <child link="left_base_link" />
@@ -47,12 +93,55 @@
     </joint>
 
     <!-- ============ Right Arm: (-0.35, 0, 0), yaw=0 ============ -->
-    <xacro:s622_arm prefix="right_" attach_world="false" />
+    <xacro:s622_arm prefix="right_" attach_world="false" finger_stop_gap="$(arg finger_stop_gap)" />
     <joint name="right_mount_joint" type="fixed">
         <parent link="world" />
         <child link="right_base_link" />
         <origin xyz="-0.35 0 0" rpy="0 0 0" />
     </joint>
+
+    <!-- ==================================================================
+         [M4_2 / S3] 夹爪"机械限位块"(等效真机拧螺丝定的最小闭合间隙)。
+         为什么需要: A'' 用关节限位做螺丝会与初始位(全闭合 0)冲突 -> finger1 被锁死
+         (M4_0/M4_2 §11 实测 3/3)。改用"物理挡块"：不动关节限位(初始位合法),
+         靠硬约束挡住指板继续合拢 -> 位置伺服误差永不归零 -> 持续夹持力。
+         几何(基于 §7.14/§7.17 标定, 单位: 相对 wrist3_link):
+           挡块宽(x) = 目标闭合间隙;  y = ±0.010(与指板等厚);  z ∈ [0.188, 0.204]
+           —— 放在【杆截面之后】: 杆占 wrist3 z ≈ [0.212, 0.242] (含 13° 倾斜余量),
+              挡块留 ~4mm 安全距离, 既不碰杆又能挡住指板内侧面。
+         默认关闭; 仿真跑长条交接时 GRIPPER_STOP_BLOCK=1 GRIPPER_STOP_GAP=0.028 启用。
+         ================================================================== -->
+    <xacro:macro name="gripper_stop_block" params="prefix gap:=0.028">
+        <link name="${prefix}gripper_stop">
+            <inertial>
+                <mass value="0.002" />
+                <inertia ixx="7e-08" ixy="0" ixz="0" iyy="7e-08" iyz="0" izz="7e-08" />
+            </inertial>
+            <collision name="collision">
+                <geometry>
+                    <box size="${gap} 0.020 0.016" />
+                </geometry>
+            </collision>
+            <visual name="visual">
+                <geometry>
+                    <box size="${gap} 0.020 0.016" />
+                </geometry>
+                <material name="">
+                    <color rgba="0.2 0.8 0.2 1.0" />
+                </material>
+            </visual>
+        </link>
+        <joint name="${prefix}gripper_stop_joint" type="fixed">
+            <parent link="${prefix}wrist3_link" />
+            <child link="${prefix}gripper_stop" />
+            <origin xyz="0 0 0.196" rpy="0 0 0" />
+        </joint>
+    </xacro:macro>
+
+    <xacro:if value="$(arg gripper_stop_block)">
+        <xacro:gripper_stop_block prefix="left_" gap="$(arg gripper_stop_gap)" />
+        <xacro:gripper_stop_block prefix="right_" gap="$(arg gripper_stop_gap)" />
+    </xacro:if>
 
     <!-- ============ Gripper 摩擦 (双臂各一份, 从 M2.1 前缀化) ============ -->
     <gazebo reference="left_finger1_joint">
@@ -86,12 +175,12 @@
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"
         initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
-        prefix="left_" />
+        prefix="left_" arm_command_mode="$(arg arm_command_mode)" />
 
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"
         initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
-        prefix="right_" />
+        prefix="right_" arm_command_mode="$(arg arm_command_mode)" />
 
     <!-- ============ [M2] 全局俯视相机（默认关） ============
          world 相机（0,0.5,0.9 俯视）是旧视觉伺服用；M2 标定用腕部 wrist_camera，
