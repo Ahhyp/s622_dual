@@ -10,11 +10,32 @@
     <!-- <xacro:arg name="instantiate" default="true" /> -->
          <xacro:arg name="instantiate" default="false" />
 
+    <!-- [M4_2 / A''] 夹爪"机械限位螺丝"等效：>0 时把两指行程下限收到 ±值/2
+         （即最小闭合间隙 = 该值）。默认 0.0 = 保留真机原始行程（真机零影响）。
+         只应由仿真侧（gz_launch 的 gazebo xacro）传入。 -->
+    <xacro:arg name="finger_stop_gap" default="0.0" />
+
     <!-- ==================================================================
        Macro: s622_arm
        双臂顶层需显式实例化两次, 各自不同 prefix + attach_world=false
        ================================================================== -->
-    <xacro:macro name="s622_arm" params="prefix:='' attach_world:=true">
+    <xacro:macro name="s622_arm" params="prefix:='' attach_world:=true finger_stop_gap:=0.0">
+
+        <!-- [M4_2 / A''] 限位半间隙；<=0 表示不启用额外限位 -->
+        <xacro:property name="finger_stop_half" value="${float(finger_stop_gap) * 0.5}" />
+
+        <!-- [2026-09-20] 气爪本体质量（不含手指）。此前 grasp_frame 是空 link，
+             工具侧只有两根手指(8.8 g×2)，致臂级惯量偏低 6~8%、水平伸展位 J2
+             重力力矩偏低 3.6%。真机气动夹爪本体标称 135 g，含接头/气管可能略重，
+             称重后改此一处即可（惯量与质量同步缩放），左右臂同时生效。 -->
+        <xacro:property name="gripper_body_mass" value="0.135" />
+        <!-- 本体质心沿工具轴：法兰面在 0.100、手指转轴在 0.1658，取本体中段 0.130，
+             相对 grasp_frame(0.2168) 偏移 -0.0868 -->
+        <xacro:property name="gripper_body_com_dz" value="-0.0868" />
+        <!-- 惯量按 40(x) × 40(y) × 66(z) mm 方箱等效 -->
+        <xacro:property name="gripper_body_dx" value="0.04" />
+        <xacro:property name="gripper_body_dy" value="0.04" />
+        <xacro:property name="gripper_body_dz" value="0.066" />
 
         <xacro:if value="${attach_world}">
             <link name="world" />
@@ -294,7 +315,7 @@
             <parent link="${prefix}wrist3_link" />
             <child link="${prefix}finger1" />
             <axis xyz="0.99996 0 -0.0087267" />
-            <limit lower="-1e-6" upper="0.0305" effort="150" velocity="3.2" />
+            <limit lower="${finger_stop_half if finger_stop_half > 0.0 else -1e-6}" upper="0.0305" effort="150" velocity="3.2" />
         </joint>
 
         <link name="${prefix}finger2">
@@ -326,11 +347,23 @@
             <parent link="${prefix}wrist3_link" />
             <child link="${prefix}finger2" />
             <axis xyz="0.99996 0 -0.0087267" />
-            <limit lower="-0.0305" upper="1e-6" effort="150" velocity="3.2" />
+            <limit lower="-0.0305" upper="${-finger_stop_half if finger_stop_half > 0.0 else 1e-6}" effort="150" velocity="3.2" />
         </joint>
 
-        <!-- Grasp frame at the center of the gripper -->
-        <link name="${prefix}grasp_frame" />
+        <!-- Grasp frame at the center of the gripper.
+             [2026-09-20] 补气爪本体质量（见上方 gripper_body_* 属性）。 -->
+        <link name="${prefix}grasp_frame">
+            <inertial>
+                <origin xyz="0 0 ${gripper_body_com_dz}" rpy="0 0 0" />
+                <mass value="${gripper_body_mass}" />
+                <inertia ixx="${gripper_body_mass/12*(gripper_body_dy**2+gripper_body_dz**2)}"
+                         ixy="0"
+                         ixz="0"
+                         iyy="${gripper_body_mass/12*(gripper_body_dx**2+gripper_body_dz**2)}"
+                         iyz="0"
+                         izz="${gripper_body_mass/12*(gripper_body_dx**2+gripper_body_dy**2)}" />
+            </inertial>
+        </link>
         <joint name="${prefix}wrist3_to_grasp_frame" type="fixed">
             <parent link="${prefix}wrist3_link" />
             <child link="${prefix}grasp_frame" />
@@ -388,7 +421,8 @@
        双臂顶层文件应传 instantiate:=false 并显式调 s622_arm 两次
        ================================================================== -->
     <xacro:if value="$(arg instantiate)">
-        <xacro:s622_arm prefix="$(arg prefix)" attach_world="$(arg attach_world)" />
+        <xacro:s622_arm prefix="$(arg prefix)" attach_world="$(arg attach_world)"
+            finger_stop_gap="$(arg finger_stop_gap)" />
     </xacro:if>
 
 </robot>
