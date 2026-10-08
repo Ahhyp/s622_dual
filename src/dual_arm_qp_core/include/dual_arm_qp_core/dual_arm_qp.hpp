@@ -81,6 +81,7 @@ public:
     DualArmQpResult solve(const Q12& q, const Iso3& left_T_right_target);
 
     const DualArmQpParams& params() const { return params_; }
+    std::string solverName() const { return solver_->name(); }
     void setParams(const DualArmQpParams& params) { params_ = params; }
 
     /// Last assembled problem (for inspection / debugging / tests).
@@ -95,6 +96,19 @@ private:
     DualArmQpParams params_;
     QpSolverPtr solver_;
     QpProblem last_problem_;
+
+    // ---- pre-allocated scratch (C2.R4: no heap allocation in the control path) ----
+    // Sizes are constant except when the number of general inequality rows (k)
+    // changes; the dynamic ones only resize when k changes.
+    Eigen::Matrix<double, 6, 18> A_task_;
+    Eigen::Matrix<double, 18, 18> P_;
+    Eigen::Matrix<double, 18, 1> q_cost_;
+    Eigen::Matrix<double, 12, 1> lower_;
+    Eigen::Matrix<double, 12, 1> upper_;
+    Eigen::MatrixXd A_scratch_;
+    Eigen::VectorXd l_scratch_;
+    Eigen::VectorXd u_scratch_;
+
     Eigen::VectorXd warm_start_;
     bool warm_start_enabled_ = true;
 };

@@ -24,6 +24,7 @@
 
 #include "dual_arm_kinematics/dual_arm_kinematics.hpp"
 #include "dual_arm_qp_core/dual_arm_qp.hpp"
+#include "dual_arm_qp_controller/period_monitor.hpp"
 #include "dual_arm_qp_controller/stream_health_monitor.hpp"
 
 namespace dual_arm_qp_controller {
@@ -68,6 +69,8 @@ private:
     int solve_fail_streak_ = 0;
     bool hold_active_ = false;
     StreamHealthMonitor health_;
+    PeriodMonitor period_monitor_;
+    long long stats_counter_ = 0;
 
     // parameters
     double dt_ = 0.008;
@@ -79,6 +82,7 @@ private:
     double v_max_default_ = 2.5;
     double test_sweep_amp_m_ = 0.0;
     double test_sweep_period_s_ = 4.0;
+    double period_fault_factor_ = 2.0;
 
     template <typename T>
     void declareIfNeeded(const std::string& name, const T& default_value) {

@@ -54,7 +54,7 @@ public:
     /// @param q_cmd      last commanded joint positions (12)
     /// @param solve_fail_streak  consecutive QP solve failures
     StreamHealth evaluate(double elapsed_s, const Vec12& q, const Vec12& q_cmd,
-                          int solve_fail_streak) {
+                          int solve_fail_streak, bool deadline_fault = false) {
         solve_fail_streak_ = solve_fail_streak;
         StreamHealth out;
 
@@ -70,6 +70,15 @@ public:
                     return out;
                 }
             }
+        }
+
+        // 1b) control-period deadline overrun (C2.R2): global hold
+        if (deadline_fault) {
+            out.healthy = false;
+            out.unhealthy_arm = -1;
+            out.reason = "control period overrun";
+            last_ = out;
+            return out;
         }
 
         // 2) injected single-arm stall (simulation only)
