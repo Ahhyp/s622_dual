@@ -25,6 +25,7 @@
   <depend>eigen</depend>
   <depend>dual_arm_kinematics</depend>
   <depend>dual_arm_qp_core</depend>
+  <depend>dual_arm_collision</depend>
 
   <exec_depend>s622_moveit_descriptions</exec_depend>
   <exec_depend>controller_manager</exec_depend>

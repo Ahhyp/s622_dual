@@ -20,6 +20,7 @@ find_package(pluginlib REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(dual_arm_kinematics REQUIRED)
 find_package(dual_arm_qp_core REQUIRED)
+find_package(dual_arm_collision REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED src/dual_arm_qp_controller.cpp)
 target_include_directories(${PROJECT_NAME}
@@ -37,6 +38,7 @@ target_link_libraries(${PROJECT_NAME}
     Eigen3::Eigen
     dual_arm_kinematics::dual_arm_kinematics
     dual_arm_qp_core::dual_arm_qp_core
+    dual_arm_collision::dual_arm_collision
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -63,7 +65,7 @@ endif()
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(
   controller_interface hardware_interface pluginlib rclcpp rclcpp_lifecycle Eigen3
-  dual_arm_kinematics dual_arm_qp_core)
+  dual_arm_kinematics dual_arm_qp_core dual_arm_collision)
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
 
