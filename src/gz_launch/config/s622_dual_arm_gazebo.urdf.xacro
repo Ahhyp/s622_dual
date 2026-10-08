@@ -17,6 +17,12 @@
     <!-- 2026-08-25 对齐单臂/robotarm：include_camera_visual=false（默认）=
          简化几何体，RViz 不卡；true=真实 mesh（d435.dae） -->
     <xacro:arg name="include_camera_visual" default="false" />
+    <!-- [C2.9a] arm command interface: velocity (JTC profile, default) or
+         position (QP profile, 125 Hz) -->
+    <xacro:arg name="arm_command_mode" default="velocity" />
+    <!-- [C2.9a] controllers yaml loaded by the gz_ros2_control plugin -->
+    <xacro:arg name="controllers_yaml"
+        default="$(find s622_moveit_config)/config/dual_arm_controllers.yaml" />
 
     <!-- ============ world 根 link ============ -->
     <link name="world" />
@@ -25,7 +31,7 @@
     <gazebo>
         <plugin filename="gz_ros2_control-system"
             name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-            <parameters>$(find s622_moveit_config)/config/dual_arm_controllers.yaml</parameters>
+            <parameters>$(arg controllers_yaml)</parameters>
         </plugin>
 
         <plugin filename="gz-sim-joint-state-publisher-system"
@@ -169,12 +175,12 @@
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"
         initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
-        prefix="left_" />
+        prefix="left_" arm_command_mode="$(arg arm_command_mode)" />
 
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"
         initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
-        prefix="right_" />
+        prefix="right_" arm_command_mode="$(arg arm_command_mode)" />
 
     <!-- ============ [M2] 全局俯视相机（默认关） ============
          world 相机（0,0.5,0.9 俯视）是旧视觉伺服用；M2 标定用腕部 wrist_camera，

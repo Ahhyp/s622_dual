@@ -2,7 +2,16 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
     <!-- 增加 prefix 参数, 默认为空以保持 M1.7 兼容 -->
     <xacro:macro name="s622_moveit_descriptions_ros2_control"
-        params="name initial_positions_file prefix:=''">
+        params="name initial_positions_file prefix:='' arm_command_mode:='velocity'">
+
+        <!-- [C2.9a] arm command interface selectable: velocity (JTC profile) or
+             position (QP profile).  gz_ros2_control implements the position
+             interface as a P-type servo: velocity ~= gain * (target - current). -->
+        <xacro:property name="arm_cmd_iface"
+            value="${'position' if arm_command_mode == 'position' else 'velocity'}" />
+        <xacro:if value="${arm_command_mode == 'position'}">
+            <xacro:property name="arm_pos_gain" value="${1.0}" />
+        </xacro:if>
         
         <xacro:property name="initial_positions"
             value="${load_yaml(initial_positions_file)['initial_positions']}" />
@@ -14,7 +23,10 @@
             
             <!-- 6 个关节全部前缀化,同时 initial_positions 用无前缀 key 索引 -->
             <joint name="${prefix}j1">
-                <command_interface name="velocity" />
+                <command_interface name="${arm_cmd_iface}" />
+                <xacro:if value="${arm_command_mode == 'position'}">
+                    <param name="position_proportional_gain">${arm_pos_gain}</param>
+                </xacro:if>
                 <state_interface name="position">
                     <param name="initial_value">${initial_positions['j1']}</param>
                 </state_interface>
@@ -22,7 +34,10 @@
             </joint>
 
             <joint name="${prefix}j2">
-                <command_interface name="velocity" />
+                <command_interface name="${arm_cmd_iface}" />
+                <xacro:if value="${arm_command_mode == 'position'}">
+                    <param name="position_proportional_gain">${arm_pos_gain}</param>
+                </xacro:if>
                 <state_interface name="position">
                     <param name="initial_value">${initial_positions['j2']}</param>
                 </state_interface>
@@ -30,7 +45,10 @@
             </joint>
 
             <joint name="${prefix}j3">
-                <command_interface name="velocity" />
+                <command_interface name="${arm_cmd_iface}" />
+                <xacro:if value="${arm_command_mode == 'position'}">
+                    <param name="position_proportional_gain">${arm_pos_gain}</param>
+                </xacro:if>
                 <state_interface name="position">
                     <param name="initial_value">${initial_positions['j3']}</param>
                 </state_interface>
@@ -38,7 +56,10 @@
             </joint>
 
             <joint name="${prefix}j4">
-                <command_interface name="velocity" />
+                <command_interface name="${arm_cmd_iface}" />
+                <xacro:if value="${arm_command_mode == 'position'}">
+                    <param name="position_proportional_gain">${arm_pos_gain}</param>
+                </xacro:if>
                 <state_interface name="position">
                     <param name="initial_value">${initial_positions['j4']}</param>
                 </state_interface>
@@ -46,7 +67,10 @@
             </joint>
 
             <joint name="${prefix}j5">
-                <command_interface name="velocity" />
+                <command_interface name="${arm_cmd_iface}" />
+                <xacro:if value="${arm_command_mode == 'position'}">
+                    <param name="position_proportional_gain">${arm_pos_gain}</param>
+                </xacro:if>
                 <state_interface name="position">
                     <param name="initial_value">${initial_positions['j5']}</param>
                 </state_interface>
@@ -54,7 +78,10 @@
             </joint>
 
             <joint name="${prefix}j6">
-                <command_interface name="velocity" />
+                <command_interface name="${arm_cmd_iface}" />
+                <xacro:if value="${arm_command_mode == 'position'}">
+                    <param name="position_proportional_gain">${arm_pos_gain}</param>
+                </xacro:if>
                 <state_interface name="position">
                     <param name="initial_value">${initial_positions['j6']}</param>
                 </state_interface>
