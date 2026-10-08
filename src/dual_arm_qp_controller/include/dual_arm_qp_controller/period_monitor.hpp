@@ -38,7 +38,35 @@ public:
         count_ = 0;
         faults_ = 0;
         last_ = nominal_s_;
+        have_last_time_ = false;
+        last_was_measured_ = false;
     }
+
+    /// Feed an ABSOLUTE timestamp [s]; the monitor differentiates it to obtain
+    /// the real elapsed period.  This is the correct input for backends that
+    /// hand the controller a synthetic `period` (gz_ros2_control always passes
+    /// 1/update_rate).  Falls back to `fallback_s` on the first call, on a
+    /// non-monotonic/backwards clock jump, and on non-finite input.
+    /// @return true if the measured period is a deadline violation.
+    bool updateFromTime(double now_s, double fallback_s) {
+        double dt = fallback_s;
+        if (std::isfinite(now_s)) {
+            if (have_last_time_ && now_s > last_time_) {
+                dt = now_s - last_time_;
+                last_was_measured_ = true;
+            } else {
+                last_was_measured_ = false;
+            }
+            last_time_ = now_s;
+            have_last_time_ = true;
+        } else {
+            last_was_measured_ = false;
+        }
+        return update(dt);
+    }
+
+    /// True if the last fed period came from a real timestamp difference.
+    bool lastWasMeasured() const { return last_was_measured_; }
 
     /// Feed the actual period [s].  @return true if it is a deadline violation.
     bool update(double period_s) {
@@ -86,6 +114,9 @@ private:
     long long count_ = 0;
     long long faults_ = 0;
     double last_ = 0.008;
+    double last_time_ = 0.0;
+    bool have_last_time_ = false;
+    bool last_was_measured_ = false;
 };
 
 }  // namespace dual_arm_qp_controller

@@ -165,9 +165,13 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
 
     const double elapsed = (time - activate_time_).seconds();
 
-    // C2.R2: measure the REAL control period; a deadline overrun is a global
-    // (both-arm) D7 hold, so scheduler stalls become part of health monitoring.
-    const bool deadline_fault = period_monitor_.update(period.seconds());
+    // C2.R2: measure the REAL control period.  NOTE: some backends hand the
+    // controller a synthetic `period` (gz_ros2_control always passes
+    // 1/update_rate), so we differentiate the timestamp instead and only fall
+    // back to `period` when that is not possible.  A deadline overrun is a
+    // global (both-arm) D7 hold, so scheduler stalls become part of health.
+    const double period_arg_ms = period.seconds() * 1e3;
+    const bool deadline_fault = period_monitor_.updateFromTime(time.seconds(), period.seconds());
 
     // C2.7c: INDEPENDENT hard safety layer.  This does not rely on the QP or on
     // the CBF row being feasible -- it stops both arms as soon as the measured
@@ -224,11 +228,12 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     // C2.R2 statistics (low rate: every 10 s at 125 Hz)
     if (++stats_counter_ % 1250 == 0) {
         RCLCPP_INFO(get_node()->get_logger(),
-                    "period ms: mean=%.3f P95=%.3f P99=%.3f max=%.3f | overruns=%lld/%lld "
-                    "| solver P99=%.3f ms",
-                    period_monitor_.meanMs(), period_monitor_.percentileMs(0.95),
+                    "period ms: arg=%.3f measured(mean=%.3f P95=%.3f P99=%.3f max=%.3f, "
+                    "measured_flag=%d) | overruns=%lld/%lld | solver P99=%.3f ms",
+                    period_arg_ms, period_monitor_.meanMs(), period_monitor_.percentileMs(0.95),
                     period_monitor_.percentileMs(0.99), period_monitor_.maxMs(),
-                    period_monitor_.faults(), period_monitor_.count(), result.solve_time_ms);
+                    static_cast<int>(period_monitor_.lastWasMeasured()), period_monitor_.faults(),
+                    period_monitor_.count(), result.solve_time_ms);
     }
     return return_type::OK;
 }
