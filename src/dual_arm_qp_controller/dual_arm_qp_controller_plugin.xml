@@ -1,0 +1,11 @@
+<library path="dual_arm_qp_controller">
+  <class name="dual_arm_qp_controller/DualArmQpController"
+         type="dual_arm_qp_controller::DualArmQpController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>
+      Dual-arm coordinated QP controller: relative-pose task with slack,
+      joint-limit/velocity hard constraints, position command output, and
+      the D7 two-arm stream-health interlock.
+    </description>
+  </class>
+</library>

@@ -1,0 +1,41 @@
+# D7 interlock test profile: the relative target is swept continuously, and a
+# right-arm stream stall is injected at t=3 s for 1.5 s. Expected behaviour:
+# motion, then BOTH arms freeze for the stall window, then motion resumes.
+controller_manager:
+  ros__parameters:
+    update_rate: 125
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    dual_arm_qp_controller:
+      type: dual_arm_qp_controller/DualArmQpController
+
+dual_arm_qp_controller:
+  ros__parameters:
+    joints:
+      - left_j1
+      - left_j2
+      - left_j3
+      - left_j4
+      - left_j5
+      - left_j6
+      - right_j1
+      - right_j2
+      - right_j3
+      - right_j4
+      - right_j5
+      - right_j6
+    dt: 0.008
+    kp_rel: 10.0
+    w_rel: 1.0
+    w_slack: 1000.0
+    w_center: 0.01
+    w_reg: 0.000001
+    v_max: 2.5
+    tracking_error_limit: 0.0
+    solve_failure_limit: 5
+    stall_inject_arm: 1
+    stall_inject_start_s: 5.0
+    stall_inject_duration_s: 1.5
+    test_sweep_amp_m: 0.05
+    test_sweep_period_s: 4.0

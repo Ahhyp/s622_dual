@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd"
+            schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dual_arm_kinematics</name>
+  <version>0.1.0</version>
+  <description>
+    Step 0: unified dual-arm kinematics on top of the project's own DHKinematics.
+    Per-arm base-frame FK/Jacobian, world-frame composition, and a relative
+    pose / relative Jacobian assembled with SE(3) adjoints. Validated against
+    KDL (URDF oracle) and finite differences.
+  </description>
+
+  <maintainer email="1056651817@qq.com">Ahhyp</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>eigen</depend>
+  <depend>fairino_planning_core</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>orocos_kdl</test_depend>
+  <test_depend>kdl_parser</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
