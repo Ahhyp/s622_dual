@@ -78,7 +78,8 @@ inline Mat3 leftJacobianSO3(const Vec3& w) {
            ((th - std::sin(th)) / (th2 * th)) * W * W;
 }
 
-inline Mat3 rightJacobianInverseSO3(const Vec3& w) {
+/// J_l(w)^-1 = I - 0.5 [w] + (1/theta^2)(1 - (theta/2) cot(theta/2)) [w]^2
+inline Mat3 leftJacobianInverseSO3(const Vec3& w) {
     const double th2 = w.squaredNorm();
     const Mat3 W = skew(w);
     if (th2 < 1e-12) {
@@ -90,8 +91,17 @@ inline Mat3 rightJacobianInverseSO3(const Vec3& w) {
     return Mat3::Identity() - 0.5 * W + c * W * W;
 }
 
-inline Mat3 leftJacobianInverseSO3(const Vec3& w) {
-    return rightJacobianInverseSO3(-w);
+/// J_r(w)^-1 = J_l(-w)^-1 = I + 0.5 [w] + (same coefficient) [w]^2
+inline Mat3 rightJacobianInverseSO3(const Vec3& w) {
+    const double th2 = w.squaredNorm();
+    const Mat3 W = skew(w);
+    if (th2 < 1e-12) {
+        return Mat3::Identity() + 0.5 * W + (1.0 / 12.0) * W * W;
+    }
+    const double th = std::sqrt(th2);
+    const double half = 0.5 * th;
+    const double c = (1.0 - half * std::cos(half) / std::sin(half)) / th2;
+    return Mat3::Identity() + 0.5 * W + c * W * W;
 }
 
 inline Iso3 expSE3(const Vec6& xi) {

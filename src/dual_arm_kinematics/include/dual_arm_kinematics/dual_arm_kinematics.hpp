@@ -80,6 +80,30 @@ public:
     /// Spatial Jacobian: axes = world, reference point = world origin.
     Mat6 spatialJacobianWorld(Arm a, const JointConfig& q) const;
 
+    /// World axes, reference point = grasp origin ([v; w] in world axes).
+    Mat6 jacobianWorldPoint(Arm a, const JointConfig& q) const;
+
+    // ---------------- coordination / object frame (C2.4) ----------------
+    /// SE(3) midpoint of the two grasp frames, expressed in world:
+    ///   p_O = (p_L + p_R) / 2
+    ///   R_O = R_L * exp( 0.5 * log(R_L^T R_R) )
+    Iso3 worldTobject(const Q12& q12) const;
+
+    /// Object Jacobian, axes = world, reference point = object origin.
+    /// Exact:  v_O = 0.5 (v_L + v_R),
+    ///         w_O = (I - G) w_L + G w_R,
+    /// with G = R_L * J_l(xi/2) * 0.5 * J_l(xi)^-1 * R_L^T, xi = log(R_L^T R_R).
+    Mat6x12 objectJacobianWorld(const Q12& q12) const;
+
+    /// Object Jacobian with axes = object frame (reference point = object origin).
+    Mat6x12 objectJacobianBody(const Q12& q12) const;
+
+    /// Pose error twist  e = log( (world_T_object)^-1 * target ),  object frame.
+    Vec6 objectError(const Q12& q12, const Iso3& world_T_object_target) const;
+
+    /// First-order (small-error) error-rate Jacobian for objectError().
+    Mat6x12 objectErrorJacobian(const Q12& q12, const Iso3& world_T_object_target) const;
+
     // ---------------- 12-DOF helpers ----------------
     static Q12 stack(const JointConfig& q_left, const JointConfig& q_right);
     static void split(const Q12& q12, JointConfig* q_left, JointConfig* q_right);
