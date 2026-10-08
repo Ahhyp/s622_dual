@@ -1,16 +1,19 @@
 // include/dual_arm_qp_core/dual_arm_qp.hpp
 // Task-level QP for dual-arm coordinated control (C2.2 skeleton).
 //
-// Decision variables: z = [dq (12); s (6)]
-//   dq : joint increment over one control period
-//   s  : slack of the relative-pose task (SE(3) twist, right-grasp frame)
+// Decision variables (C2.4b): z = [dq (12); s_rel (6); s_obj (6)]
+//   dq    : joint increment over one control period
+//   s_rel : slack of the relative-pose task (twist, right-grasp frame)
+//   s_obj : slack of the object/coordination-frame task (twist, object frame)
 //
 // Cost:
-//   w_rel   * || J_rel dq + alpha * e - s ||^2      (relative pose task)
-//   w_slack * || s ||^2                             (slack penalty)
-//   w_center* || dq - dq_center ||^2                (secondary: joint centering)
-//   w_reg   * || dq ||^2                            (regularization)
-//   (alpha = kp_rel * dt)
+//   w_rel    * || J_rel dq + alpha_rel e_rel - s_rel ||^2   (relative task)
+//   w_obj    * || J_obj dq + alpha_obj e_obj - s_obj ||^2   (object task)
+//   w_slack  * || s_rel ||^2
+//   w_slack_obj * || s_obj ||^2
+//   w_center * || dq - dq_center ||^2
+//   w_reg    * || dq ||^2
+//   (alpha_* = kp_* * dt; the object task is disabled when w_obj == 0)
 //
 // Hard constraints (l <= A z <= u):
 //   dq_lower <= dq <= dq_upper      with
@@ -45,6 +48,11 @@ struct DualArmQpParams {
     double w_center = 1e-2;
     double w_reg = 1e-6;
 
+    // ---- object / coordination-frame task (C2.4b) ----
+    double kp_obj = 10.0;       // object feedback gain [1/s]
+    double w_obj = 0.0;         // 0 = object task disabled
+    double w_slack_obj = 1e-6;  // keeps P PD when w_obj == 0
+
     Vec12 q_min;
     Vec12 q_max;
     Vec12 v_max;
@@ -55,7 +63,7 @@ struct DualArmQpParams {
 
     /// Extra linear inequality rows  C z <= d  (columns = [dq; s]).
     /// Rows are appended after the box constraints.
-    Eigen::MatrixXd C_ineq;   // (k x 18)
+    Eigen::MatrixXd C_ineq;   // (k x 24)
     Eigen::VectorXd d_ineq;   // (k)
 
     DualArmQpParams();
@@ -63,11 +71,13 @@ struct DualArmQpParams {
 
 struct DualArmQpResult {
     Vec12 dq = Vec12::Zero();
-    Vec6 slack = Vec6::Zero();
+    Vec6 slack = Vec6::Zero();        // relative-task slack
+    Vec6 slack_object = Vec6::Zero(); // object-task slack
     bool converged = false;
     int iterations = 0;
     double solve_time_ms = 0.0;
-    double relative_error_norm = 0.0;  // ||e|| at the linearization point
+    double relative_error_norm = 0.0;  // ||e_rel|| at the linearization point
+    double object_error_norm = 0.0;    // ||e_obj|| at the linearization point
     std::string solver_name;
 };
 
@@ -76,9 +86,19 @@ public:
     DualArmQp(const DualArmKinematics& kinematics, const DualArmQpParams& params,
               QpSolverPtr solver = nullptr);
 
-    /// One QP step: returns the joint increment that drives the relative pose
-    /// towards `left_T_right_target` while respecting the hard constraints.
+    /// One QP step (relative task only): the object target defaults to the
+    /// current object pose.
     DualArmQpResult solve(const Q12& q, const Iso3& left_T_right_target);
+
+    /// One QP step with both tasks (C2.4b).
+    DualArmQpResult solve(const Q12& q, const Iso3& left_T_right_target,
+                          const Iso3& world_T_object_target);
+
+    /// Same, with a feed-forward object body twist (object frame, [v; w]).
+    /// Feed-forward is what removes the v/kp lag of pure proportional tracking.
+    DualArmQpResult solve(const Q12& q, const Iso3& left_T_right_target,
+                          const Iso3& world_T_object_target,
+                          const Vec6& object_body_twist_ff);
 
     const DualArmQpParams& params() const { return params_; }
     std::string solverName() const { return solver_->name(); }
@@ -100,9 +120,10 @@ private:
     // ---- pre-allocated scratch (C2.R4: no heap allocation in the control path) ----
     // Sizes are constant except when the number of general inequality rows (k)
     // changes; the dynamic ones only resize when k changes.
-    Eigen::Matrix<double, 6, 18> A_task_;
-    Eigen::Matrix<double, 18, 18> P_;
-    Eigen::Matrix<double, 18, 1> q_cost_;
+    Eigen::Matrix<double, 6, 24> A_task_rel_;
+    Eigen::Matrix<double, 6, 24> A_task_obj_;
+    Eigen::Matrix<double, 24, 24> P_;
+    Eigen::Matrix<double, 24, 1> q_cost_;
     Eigen::Matrix<double, 12, 1> lower_;
     Eigen::Matrix<double, 12, 1> upper_;
     Eigen::MatrixXd A_scratch_;

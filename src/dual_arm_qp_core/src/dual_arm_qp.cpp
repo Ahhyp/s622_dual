@@ -1,4 +1,8 @@
 // src/dual_arm_qp.cpp
+// C2.4b: two main tasks (relative pose + object/coordination frame), each with
+// its own slack.  Decision vector is always 24 = [dq(12); s_rel(6); s_obj(6)],
+// so the QP structure never changes at runtime (OSQP workspace stays warm);
+// the object task is switched off by w_obj == 0.
 
 #include "dual_arm_qp_core/dual_arm_qp.hpp"
 
@@ -27,34 +31,67 @@ DualArmQp::DualArmQp(const DualArmKinematics& kinematics, const DualArmQpParams&
     : kin_(kinematics), params_(params), solver_(solver ? std::move(solver) : makeDefaultSolver()) {}
 
 DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) {
+    return solve(q, left_T_right_target, kin_.worldTobject(q));
+}
+
+DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
+                                 const Iso3& world_T_object_target) {
+    return solve(q, left_T_right_target, world_T_object_target, Vec6::Zero());
+}
+
+DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
+                                 const Iso3& world_T_object_target,
+                                 const Vec6& object_body_twist_ff) {
     DualArmQpResult result;
     result.solver_name = solver_->name();
 
-    const Vec6 e = kin_.relativeError(q, left_T_right_target);
-    result.relative_error_norm = e.norm();
+    constexpr int kNumVars = 24;
+    constexpr int kSRel0 = 12;
+    constexpr int kSObj0 = 18;
+    const Eigen::Matrix<double, 12, 12> I12 = Eigen::Matrix<double, 12, 12>::Identity();
+    const Eigen::Matrix<double, 6, 6> I6 = Eigen::Matrix<double, 6, 6>::Identity();
 
-    const dual_arm::Mat6x12 J =
+    const Vec6 e_rel = kin_.relativeError(q, left_T_right_target);
+    result.relative_error_norm = e_rel.norm();
+    const dual_arm::Mat6x12 J_rel =
         kin_.relativeJacobian(q, dual_arm::RelativeFrame::BodyR);
 
-    constexpr int kNumVars = 18;  // [dq(12); slack(6)]
-    (void)kNumVars;
+    const Vec6 e_obj = kin_.objectError(q, world_T_object_target);
+    result.object_error_norm = e_obj.norm();
+
     const double dt = params_.dt;
-    const double alpha = params_.kp_rel * dt;
+    const double alpha_rel = params_.kp_rel * dt;
+    const double alpha_obj = params_.kp_obj * dt;
+    const bool object_on = params_.w_obj > 0.0;
 
-    // ---- cost (pre-allocated scratch, no heap allocation) ------------------
-    A_task_.setZero();
-    A_task_.leftCols<12>() = J;
-    A_task_.rightCols<6>() = -Eigen::Matrix<double, 6, 6>::Identity();
+    // ---- relative task row block: [J_rel, -I6, 0] -------------------------
+    A_task_rel_.setZero();
+    A_task_rel_.block<6, 12>(0, 0) = J_rel;
+    A_task_rel_.block<6, 6>(0, kSRel0) = -I6;
 
-    // Task residual r = J_rel dq - alpha*e - s, with alpha = kp_rel*dt.
-    // (edot ~= -J_rel dq, so J_rel dq = +alpha*e drives e -> 0.)
-    const Vec6 task_bias = -alpha * e;
-    P_.noalias() = params_.w_rel * (A_task_.transpose() * A_task_);
-    q_cost_.noalias() = params_.w_rel * (A_task_.transpose() * task_bias);
+    // ---- object task row block: [J_obj, 0, -I6] ---------------------------
+    A_task_obj_.setZero();
+    if (object_on) {
+        const dual_arm::Mat6x12 J_obj = kin_.objectJacobianBody(q);
+        A_task_obj_.block<6, 12>(0, 0) = J_obj;
+        A_task_obj_.block<6, 6>(0, kSObj0) = -I6;
+    }
 
-    P_.topLeftCorner<12, 12>() +=
-        (params_.w_center + params_.w_reg) * Eigen::Matrix<double, 12, 12>::Identity();
-    P_.bottomRightCorner<6, 6>() += params_.w_slack * Eigen::Matrix<double, 6, 6>::Identity();
+    // residual = A z - alpha*e  (so that edot ~= -alpha*e drives e -> 0)
+    const Vec6 bias_rel = -alpha_rel * e_rel;
+    // bias = -(alpha*e + dt*v_ff): the proportional term removes error, the
+    // feed-forward term removes the velocity-dependent lag (C2.4c).
+    const Vec6 bias_obj = -(alpha_obj * e_obj + dt * object_body_twist_ff);
+
+    P_ = params_.w_rel * (A_task_rel_.transpose() * A_task_rel_);
+    q_cost_ = params_.w_rel * (A_task_rel_.transpose() * bias_rel);
+    if (object_on) {
+        P_ += params_.w_obj * (A_task_obj_.transpose() * A_task_obj_);
+        q_cost_ += params_.w_obj * (A_task_obj_.transpose() * bias_obj);
+    }
+    P_.block<12, 12>(0, 0) += (params_.w_center + params_.w_reg) * I12;
+    P_.block<6, 6>(kSRel0, kSRel0) += params_.w_slack * I6;
+    P_.block<6, 6>(kSObj0, kSObj0) += params_.w_slack_obj * I6;
     q_cost_.head<12>() -= params_.w_center * params_.dq_center;
 
     // ---- box constraints on dq -------------------------------------------
@@ -62,7 +99,6 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) 
         double lo = std::max(-params_.v_max[i] * dt, params_.q_min[i] - q[i]);
         double hi = std::min(params_.v_max[i] * dt, params_.q_max[i] - q[i]);
         if (lo > hi) {
-            // Joint is far outside its range: move back as fast as allowed.
             const double v = (q[i] > params_.q_max[i]) ? -params_.v_max[i] * dt
                                                        : params_.v_max[i] * dt;
             lo = hi = v;
@@ -71,7 +107,10 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) 
         upper_[i] = hi;
     }
 
-    const int k = static_cast<int>(params_.C_ineq.rows());
+    int k = 0;
+    if (params_.C_ineq.rows() > 0 && params_.C_ineq.cols() == kNumVars) {
+        k = static_cast<int>(params_.C_ineq.rows());
+    }
     const int m = 12 + k;
     if (A_scratch_.rows() != m || A_scratch_.cols() != kNumVars) {
         A_scratch_.resize(m, kNumVars);
@@ -79,7 +118,7 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) 
         u_scratch_.resize(m);
     }
     A_scratch_.topRows(12).setZero();
-    A_scratch_.topRows(12).leftCols<12>() = Eigen::Matrix<double, 12, 12>::Identity();
+    A_scratch_.topRows(12).leftCols<12>() = I12;
     l_scratch_.head(12) = lower_;
     u_scratch_.head(12) = upper_;
     if (k > 0) {
@@ -101,18 +140,17 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) 
     result.converged = solution.converged;
     result.iterations = solution.iterations;
     result.solve_time_ms = solution.solve_time_ms;
+
     if (solution.x.size() == kNumVars) {
-        result.dq = solution.x.head<12>();
-        result.slack = solution.x.tail<6>();
+        result.dq = solution.x.segment<12>(0);
+        result.slack = solution.x.segment<6>(kSRel0);
+        result.slack_object = solution.x.segment<6>(kSObj0);
     } else if (solution.x.size() == 12) {
         result.dq = solution.x;
     }
 
-    // Safety clamp: the solver tolerances are ~1e-6, but the joint box is a
-    // hard constraint, so project dq onto it before it ever reaches hardware.
-    // NOTE (C2.R3): this element-wise projection is exact ONLY for the box.
-    // It is skipped when general inequality rows (e.g. CBF) are present,
-    // because it does not preserve C*dq <= d in general.
+    // Safety clamp: exact for the box only.  Skipped when general inequality
+    // rows are present (C2.R3), because it can break C*dq <= d.
     if (k == 0) {
         for (int i = 0; i < 12; ++i) {
             result.dq[i] = std::min(upper_[i], std::max(lower_[i], result.dq[i]));
@@ -122,7 +160,8 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) 
     if (warm_start_enabled_) {
         if (warm_start_.size() != kNumVars) warm_start_.setZero(kNumVars);
         warm_start_.head<12>() = result.dq;
-        warm_start_.tail<6>() = result.slack;
+        warm_start_.segment<6>(kSRel0) = result.slack;
+        warm_start_.segment<6>(kSObj0) = result.slack_object;
     }
     return result;
 }
