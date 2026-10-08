@@ -83,6 +83,11 @@ public:
     /// World axes, reference point = grasp origin ([v; w] in world axes).
     Mat6 jacobianWorldPoint(Arm a, const JointConfig& q) const;
 
+    /// Intermediate DH frame i (0 = base, 1..6 = after joint i).  C2.5 uses
+    /// this for the arm-arm clearance proxy (elbow / wrist origins).
+    Iso3 baseTframe(Arm a, const JointConfig& q, int frame_index) const;
+    Iso3 worldTframe(Arm a, const JointConfig& q, int frame_index) const;
+
     // ---------------- coordination / object frame (C2.4) ----------------
     /// SE(3) midpoint of the two grasp frames, expressed in world:
     ///   p_O = (p_L + p_R) / 2

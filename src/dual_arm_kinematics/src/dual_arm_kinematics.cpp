@@ -2,6 +2,8 @@
 
 #include "dual_arm_kinematics/dual_arm_kinematics.hpp"
 
+#include <algorithm>
+
 namespace dual_arm {
 
 Iso3 DualArmKinematics::toIso(const Eigen::Matrix4d& T) {
@@ -68,6 +70,18 @@ Mat6 DualArmKinematics::jacobianWorldPoint(Arm a, const JointConfig& q) const {
     R6.topLeftCorner<3, 3>() = R_wg;
     R6.bottomRightCorner<3, 3>() = R_wg;
     return R6 * jacobianBody(a, q);
+}
+
+Iso3 DualArmKinematics::baseTframe(Arm a, const JointConfig& q, int frame_index) const {
+    const auto Ts = dh_[index(a)].fkineAll(q);
+    const int i = std::min(6, std::max(0, frame_index));
+    Iso3 T = Iso3::Identity();
+    T.matrix() = Ts[i];
+    return T;
+}
+
+Iso3 DualArmKinematics::worldTframe(Arm a, const JointConfig& q, int frame_index) const {
+    return base_[index(a)] * baseTframe(a, q, frame_index);
 }
 
 Iso3 DualArmKinematics::worldTobject(const Q12& q12) const {

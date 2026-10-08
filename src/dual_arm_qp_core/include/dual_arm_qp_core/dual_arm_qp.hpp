@@ -53,6 +53,14 @@ struct DualArmQpParams {
     double w_obj = 0.0;         // 0 = object task disabled
     double w_slack_obj = 1e-6;  // keeps P PD when w_obj == 0
 
+    // ---- nullspace secondary objectives (C2.5) ----------------------------
+    // dq_center is built from a weighted sum of improving directions and
+    // clamped to at most null_step (rad per step) in norm.
+    double w_null_margin = 0.0;  // joint-limit margin
+    double w_null_manip = 0.0;   // sigma_min(J_rel)
+    double w_null_clear = 0.0;   // arm-arm clearance proxy (elbow/wrist)
+    double null_step = 0.005;    // max |dq_center| per step [rad]
+
     Vec12 q_min;
     Vec12 q_max;
     Vec12 v_max;
@@ -130,6 +138,7 @@ private:
     Eigen::VectorXd l_scratch_;
     Eigen::VectorXd u_scratch_;
 
+    Vec12 dq_center_scratch_ = Vec12::Zero();
     Eigen::VectorXd warm_start_;
     bool warm_start_enabled_ = true;
 };

@@ -11,6 +11,59 @@
 
 namespace dual_arm_qp {
 
+namespace {
+
+/// sigma_min of the relative Jacobian (dual-arm task capability metric).
+double sigmaMinRel(const DualArmKinematics& kin, const Q12& q) {
+    const dual_arm::Mat6x12 J = kin.relativeJacobian(q, dual_arm::RelativeFrame::BodyR);
+    Eigen::JacobiSVD<dual_arm::Mat6x12> svd(J);
+    return svd.singularValues().minCoeff();
+}
+
+/// Arm-arm clearance proxy: min distance between key link origins of the two
+/// arms (shoulder / elbow / wrist / flange).  A comfort objective, NOT safety.
+double clearanceProxy(const DualArmKinematics& kin, const Q12& q) {
+    dual_arm::JointConfig ql, qr;
+    DualArmKinematics::split(q, &ql, &qr);
+    const int idx[4] = {2, 3, 4, 5};
+    double d_min = std::numeric_limits<double>::infinity();
+    for (int i = 0; i < 4; ++i) {
+        const Eigen::Vector3d pl = kin.worldTframe(dual_arm::Arm::Left, ql, idx[i]).translation();
+        for (int j = 0; j < 4; ++j) {
+            const Eigen::Vector3d pr =
+                kin.worldTframe(dual_arm::Arm::Right, qr, idx[j]).translation();
+            d_min = std::min(d_min, (pl - pr).norm());
+        }
+    }
+    return d_min;
+}
+
+/// Improving (ascent) direction of a scalar objective, by central differences.
+template <typename Fn>
+Vec12 ascentDirection(const Q12& q, double h, Fn f) {
+    Vec12 g;
+    for (int i = 0; i < 12; ++i) {
+        Q12 qp = q, qm = q;
+        qp[i] += h;
+        qm[i] -= h;
+        g[i] = (f(qp) - f(qm)) / (2.0 * h);
+    }
+    return g;
+}
+
+/// Joint-limit margin: push joints back towards the middle of their range.
+Vec12 marginDirection(const DualArmQpParams& p, const Q12& q) {
+    Vec12 g;
+    for (int i = 0; i < 12; ++i) {
+        const double range = std::max(1e-6, p.q_max[i] - p.q_min[i]);
+        const double mid = 0.5 * (p.q_max[i] + p.q_min[i]);
+        g[i] = -2.0 * (q[i] - mid) / (range * range);  // descent of sum(r_i^2)
+    }
+    return g;
+}
+
+}  // namespace
+
 void defaultS622Limits(Vec12* q_min, Vec12* q_max, Vec12* v_max) {
     const double lo[6] = {-3.0543, -4.6251, -2.8274, -4.6251, -3.0543, -3.0543};
     const double hi[6] = {3.0543, 1.4835, 2.8274, 1.4835, 3.0543, 3.0543};
@@ -70,9 +123,9 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
     A_task_rel_.block<6, 6>(0, kSRel0) = -I6;
 
     // ---- object task row block: [J_obj, 0, -I6] ---------------------------
+    const dual_arm::Mat6x12 J_obj = kin_.objectJacobianBody(q);
     A_task_obj_.setZero();
     if (object_on) {
-        const dual_arm::Mat6x12 J_obj = kin_.objectJacobianBody(q);
         A_task_obj_.block<6, 12>(0, 0) = J_obj;
         A_task_obj_.block<6, 6>(0, kSObj0) = -I6;
     }
@@ -89,10 +142,55 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
         P_ += params_.w_obj * (A_task_obj_.transpose() * A_task_obj_);
         q_cost_ += params_.w_obj * (A_task_obj_.transpose() * bias_obj);
     }
+    // ---- nullspace secondary objectives (C2.5) ----------------------------
+    // Each direction is normalised before weighting; the sum is capped at
+    // null_step so the secondary objective can never dominate the main tasks.
+    const bool nullspace_on = params_.w_null_margin > 0.0 || params_.w_null_manip > 0.0 ||
+                              params_.w_null_clear > 0.0;
+    if (nullspace_on) {
+        Vec12 dir = Vec12::Zero();
+        auto add = [&](const Vec12& d, double w) {
+            const double n = d.norm();
+            if (n > 1e-12) dir += w * (d / n);
+        };
+        if (params_.w_null_margin > 0.0) add(marginDirection(params_, q), params_.w_null_margin);
+        if (params_.w_null_manip > 0.0) {
+            add(ascentDirection(q, 1e-3, [&](const Q12& qq) { return sigmaMinRel(kin_, qq); }),
+                params_.w_null_manip);
+        }
+        if (params_.w_null_clear > 0.0) {
+            add(ascentDirection(q, 1e-3, [&](const Q12& qq) { return clearanceProxy(kin_, qq); }),
+                params_.w_null_clear);
+        }
+        // Project the preference into the NULLSPACE of the active main tasks
+        // (damped pseudo-inverse):  N = I - J_task^+ J_task.  This is what makes
+        // it a true redundancy allocation instead of a competing soft cost.
+        // With both tasks active J_task is 12x12 -> N ~= 0 (no redundancy).
+        const int m_task = object_on ? 12 : 6;
+        Eigen::MatrixXd J_task(m_task, 12);
+        J_task.topRows<6>() = J_rel;
+        if (object_on) J_task.bottomRows<6>() = J_obj;
+        const double lambda2 = 1e-8;
+        const Eigen::MatrixXd JJt =
+            J_task * J_task.transpose() +
+            lambda2 * Eigen::MatrixXd::Identity(m_task, m_task);
+        const Eigen::MatrixXd N =
+            Eigen::Matrix<double, 12, 12>::Identity() - J_task.transpose() * JJt.inverse() * J_task;
+        Vec12 dir_null = N * dir;
+        const double n = dir_null.norm();
+        if (n > 1e-12) {
+            dq_center_scratch_ = (params_.null_step / std::max(1.0, n)) * dir_null;
+        } else {
+            dq_center_scratch_.setZero();
+        }
+    } else {
+        dq_center_scratch_ = params_.dq_center;
+    }
+
     P_.block<12, 12>(0, 0) += (params_.w_center + params_.w_reg) * I12;
     P_.block<6, 6>(kSRel0, kSRel0) += params_.w_slack * I6;
     P_.block<6, 6>(kSObj0, kSObj0) += params_.w_slack_obj * I6;
-    q_cost_.head<12>() -= params_.w_center * params_.dq_center;
+    q_cost_.head<12>() -= params_.w_center * dq_center_scratch_;
 
     // ---- box constraints on dq -------------------------------------------
     for (int i = 0; i < 12; ++i) {
