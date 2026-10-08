@@ -135,8 +135,8 @@ TEST(DualArmQp, GeneralInequalityPreservedWhenClampIsSkipped) {
     // too -- the solver result must be returned as-is.
     DualArmKinematics kin;
     DualArmQpParams params;
-    params.C_ineq = Eigen::MatrixXd::Zero(1, 18);
-    params.C_ineq(0, 0) = 1.0;                       // dq_0 <= -0.01
+    params.C_ineq = Eigen::MatrixXd::Zero(1, 24);   // 24 vars since C2.4b
+    params.C_ineq(0, 0) = 1.0;                      // dq_0 <= -0.01
     params.d_ineq = Eigen::VectorXd::Constant(1, -0.01);
     DualArmQp qp(kin, params);
 
