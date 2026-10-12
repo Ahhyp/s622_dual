@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd"
+            schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dual_arm_pose_optimization</name>
+  <version>0.1.0</version>
+  <description>
+    C4.2: handover / standby pose and cooperative-zone optimization for the S622
+    dual-arm system.
+
+    S1 scope (this package's first slice): build a MoveIt PlanningScene OFFLINE
+    (no ROS node) from URDF + SRDF, using the real STL collision meshes and FCL,
+    with hard assertions that every mesh actually loaded.  Provides the three
+    collision-distance readings the plan requires (whole-robot minimum vs
+    cross-arm minimum vs C2.7 capsule proxy), the SRDF / cross-arm / robot-world
+    allowed-collision matrices, and a floor object with an explicit base_link
+    exemption.
+  </description>
+
+  <maintainer email="1056651817@qq.com">Ahhyp</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>moveit_core</depend>
+  <depend>urdf</depend>
+  <depend>srdfdom</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>dual_arm_kinematics</depend>
+  <depend>dual_arm_collision</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
