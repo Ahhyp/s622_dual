@@ -55,6 +55,11 @@ struct IkOutcome {
   std::size_t n_hard_pass = 0;     ///< candidates that passed the hard filters
   double selected_cost = 0.0;
 
+  /// ALL hard-passing analytic branches, best-first by the selector's cost.
+  /// Required by 额外要求 2: the dual-arm problem must be evaluated over
+  /// solution PAIRS, not over one arbitrarily chosen solution per arm.
+  std::vector<JointConfig> hard_pass_solutions;
+
   /// Per-candidate reject reasons, as "reason: count" (for the S2 report).
   std::vector<std::pair<std::string, int>> reject_histogram;
 

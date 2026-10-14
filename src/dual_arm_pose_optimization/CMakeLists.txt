@@ -22,6 +22,8 @@ add_library(${PROJECT_NAME} SHARED
   src/collision_backend.cpp
   src/ik_layer.cpp
   src/m4_baseline.cpp
+  src/candidate_pool.cpp
+  src/feasibility.cpp
 )
 target_include_directories(${PROJECT_NAME}
   PUBLIC
@@ -52,11 +54,15 @@ target_link_libraries(c42_scene_probe ${PROJECT_NAME})
 add_executable(c42_baseline_probe src/c42_baseline_probe_main.cpp)
 target_link_libraries(c42_baseline_probe ${PROJECT_NAME})
 
+# S3: layered reachability sweep S0 -> S4.
+add_executable(c42_reachability src/c42_reachability_main.cpp)
+target_link_libraries(c42_reachability ${PROJECT_NAME})
+
 install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
-install(TARGETS c42_scene_probe c42_baseline_probe
+install(TARGETS c42_scene_probe c42_baseline_probe c42_reachability
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
@@ -80,6 +86,11 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_ik_layer test/test_ik_layer.cpp)
   target_link_libraries(test_ik_layer ${PROJECT_NAME})
+
+  ament_add_gtest(test_feasibility test/test_feasibility.cpp)
+  target_link_libraries(test_feasibility ${PROJECT_NAME})
+  target_compile_definitions(test_feasibility PRIVATE
+    C42_URDF="${C42_URDF}" C42_SRDF="${C42_SRDF}")
 
   ament_add_gtest(test_m4_baseline test/test_m4_baseline.cpp)
   target_link_libraries(test_m4_baseline ${PROJECT_NAME})

@@ -21,3 +21,6 @@ src/hand_eye_calibration/calib/
 # C4.1 workspace analysis data products (large binaries; regenerate with
 # src/dual_arm_workspace_analysis/analysis/run_c41.sh)
 src/dual_arm_workspace_analysis/analysis/data/
+
+# C4.2 S3 sweep data product (14 MB; regenerate with run_c42_s3.sh)
+src/dual_arm_pose_optimization/analysis/figs/c42_s3_candidates.csv

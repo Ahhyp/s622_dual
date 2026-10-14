@@ -1,6 +1,7 @@
 // src/ik_layer.cpp
 #include "dual_arm_pose_optimization/ik_layer.hpp"
 
+#include <algorithm>
 #include <map>
 
 #include "dual_arm_kinematics/se3.hpp"
@@ -74,11 +75,18 @@ IkOutcome IkLayer::solveAndSelect(const Eigen::Matrix4d& target_base, const Join
   out.n_candidates = sel.diagnostics.size();
 
   std::map<std::string, int> hist;
+  std::vector<std::pair<double, JointConfig>> passing;
   for (const auto& d : sel.diagnostics) {
-    if (d.passed_hard_filter) ++out.n_hard_pass;
+    if (d.passed_hard_filter) {
+      ++out.n_hard_pass;
+      passing.emplace_back(d.total_cost, d.q);
+    }
     if (d.selected) out.selected_cost = d.total_cost;
     hist[rejectReasonName(static_cast<int>(d.reject_reason))] += 1;
   }
+  std::sort(passing.begin(), passing.end(),
+            [](const auto& a, const auto& b) { return a.first < b.first; });
+  for (auto& kv : passing) out.hard_pass_solutions.push_back(kv.second);
   for (const auto& kv : hist) out.reject_histogram.emplace_back(kv.first, kv.second);
 
   if (sel.selected.has_value()) {
