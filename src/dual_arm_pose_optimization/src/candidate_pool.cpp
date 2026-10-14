@@ -92,6 +92,7 @@ bool WorkspaceIndex::dualHas(const Eigen::Vector3d& p) const {
 WorkspaceIndex WorkspaceIndex::load(const Options& options) {
   MappedRecords rec(options.c41_bin);
   WorkspaceIndex idx;
+  idx.path_ = options.c41_bin;
   idx.voxel_ = options.voxel;
   idx.total_records_ = rec.size();
   if (idx.total_records_ == 0) throw SceneLoadError("WorkspaceIndex: empty C4.1 file");
@@ -168,6 +169,21 @@ WorkspaceIndex WorkspaceIndex::load(const Options& options) {
     idx.handover_.push_back(s);
   }
   return idx;
+}
+
+std::vector<dual_arm::Q12> WorkspaceIndex::sampleQ12(std::size_t n) const {
+  MappedRecords rec(path_);
+  std::vector<dual_arm::Q12> out;
+  if (rec.size() == 0 || n == 0) return out;
+  const std::uint64_t stride = std::max<std::uint64_t>(1, rec.size() / n);
+  out.reserve(n);
+  for (std::uint64_t i = 0; i < rec.size() && out.size() < n; i += stride) {
+    const float* r = rec.rec(i);
+    dual_arm::Q12 q;
+    for (int j = 0; j < 12; ++j) q[j] = r[j];
+    out.push_back(q);
+  }
+  return out;
 }
 
 std::vector<Eigen::Vector3d> WorkspaceIndex::gridObjectCentres(double step) const {

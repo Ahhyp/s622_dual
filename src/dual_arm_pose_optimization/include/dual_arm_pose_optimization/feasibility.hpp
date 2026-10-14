@@ -123,6 +123,8 @@ public:
   const M4Params& m4() const { return m4_; }
   const BaselinePose& baseline() const { return baseline_; }
   const FeasibilityOptions& options() const { return opts_; }
+  MoveItCollisionBackend* collision() { return collision_.get(); }
+  const MoveItCollisionBackend* collision() const { return collision_.get(); }
 
 private:
   std::shared_ptr<DualArmScene> scene_;

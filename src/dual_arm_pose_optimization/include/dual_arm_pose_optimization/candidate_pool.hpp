@@ -72,6 +72,11 @@ public:
   /// Not filtered by the mask (that is the point of this pool).
   std::vector<Eigen::Vector3d> gridObjectCentres(double step) const;
 
+  /// Strided sample of the accepted 12-DOF configurations (the standby pool).
+  /// These were filtered by C4.1 to be within the joint limits, above the floor
+  /// and arm-arm collision free.
+  std::vector<dual_arm::Q12> sampleQ12(std::size_t n) const;
+
 private:
   std::size_t index(int i, int j, int k) const;
   bool has(const std::vector<std::uint8_t>& m, const Eigen::Vector3d& p) const;
@@ -84,6 +89,7 @@ private:
   std::vector<std::uint8_t> left_, right_;
   std::size_t n_left_ = 0, n_right_ = 0, n_dual_ = 0;
   std::uint64_t total_records_ = 0;
+  std::string path_;
   std::vector<C41Sample> handover_;
 };
 
