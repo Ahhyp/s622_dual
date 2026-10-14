@@ -1,0 +1,210 @@
+{
+  "stage": "C4.2",
+  "connectivity_sensitivity": [
+    {
+      "voxel_m": 0.01,
+      "connectivity": 26,
+      "voxels": 23226,
+      "components": 524,
+      "largest_fraction": 0.938
+    },
+    {
+      "voxel_m": 0.01,
+      "connectivity": 6,
+      "voxels": 23226,
+      "components": 5913,
+      "largest_fraction": 0.4694
+    },
+    {
+      "voxel_m": 0.015,
+      "connectivity": 26,
+      "voxels": 16076,
+      "components": 41,
+      "largest_fraction": 0.9968
+    },
+    {
+      "voxel_m": 0.015,
+      "connectivity": 6,
+      "voxels": 16076,
+      "components": 702,
+      "largest_fraction": 0.9173
+    },
+    {
+      "voxel_m": 0.02,
+      "connectivity": 26,
+      "voxels": 9839,
+      "components": 1,
+      "largest_fraction": 1.0
+    },
+    {
+      "voxel_m": 0.02,
+      "connectivity": 6,
+      "voxels": 9839,
+      "components": 36,
+      "largest_fraction": 0.995
+    },
+    {
+      "voxel_m": 0.03,
+      "connectivity": 26,
+      "voxels": 3800,
+      "components": 1,
+      "largest_fraction": 1.0
+    },
+    {
+      "voxel_m": 0.03,
+      "connectivity": 6,
+      "voxels": 3800,
+      "components": 2,
+      "largest_fraction": 0.9987
+    },
+    {
+      "voxel_m": 0.04,
+      "connectivity": 26,
+      "voxels": 1748,
+      "components": 1,
+      "largest_fraction": 1.0
+    },
+    {
+      "voxel_m": 0.04,
+      "connectivity": 6,
+      "voxels": 1748,
+      "components": 1,
+      "largest_fraction": 1.0
+    }
+  ],
+  "c41_index": {
+    "records": 2777990,
+    "voxel": 0.02,
+    "left_voxels": 147454,
+    "right_voxels": 147553,
+    "crw_voxels": 53606,
+    "handover_samples": 58144
+  },
+  "funnel_ALL": {
+    "candidates": 233288,
+    "s0_point_reachable": 98458,
+    "s0_left": 155079,
+    "s0_right": 131583,
+    "s1_left": 38601,
+    "s1_right": 67157,
+    "s2_dual": 28841,
+    "s3_grasp": 28841,
+    "s4_collision_free": 28192,
+    "ratios": {
+      "S1L_over_S0": 0.392055,
+      "S1R_over_S0": 0.682088,
+      "S2_over_S0": 0.292927,
+      "S3_over_S2": 1.0,
+      "S4_over_S3": 0.977497,
+      "S4_over_candidates": 0.120846
+    },
+    "pair_attempts": 31214,
+    "nesting_violations": 0,
+    "s4_outside_s0_sampling_gap": 171,
+    "hard_pass_left": 148298,
+    "hard_pass_right": 144936,
+    "mean_cross_arm_clearance": 0.033452,
+    "min_cross_arm_clearance": 0.000132
+  },
+  "nesting_violations": 0,
+  "s4": {
+    "n_s4": 28192,
+    "pareto_8obj_fraction": 0.5848,
+    "pareto_key3_size": 92,
+    "poles": {
+      "J1_sigma_min_left": 0.15485,
+      "J2_sigma_min_right": 0.143774,
+      "J3_w_rel": 1.16699,
+      "J4_arm_arm": 0.033666,
+      "J5_joint_margin": 1.14263,
+      "J6_closeness": 0.011907,
+      "J7_continuity": 1.0,
+      "J8_arm_proximal": 0.207205
+    }
+  },
+  "s5": {
+    "V0_score": 0.860655,
+    "V0_pO": [
+      0.115426,
+      0.01542,
+      0.223439
+    ],
+    "V1_score": 0.86439,
+    "V1_pO": [
+      0.134151,
+      -0.012335,
+      0.234339
+    ],
+    "theta_sensitivity": [
+      {
+        "theta_max_deg": 5.0,
+        "score": 0.863858,
+        "used_deg": 5.0,
+        "feasible": true
+      },
+      {
+        "theta_max_deg": 10.0,
+        "score": 0.864389,
+        "used_deg": 10.0,
+        "feasible": true
+      },
+      {
+        "theta_max_deg": 15.0,
+        "score": 0.864422,
+        "used_deg": 12.017543,
+        "feasible": true
+      }
+    ],
+    "segment_rate": 0.828883,
+    "cooperative_zone_voxels": 9839,
+    "cooperative_zone_litres": 78.712,
+    "cooperative_zone_components": 1
+  },
+  "s6": {
+    "scale_variant_V1_pO": [
+      0.079164,
+      -0.228536,
+      0.165815
+    ],
+    "scale_variant_shift_m": 0.2334,
+    "effective_objectives": [
+      "J3_w_rel",
+      "J5_margin",
+      "J6_closeness"
+    ],
+    "saturated_fixed": {
+      "J1_smin_L": 0.05,
+      "J2_smin_R": 0.05,
+      "J3_w_rel": 0.05,
+      "J4_arm_arm": 0.0,
+      "J5_margin": 0.5873,
+      "J6_closeness": 0.0,
+      "J7_continuity": 0.1544,
+      "J8_arm_prox": 0.9478
+    }
+  },
+  "recommended": {
+    "pose": [
+      0.079164,
+      -0.228536,
+      0.165815
+    ],
+    "scale_set": "P95",
+    "reason": "the fixed scales clipped J8 for 94.8% of candidates; the P95 variant keeps joint margin and clearance positive while also improving sigma_min"
+  },
+  "limits": [
+    "S4 is static feasibility, not reachability",
+    "the segment metric is NOT a motion planner",
+    "the effective objective set is {J3, J5, J6}",
+    "S3 is a structural identity under the rigid-grasp model",
+    "the cooperative zone is ONE DOMINANT component, not literally one: at 2 cm/26-connectivity it is 1 component, but at 1 cm it is 524 (largest holding 94% of the voxels)",
+    "Q1-Q4 of m4_handover.yaml are unconfirmed; the rod is a parametric box",
+    "Baseline B is provisional_rebuilt"
+  ],
+  "figures": [
+    "fig5_pareto.png",
+    "fig6_cooperative_zone.png",
+    "fig7_sensitivity.png",
+    "fig8_overview.png"
+  ]
+}

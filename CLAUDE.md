@@ -52,6 +52,9 @@ src/                          ← 所有包平铺，不再用子目录分类
 ├── s622_task_interfaces/      # 双臂项目：Action/Service 接口（待建）
 ├── s622_servo_actions/        # 双臂项目：伺服 Action Server（待建）
 ├── s622_bt_manager/           # 双臂项目：BT.CPP 任务管理器（待建）
+├── dual_arm_kinematics/       # 双臂 DH 正逆运动学、雅可比、相对可操作度
+├── dual_arm_workspace_analysis/  # C4.1：双臂工作空间与可操作度分析
+├── dual_arm_pose_optimization/   # C4.2：交接位姿优化（离线 MoveIt + FCL + 多目标）
 └── yolov8_obb/                # YOLOv8 OBB 检测
 ```
 

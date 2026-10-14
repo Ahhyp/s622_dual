@@ -13,27 +13,27 @@
     "normalised": [0.971017, 0.874819, 0.418286, 0.999848, 0.909141, 0.708968, 0.997843, 0.993703]
   },
   "V1": {
-    "score": 0.878285,
+    "score": 0.878585,
     "feasible": true,
     "evals": 601,
-    "p_O": [0.078136, -0.223424, 0.165067], "rotvec_deg": [6.186781, -3.281512, -7.138306],
+    "p_O": [0.079164, -0.228536, 0.165815], "rotvec_deg": [5.655735, -2.090612, -7.977594],
     "theta_norm_deg": 10.000000,
-    "metrics": {"smin_left": 0.147764, "smin_right": 0.135176, "w_rel": 0.486409, "arm_arm": 0.033658, "arm_proximal": 0.217293, "joint_margin": 1.138342, "deviation": 0.300731, "continuity": 0.985106},
-    "normalised": [0.961135, 0.943342, 0.422292, 0.999843, 1.000000, 0.714563, 0.985106, 1.000000]
+    "metrics": {"smin_left": 0.147495, "smin_right": 0.135464, "w_rel": 0.490830, "arm_arm": 0.033658, "arm_proximal": 0.216672, "joint_margin": 1.138253, "deviation": 0.302846, "continuity": 0.985417},
+    "normalised": [0.959387, 0.945352, 0.426131, 0.999837, 1.000000, 0.712556, 0.985417, 1.000000]
   },
-  "theta_sensitivity": [{"theta_max_deg": 5.000000, "score": 0.872525, "used_deg": 5.000000, "feasible": true}, {"theta_max_deg": 10.000000, "score": 0.878209, "used_deg": 10.000000, "feasible": true}, {"theta_max_deg": 15.000000, "score": 0.881979, "used_deg": 14.987860, "feasible": true}],
+  "theta_sensitivity": [{"theta_max_deg": 5.000000, "score": 0.872525, "used_deg": 5.000000, "feasible": true}, {"theta_max_deg": 10.000000, "score": 0.878585, "used_deg": 10.000000, "feasible": true}, {"theta_max_deg": 15.000000, "score": 0.881979, "used_deg": 14.987860, "feasible": true}],
   "segment_metric": {"name": "joint-space straight-line segment feasibility",
     "note": "NOT a motion planner; reported as segment feasibility",
     "samples": 32,
-    "candidates": 962,
-    "feasible": 801,
-    "rate": 0.832640,
+    "candidates": 961,
+    "feasible": 797,
+    "rate": 0.829344,
     "sample_sensitivity": [{"N": 8, "feasible": true}, {"N": 16, "feasible": true}, {"N": 32, "feasible": true}, {"N": 64, "feasible": false}]},
   "standby": {
     "pool_sampled": 2000,
-    "after_filters": 962,
-    "scales": {"path": 8.707365, "joint_motion": 4.651998, "cart": 0.678120, "clearance": 0.050000},
-    "best": {"q12": [1.448716, -2.703107, -0.166060, -0.129791, 0.939253, 0.603498, 1.355182, -2.088704, 2.055343, 1.082508, -0.871782, -0.421498], "segment_ok": true, "path": 3.680323, "joint_motion": 1.522998, "clearance": 0.344767, "cart": 0.328185, "score": 0.801593}
+    "after_filters": 961,
+    "scales": {"path": 8.735586, "joint_motion": 4.655382, "cart": 0.680992, "clearance": 0.050000},
+    "best": {"q12": [1.448716, -2.703107, -0.166060, -0.129791, 0.939253, 0.603498, 1.355182, -2.088704, 2.055343, 1.082508, -0.871782, -0.421498], "segment_ok": true, "path": 3.685691, "joint_motion": 1.523076, "clearance": 0.344767, "cart": 0.326722, "score": 0.802206}
   },
   "baseline_eval_same_pipeline": {
     "score": 0.815966,
@@ -44,11 +44,11 @@
     "metrics": {"smin_left": 0.089264, "smin_right": 0.100866, "w_rel": 0.726021, "arm_arm": 0.033663, "arm_proximal": 0.196900, "joint_margin": 0.772411, "deviation": 0.000000, "continuity": 1.000000},
     "normalised": [0.580618, 0.703903, 0.630320, 1.000000, 0.678594, 1.000000, 1.000000, 0.934290]
   },
-  "multi_seed": {"runs": 10, "feasible": 10, "seed": 20261014, "best": 0.878351, "worst": 0.875624,
-    "scores": [0.878351, 0.878282, 0.877697, 0.877376, 0.877284, 0.877127, 0.876515, 0.876494, 0.875956, 0.875624],
-    "p_O_best": [0.078340, -0.229816, 0.169409]
+  "multi_seed": {"runs": 10, "feasible": 10, "seed": 20261014, "best": 0.878350, "worst": 0.871971,
+    "scores": [0.878350, 0.878345, 0.878000, 0.877060, 0.876865, 0.876855, 0.876363, 0.875987, 0.875770, 0.871971],
+    "p_O_best": [0.077721, -0.225091, 0.172869]
   },
   "checks_passed": 4,
   "checks_total": 4,
-  "total_seconds": 68.230251
+  "total_seconds": 94.911790
 }
