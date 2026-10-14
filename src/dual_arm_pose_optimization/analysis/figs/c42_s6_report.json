@@ -1,0 +1,378 @@
+{
+  "comparison_vs_baseline_B": {
+    "V0": {
+      "smin_left": {
+        "baseline": 0.089264,
+        "optimized": 0.141967,
+        "abs_change": 0.052703,
+        "rel_change_pct": 59.04
+      },
+      "smin_right": {
+        "baseline": 0.100866,
+        "optimized": 0.13319,
+        "abs_change": 0.032324,
+        "rel_change_pct": 32.05
+      },
+      "w_rel": {
+        "baseline": 0.726021,
+        "optimized": 0.703027,
+        "abs_change": -0.022994,
+        "rel_change_pct": -3.17
+      },
+      "mesh_arm_arm": {
+        "baseline": 0.033663,
+        "optimized": 0.03366,
+        "abs_change": -3e-06,
+        "rel_change_pct": -0.01
+      },
+      "joint_margin": {
+        "baseline": 0.772411,
+        "optimized": 0.5,
+        "abs_change": -0.272411,
+        "rel_change_pct": -35.27
+      },
+      "deviation": {
+        "baseline": 0.0,
+        "optimized": 0.21338,
+        "abs_change": 0.21338,
+        "rel_change_pct": null
+      },
+      "continuity": {
+        "baseline": 1.0,
+        "optimized": 0.9513,
+        "abs_change": -0.0487,
+        "rel_change_pct": -4.87
+      },
+      "arm_proximal": {
+        "baseline": 0.1969,
+        "optimized": 0.190962,
+        "abs_change": -0.005938,
+        "rel_change_pct": -3.02
+      }
+    },
+    "V1": {
+      "smin_left": {
+        "baseline": 0.089264,
+        "optimized": 0.143413,
+        "abs_change": 0.054149,
+        "rel_change_pct": 60.66
+      },
+      "smin_right": {
+        "baseline": 0.100866,
+        "optimized": 0.139006,
+        "abs_change": 0.03814,
+        "rel_change_pct": 37.81
+      },
+      "w_rel": {
+        "baseline": 0.726021,
+        "optimized": 0.664318,
+        "abs_change": -0.061703,
+        "rel_change_pct": -8.5
+      },
+      "mesh_arm_arm": {
+        "baseline": 0.033663,
+        "optimized": 0.033659,
+        "abs_change": -4e-06,
+        "rel_change_pct": -0.01
+      },
+      "joint_margin": {
+        "baseline": 0.772411,
+        "optimized": 0.499998,
+        "abs_change": -0.272413,
+        "rel_change_pct": -35.27
+      },
+      "deviation": {
+        "baseline": 0.0,
+        "optimized": 0.218376,
+        "abs_change": 0.218376,
+        "rel_change_pct": null
+      },
+      "continuity": {
+        "baseline": 1.0,
+        "optimized": 0.969568,
+        "abs_change": -0.030432,
+        "rel_change_pct": -3.04
+      },
+      "arm_proximal": {
+        "baseline": 0.1969,
+        "optimized": 0.180082,
+        "abs_change": -0.016818,
+        "rel_change_pct": -8.54
+      }
+    },
+    "score": {
+      "baseline": 0.823514,
+      "V0": 0.860655,
+      "V1": 0.86439,
+      "V1_rel_change_pct": 4.96
+    }
+  },
+  "scale_variant": {
+    "scales_fixed": [
+      0.153739,
+      0.143295,
+      1.151829,
+      0.05,
+      0.5,
+      1.053581,
+      1.0,
+      0.05
+    ],
+    "scales_p95": [
+      0.153739,
+      0.143295,
+      1.151829,
+      0.033663,
+      1.138253,
+      1.053581,
+      1.0,
+      0.210748
+    ],
+    "V1_optimum_shift_m": 0.2291,
+    "metrics": {
+      "smin_left": {
+        "baseline": 0.089264,
+        "optimized_p95": 0.147764,
+        "rel_change_pct": 65.54
+      },
+      "smin_right": {
+        "baseline": 0.100866,
+        "optimized_p95": 0.135176,
+        "rel_change_pct": 34.02
+      },
+      "w_rel": {
+        "baseline": 0.726021,
+        "optimized_p95": 0.486409,
+        "rel_change_pct": -33.0
+      },
+      "mesh_arm_arm": {
+        "baseline": 0.033663,
+        "optimized_p95": 0.033658,
+        "rel_change_pct": -0.01
+      },
+      "joint_margin": {
+        "baseline": 0.772411,
+        "optimized_p95": 1.138342,
+        "rel_change_pct": 47.38
+      },
+      "deviation": {
+        "baseline": 0.0,
+        "optimized_p95": 0.300731,
+        "rel_change_pct": null
+      },
+      "continuity": {
+        "baseline": 1.0,
+        "optimized_p95": 0.985106,
+        "rel_change_pct": -1.49
+      },
+      "arm_proximal": {
+        "baseline": 0.1969,
+        "optimized_p95": 0.217293,
+        "rel_change_pct": 10.36
+      }
+    }
+  },
+  "saturation": {
+    "J1_smin_L": {
+      "fixed": 0.05,
+      "p95": 0.05
+    },
+    "J2_smin_R": {
+      "fixed": 0.05,
+      "p95": 0.05
+    },
+    "J3_w_rel": {
+      "fixed": 0.05,
+      "p95": 0.05
+    },
+    "J4_arm_arm": {
+      "fixed": 0.0,
+      "p95": 0.0661
+    },
+    "J5_margin": {
+      "fixed": 0.5873,
+      "p95": 0.05
+    },
+    "J6_closeness": {
+      "fixed": 0.0,
+      "p95": 0.0
+    },
+    "J7_continuity": {
+      "fixed": 0.1544,
+      "p95": 0.1544
+    },
+    "J8_arm_prox": {
+      "fixed": 0.9478,
+      "p95": 0.05
+    }
+  },
+  "saturated_objectives_per_candidate_fixed": {
+    "0": 528,
+    "1": 7493,
+    "2": 16780,
+    "3": 2756,
+    "4": 635
+  },
+  "ablation": {
+    "J1_smin_L": {
+      "dropped": "J1_smin_L",
+      "picked_p_O": [
+        0.1071,
+        0.0172,
+        0.2567
+      ],
+      "moved_m": 0.0,
+      "score_of_new_pick_under_full_weights": 0.84762
+    },
+    "J2_smin_R": {
+      "dropped": "J2_smin_R",
+      "picked_p_O": [
+        0.1071,
+        0.0172,
+        0.2567
+      ],
+      "moved_m": 0.0,
+      "score_of_new_pick_under_full_weights": 0.84762
+    },
+    "J3_w_rel": {
+      "dropped": "J3_w_rel",
+      "picked_p_O": [
+        0.1186,
+        -0.097,
+        0.1923
+      ],
+      "moved_m": 0.1317,
+      "score_of_new_pick_under_full_weights": 0.84312
+    },
+    "J4_arm_arm": {
+      "dropped": "J4_arm_arm",
+      "picked_p_O": [
+        0.1071,
+        0.0172,
+        0.2567
+      ],
+      "moved_m": 0.0,
+      "score_of_new_pick_under_full_weights": 0.84762
+    },
+    "J5_margin": {
+      "dropped": "J5_margin",
+      "picked_p_O": [
+        0.1242,
+        0.115,
+        0.2023
+      ],
+      "moved_m": 0.1132,
+      "score_of_new_pick_under_full_weights": 0.78231
+    },
+    "J6_closeness": {
+      "dropped": "J6_closeness",
+      "picked_p_O": [
+        0.1685,
+        0.1966,
+        0.1784
+      ],
+      "moved_m": 0.2051,
+      "score_of_new_pick_under_full_weights": 0.80801
+    },
+    "J7_continuity": {
+      "dropped": "J7_continuity",
+      "picked_p_O": [
+        0.1071,
+        0.0172,
+        0.2567
+      ],
+      "moved_m": 0.0,
+      "score_of_new_pick_under_full_weights": 0.84762
+    },
+    "J8_arm_prox": {
+      "dropped": "J8_arm_prox",
+      "picked_p_O": [
+        0.1071,
+        0.0172,
+        0.2567
+      ],
+      "moved_m": 0.0,
+      "score_of_new_pick_under_full_weights": 0.84762
+    },
+    "_nominal": {
+      "picked_p_O": [
+        0.1071,
+        0.0172,
+        0.2567
+      ],
+      "score": 0.84762
+    }
+  },
+  "weight_sensitivity_jaccard_top5": {
+    "J1_smin_L": {
+      "plus50": 0.6667,
+      "minus50": 0.4286
+    },
+    "J2_smin_R": {
+      "plus50": 0.6667,
+      "minus50": 0.25
+    },
+    "J3_w_rel": {
+      "plus50": 0.4286,
+      "minus50": 0.4286
+    },
+    "J4_arm_arm": {
+      "plus50": 1.0,
+      "minus50": 1.0
+    },
+    "J5_margin": {
+      "plus50": 0.6667,
+      "minus50": 0.4286
+    },
+    "J6_closeness": {
+      "plus50": 0.4286,
+      "minus50": 0.0
+    },
+    "J7_continuity": {
+      "plus50": 0.4286,
+      "minus50": 0.4286
+    },
+    "J8_arm_prox": {
+      "plus50": 1.0,
+      "minus50": 1.0
+    }
+  },
+  "multi_seed": {
+    "runs": 20,
+    "feasible": 20,
+    "p_opt_1pct_of_best": 1.0,
+    "mean": 0.863682,
+    "std": 0.000323,
+    "min": 0.862328,
+    "max": 0.863845,
+    "scores": [
+      0.863845,
+      0.863845,
+      0.863835,
+      0.863833,
+      0.863824,
+      0.863822,
+      0.86381,
+      0.863808,
+      0.863798,
+      0.863796,
+      0.863771,
+      0.863767,
+      0.863741,
+      0.863712,
+      0.863695,
+      0.863688,
+      0.863601,
+      0.863562,
+      0.863556,
+      0.862328
+    ]
+  },
+  "notes": {
+    "gain_convention": "C4.2 plan §7.1: continuous quantities use relative change; rates would use percentage points; times use ratios. No rates/times are reported at this stage.",
+    "saturation_issue": "with the original FIXED scales, J8 was clipped for 94.8% and J5 for 58.7% of candidates, which silently removed them from the optimisation. The P95 variant fixes that and changes the recommended pose."
+  },
+  "figures": [
+    "fig7_sensitivity.png"
+  ]
+}

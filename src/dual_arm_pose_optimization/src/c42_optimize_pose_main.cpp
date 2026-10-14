@@ -17,6 +17,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <random>
 #include <vector>
 
 #include "dual_arm_pose_optimization/m4_baseline.hpp"
@@ -103,6 +104,8 @@ int main(int argc, char** argv) {
   int top_k = 12;
   int standby_n = 20000;
   int seg_samples = 32;
+  int multi_seed = 0;          ///< 0 = off; N = run N randomised refinement starts
+  unsigned multi_seed_seed = 20261014;
 
   for (int i = 1; i < argc; ++i) {
     const std::string a = argv[i];
@@ -120,6 +123,8 @@ int main(int argc, char** argv) {
     else if (a == "--top-k") top_k = std::stoi(next());
     else if (a == "--standby-n") standby_n = std::stoi(next());
     else if (a == "--seg-samples") seg_samples = std::stoi(next());
+    else if (a == "--multi-seed") multi_seed = std::stoi(next());
+    else if (a == "--multi-seed-seed") multi_seed_seed = std::stoul(next());
     else if (a == "-h" || a == "--help") {
       std::cout << "usage: c42_optimize_pose [--urdf P] [--srdf P] [--c41-bin P] [--csv P]\n"
                    "                        [--json OUT] [--weights equal|precision_first|safety_first]\n"
@@ -244,6 +249,42 @@ int main(int argc, char** argv) {
   };
 
   const c42::RefineResult best_v1 = runV1(10.0, 600);
+
+  // ------------------------------------------------ Baseline B in the same metric set
+  const c42::CandidateResult baseline_eval = c42::evaluateConfiguration(
+      scene, pipeline.collision(), m4, baseB, baseB.q12());
+  const double baseline_score = c42::scoreResult(baseline_eval, spec);
+  std::cout << "Baseline B (same metric set): score " << baseline_score
+            << "  smin_L " << baseline_eval.smin_left << "  smin_R "
+            << baseline_eval.smin_right << "  arm_proximal "
+            << baseline_eval.arm_proximal_clearance << "\n";
+
+  // ------------------------------------------------ multi-seed experiment (S6)
+  struct SeedRun { double score; bool feasible; Eigen::Vector3d p_O; };
+  std::vector<SeedRun> multi;
+  if (multi_seed > 0) {
+    std::mt19937_64 rng(multi_seed_seed);
+    std::normal_distribution<double> jitter(0.0, 0.02);
+    std::uniform_int_distribution<std::size_t> pick(0, std::min<std::size_t>(seeds.size(), 200) - 1);
+    c42::RefineOptions o;
+    o.allow_orientation = true;
+    o.theta_max = 10.0 * M_PI / 180.0;
+    o.max_evals = 250;
+    c42::PoseRefiner ref(&pipeline, &index, spec, o);
+    for (int i = 0; i < multi_seed; ++i) {
+      c42::PoseParams p;
+      p.p_O = seeds[pick(rng)].candidate.p_O + Eigen::Vector3d(jitter(rng), jitter(rng), jitter(rng));
+      const auto r = ref.refine(p, R_O_m4);
+      multi.push_back({r.score, r.feasible, r.best.p_O});
+    }
+    std::sort(multi.begin(), multi.end(),
+              [](const SeedRun& a, const SeedRun& b) { return a.score > b.score; });
+    int feas = 0;
+    for (const auto& m : multi) feas += m.feasible ? 1 : 0;
+    std::cout << "multi-seed: " << multi.size() << " runs, " << feas
+              << " feasible, best " << multi.front().score << " worst "
+              << multi.back().score << "\n";
+  }
   std::cout << "V1 best score = " << best_v1.score
             << "  ||dtheta|| = " << best_v1.best.rotvec.norm() * 180.0 / M_PI << " deg\n";
 
@@ -473,6 +514,29 @@ int main(int argc, char** argv) {
          << ", \"score\": " << rows[0].score << "}\n";
     }
     js << "  },\n";
+    js << "  \"baseline_eval_same_pipeline\": {\n";
+    dumpResult(js, [&] {
+      c42::RefineResult r;
+      r.result = baseline_eval;
+      r.score = baseline_score;
+      r.feasible = baseline_eval.layer.s4_collision_free;
+      r.best.p_O = baseline_eval.candidate.p_O;
+      return r;
+    }(), spec, "    ");
+    js << "  },\n";
+    if (!multi.empty()) {
+      int feas = 0;
+      for (const auto& m : multi) feas += m.feasible ? 1 : 0;
+      js << "  \"multi_seed\": {\"runs\": " << multi.size() << ", \"feasible\": " << feas
+         << ", \"seed\": " << multi_seed_seed << ", \"best\": " << multi.front().score
+         << ", \"worst\": " << multi.back().score << ",\n";
+      js << "    \"scores\": [";
+      for (std::size_t i = 0; i < multi.size(); ++i) {
+        js << (i ? ", " : "") << multi[i].score;
+      }
+      js << "],\n    \"p_O_best\": [" << multi.front().p_O.x() << ", " << multi.front().p_O.y()
+         << ", " << multi.front().p_O.z() << "]\n  },\n";
+    }
     js << "  \"checks_passed\": " << npass << ",\n  \"checks_total\": " << ntot << ",\n";
     js << "  \"total_seconds\": " << total_s << "\n}\n";
     std::cout << "wrote " << json_out << "\n";

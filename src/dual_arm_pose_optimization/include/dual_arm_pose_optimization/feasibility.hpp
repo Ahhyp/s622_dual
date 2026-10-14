@@ -138,6 +138,15 @@ private:
   Eigen::Matrix4d world_T_right_base_inv_ = Eigen::Matrix4d::Identity();
 };
 
+/// Evaluate an EXISTING 12-DOF configuration in the SAME metric set the
+/// optimizer uses, so a baseline configuration can be compared apples-to-apples
+/// (same sigma_min definition, same clearance scopes, same normalisation input).
+/// The rod is moved to the object pose implied by the left grasp.
+CandidateResult evaluateConfiguration(const std::shared_ptr<DualArmScene>& scene,
+                                     MoveItCollisionBackend* backend,
+                                     const M4Params& m4, const BaselinePose& baseline,
+                                     const dual_arm::Q12& q12);
+
 /// Move the (already added) rod to a new world pose.  Requires addRodToScene()
 /// to have run once; no-op if the object does not exist yet is NOT assumed.
 void setRodPose(const std::shared_ptr<DualArmScene>& scene,

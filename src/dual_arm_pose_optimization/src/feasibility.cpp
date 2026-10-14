@@ -12,6 +12,7 @@ using dual_arm::Arm;
 using dual_arm::DualArmKinematics;
 using dual_arm::Iso3;
 using dual_arm::JointConfig;
+using dual_arm::RelativeFrame;
 
 namespace {
 
@@ -51,6 +52,77 @@ void setRodPose(const std::shared_ptr<DualArmScene>& scene, const Iso3& world_T_
   scene->planningScene()->processCollisionObjectMsg(
       rodMessage(scene->robotModel()->getModelFrame(), world_T_object, params,
                  moveit_msgs::msg::CollisionObject::MOVE));
+}
+
+CandidateResult evaluateConfiguration(const std::shared_ptr<DualArmScene>& scene,
+                                     MoveItCollisionBackend* backend,
+                                     const M4Params& m4, const BaselinePose& baseline,
+                                     const dual_arm::Q12& q12) {
+  static const double LO[6] = {-3.0543, -4.6251, -2.8274, -4.6251, -3.0543, -3.0543};
+  static const double HI[6] = {3.0543, 1.4835, 2.8274, 1.4835, 3.0543, 3.0543};
+
+  JointConfig ql, qr;
+  DualArmKinematics::split(q12, &ql, &qr);
+
+  CandidateResult r;
+  r.has_chosen_pair = true;
+  r.q_left_chosen = ql;
+  r.q_right_chosen = qr;
+
+  // object pose implied by the left grasp, then put the rod there
+  const Iso3 wl = kin().worldTgrasp(Arm::Left, ql);
+  const Iso3 T_O = wl * m4.objectInLeftGrasp();
+  setRodPose(scene, T_O, m4);
+  r.candidate.p_O = T_O.translation();
+  r.candidate.R_O = T_O.rotation();
+  r.candidate.pool = "configuration";
+
+  const auto st = scene->makeStateQ12(std::vector<double>(q12.data(), q12.data() + 12));
+  r.layer.s0_point_reachable = true;  // not judged here
+  r.layer.s1_left = r.layer.s1_right = r.layer.s2_dual = r.layer.s3_grasp = true;
+  r.layer.s4_collision_free = !backend->isStateColliding(st);
+
+  const DistanceReading d = backend->distances(st, &q12);
+  r.mesh_arm_arm = d.arm_arm;
+  r.arm_proximal_clearance = d.arm_proximal;
+  r.capsule_arm_arm = d.capsule_arm_arm;
+  r.mesh_pair_a = d.arm_arm_link_a;
+  r.mesh_pair_b = d.arm_arm_link_b;
+  r.arm_proximal_pair_a = d.arm_proximal_link_a;
+  r.arm_proximal_pair_b = d.arm_proximal_link_b;
+
+  auto smin = [](const Eigen::MatrixXd& J) {
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(J);
+    return svd.singularValues().minCoeff();
+  };
+  r.smin_left = smin(kin().jacobianBase(Arm::Left, ql));
+  r.smin_right = smin(kin().jacobianBase(Arm::Right, qr));
+
+  const Eigen::MatrixXd Jrel = kin().relativeJacobian(q12, dual_arm::RelativeFrame::BodyR);
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(Jrel);
+  const auto& sv = svd.singularValues();
+  double logsum = 0.0;
+  for (int i = 0; i < sv.size(); ++i) logsum += std::log(std::max(sv(i), 1e-300));
+  r.w_rel = std::exp(logsum);
+
+  double margin = 1e9;
+  for (int j = 0; j < 6; ++j) {
+    margin = std::min(margin, std::min(ql[j] - LO[j], HI[j] - ql[j]));
+    margin = std::min(margin, std::min(qr[j] - LO[j], HI[j] - qr[j]));
+  }
+  r.joint_margin = margin;
+
+  double dev2 = 0.0;
+  for (int j = 0; j < 6; ++j) {
+    const double span = HI[j] - LO[j];
+    const double dl = (ql[j] - baseline.q_left[j]) / span;
+    const double dr = (qr[j] - baseline.q_right[j]) / span;
+    dev2 += dl * dl + dr * dr;
+  }
+  r.deviation = std::sqrt(dev2);
+  // continuity is defined RELATIVE to a seed; for the baseline itself it is 1
+  r.continuity = 1.0;
+  return r;
 }
 
 Eigen::Matrix4d Candidate::T_O() const {
