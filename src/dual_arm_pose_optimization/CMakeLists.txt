@@ -63,11 +63,19 @@ target_link_libraries(c42_reachability ${PROJECT_NAME})
 add_executable(c42_optimize_pose src/c42_optimize_pose_main.cpp)
 target_link_libraries(c42_optimize_pose ${PROJECT_NAME})
 
+# S7 bridge: C4.2 handover POSE -> executable JOINT target for the simulator.
+add_executable(c42_handover_target src/c42_handover_target_main.cpp)
+target_link_libraries(c42_handover_target ${PROJECT_NAME})
+
 install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
-install(TARGETS c42_scene_probe c42_baseline_probe c42_reachability c42_optimize_pose
+install(DIRECTORY launch config
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(TARGETS c42_scene_probe c42_baseline_probe c42_reachability c42_optimize_pose c42_handover_target
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

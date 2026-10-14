@@ -1,0 +1,64 @@
+# C4.2 -> simulation bridge controllers.
+#
+# WHY A SEPARATE FILE: the JTC profile (s622_dual_arm.launch.py +
+# s622_moveit_config/config/dual_arm_controllers.yaml) asks for VELOCITY command
+# interfaces on the arms, but the robot spawned by that launch only exposes
+# POSITION command interfaces -- so left_arm_controller fails to activate with
+#   [resource_manager]: Not acceptable command interfaces combination
+#   [controller_manager]: Could not switch controllers since prepare command mode
+#                         switch was rejected.
+# That is the documented C2.9b leftover ("JTC<->QP profile mutual exclusion was
+# never verified"), still open.  Rather than edit the existing profile, this file
+# gives the C4.2 bridge its own position-interface JTCs, which is all the
+# handover bridge needs: drive both arms to a joint target and measure.
+gz_ros2_control:
+  ros__parameters:
+    position_proportional_gain: 20.0
+
+controller_manager:
+  ros__parameters:
+    update_rate: 125
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    left_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+    right_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+    left_hand_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+    right_hand_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+left_arm_controller:
+  ros__parameters:
+    joints: [left_j1, left_j2, left_j3, left_j4, left_j5, left_j6]
+    command_interfaces: [velocity]
+    gains: {left_j1: {p: 100.0, i: 0.0, d: 1.0}, left_j2: {p: 100.0, i: 0.0, d: 1.0},
+            left_j3: {p: 100.0, i: 0.0, d: 1.0}, left_j4: {p: 100.0, i: 0.0, d: 1.0},
+            left_j5: {p: 100.0, i: 0.0, d: 1.0}, left_j6: {p: 100.0, i: 0.0, d: 1.0}}
+    state_interfaces: [position, velocity]
+    allow_partial_joints_goal: true
+
+right_arm_controller:
+  ros__parameters:
+    joints: [right_j1, right_j2, right_j3, right_j4, right_j5, right_j6]
+    command_interfaces: [velocity]
+    gains: {right_j1: {p: 100.0, i: 0.0, d: 1.0}, right_j2: {p: 100.0, i: 0.0, d: 1.0},
+            right_j3: {p: 100.0, i: 0.0, d: 1.0}, right_j4: {p: 100.0, i: 0.0, d: 1.0},
+            right_j5: {p: 100.0, i: 0.0, d: 1.0}, right_j6: {p: 100.0, i: 0.0, d: 1.0}}
+    state_interfaces: [position, velocity]
+    allow_partial_joints_goal: true
+
+left_hand_controller:
+  ros__parameters:
+    joints: [left_finger1_joint, left_finger2_joint]
+    command_interfaces: [position]
+    state_interfaces: [position]
+    allow_partial_joints_goal: true
+
+right_hand_controller:
+  ros__parameters:
+    joints: [right_finger1_joint, right_finger2_joint]
+    command_interfaces: [position]
+    state_interfaces: [position]
+    allow_partial_joints_goal: true
