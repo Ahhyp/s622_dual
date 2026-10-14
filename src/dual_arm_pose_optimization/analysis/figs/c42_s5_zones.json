@@ -26,7 +26,7 @@
         "component": 1,
         "voxels": 9839,
         "volume_l": 78.712,
-        "mean_score": 0.7467,
+        "mean_score": 0.7466,
         "max_score": 0.86
       }
     ],
@@ -34,7 +34,7 @@
       "component": 1,
       "voxels": 9839,
       "volume_l": 78.712,
-      "mean_score": 0.7467,
+      "mean_score": 0.7466,
       "max_score": 0.86
     }
   },
@@ -293,7 +293,7 @@
     },
     "checks_passed": 4,
     "checks_total": 4,
-    "total_seconds": 149.096361
+    "total_seconds": 162.799187
   },
   "figures": [
     "fig6_cooperative_zone.png"

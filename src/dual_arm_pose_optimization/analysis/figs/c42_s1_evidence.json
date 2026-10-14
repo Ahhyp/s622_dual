@@ -5,7 +5,7 @@
   "geometry": {
     "total_collision_shapes": 19,
     "urdf_collision_elements": 19,
-    "shapes_per_arm": {"left": 9, "right": 9},
+    "shapes_per_arm": {"left": 9, "right": 10},
     "links_with_collision": ["left_base_link", "left_shoulder_link", "left_upperarm_link", "left_forearm_link", "left_wrist1_link", "left_wrist2_link", "left_wrist3_link", "left_finger1", "left_finger2", "right_base_link", "right_shoulder_link", "right_upperarm_link", "right_forearm_link", "right_wrist1_link", "right_wrist2_link", "right_wrist3_link", "right_finger1", "right_finger2", "wrist_camera_link"],
     "mesh_vertices": 83042,
     "mesh_triangles": 166052,
@@ -13,7 +13,7 @@
     "meshes_failed": 0,
     "collision_detector": "FCL",
     "srdf_disable_collisions": 32,
-    "cross_arm_pairs_checked": 144
+    "cross_arm_pairs_checked": 264
   },
   "distance_scopes": {
     "baseline_A_historical": {"whole_robot": 0.0131174, "arm_arm": 0.0195195, "capsule_arm_arm": 0.154145, "colliding": false, "arm_arm_pair": ["right_finger2", "left_finger2"], "whole_pair": ["right_wrist3_link", "wrist_camera_link"]},
@@ -21,14 +21,15 @@
   },
   "checks": [
     {"name": "geometry.left_shapes > 0", "pass": true, "detail": "left=9"},
-    {"name": "geometry.right_shapes > 0", "pass": true, "detail": "right=9"},
-    {"name": "geometry.arms_symmetric", "pass": true, "detail": "left=9 right=9"},
+    {"name": "geometry.right_shapes > 0", "pass": true, "detail": "right=10"},
+    {"name": "geometry.right_has_the_wrist_camera_only", "pass": true, "detail": "left=9 right=10 (camera on right: yes)"},
+    {"name": "geometry.no_orphan_collision_links", "pass": true, "detail": "other=0 (every collision link must belong to an arm by attachment)"},
     {"name": "geometry.mesh_vertices > 0", "pass": true, "detail": "verts=83042 tris=166052"},
     {"name": "geometry.all_urdf_collisions_loaded", "pass": true, "detail": "loaded=19 urdf_declared=19"},
     {"name": "resources.all_meshes_resolved", "pass": true, "detail": "9/9 resolved"},
     {"name": "acm.srdf_disables_adjacent_pair", "pass": true, "detail": "entry=yes allowed=yes"},
     {"name": "acm.cross_arm_pair_still_checked", "pass": true, "detail": "entry=yes"},
-    {"name": "acm.cross_arm_pair_count", "pass": true, "detail": "checked=144 expected=144"},
+    {"name": "acm.cross_arm_pair_count", "pass": true, "detail": "checked=264 expected=264"},
     {"name": "distance.whole_le_arm_arm (A)", "pass": true, "detail": "whole=0.013117 arm_arm=0.019520"},
     {"name": "distance.whole_le_arm_arm (B)", "pass": true, "detail": "whole=0.013117 arm_arm=0.033960"},
     {"name": "distance.arm_arm_positive", "pass": true, "detail": "A=0.019520 B=0.033960"},
@@ -43,6 +44,6 @@
     {"name": "negative.error_names_the_uri", "pass": true, "detail": ""},
     {"name": "negative.missing_urdf_throws", "pass": true, "detail": "SceneLoadError: cannot read URDF '/tmp/c42_does_not_exist.urdf'"}
   ],
-  "passed": 22,
-  "total": 22
+  "passed": 23,
+  "total": 23
 }

@@ -43,10 +43,44 @@ std::size_t fileSize(const std::string& path, bool* ok) {
   return static_cast<std::size_t>(sz);
 }
 
-std::string armOf(const std::string& link, const std::string& lp, const std::string& rp) {
-  if (link.rfind(lp, 0) == 0) return "left";
-  if (link.rfind(rp, 0) == 0) return "right";
-  return "other";
+/// Arm membership by KINEMATIC ATTACHMENT, not by name.
+///
+/// Name prefixes are wrong for anything bolted onto an arm whose link is not
+/// named accordingly.  The concrete case in this robot: `wrist_camera_link` is
+/// rigidly attached to `right_grasp_frame`, but has no `right_` prefix, so a
+/// prefix rule files it under "other" -- and the cross-arm clearance scope then
+/// silently drops the (left arm x camera) pair, which is a real collision risk.
+///
+/// Seed with the prefix-named links, then propagate to every descendant in the
+/// URDF tree.  A link can never end up in both arms.
+std::map<std::string, std::string> armByAttachment(const urdf::ModelInterface& urdf,
+                                                   const std::string& lp,
+                                                   const std::string& rp) {
+  std::map<std::string, std::string> arm;
+  std::vector<std::string> stack;
+  for (const auto& lk : urdf.links_) {
+    if (!lk.second) continue;
+    if (lk.first.rfind(lp, 0) == 0) { arm[lk.first] = "left"; stack.push_back(lk.first); }
+    else if (lk.first.rfind(rp, 0) == 0) { arm[lk.first] = "right"; stack.push_back(lk.first); }
+  }
+  while (!stack.empty()) {
+    const std::string parent = stack.back();
+    stack.pop_back();
+    const std::string& tag = arm[parent];
+    for (const auto& jt : urdf.joints_) {
+      if (!jt.second || jt.second->parent_link_name != parent) continue;
+      const std::string& child = jt.second->child_link_name;
+      auto it = arm.find(child);
+      if (it == arm.end()) {
+        arm[child] = tag;
+        stack.push_back(child);
+      } else if (it->second != tag) {
+        throw SceneLoadError("SceneLoadError: link '" + child +
+                             "' is reachable from both arms; refusing to guess");
+      }
+    }
+  }
+  return arm;
 }
 
 }  // namespace
@@ -278,6 +312,10 @@ std::shared_ptr<DualArmScene> DualArmScene::load(const SceneLoadOptions& options
   }
   rep.collision_detector_name = scene->scene_->getCollisionDetectorName();
 
+  // Arm membership by attachment (see armByAttachment for why not by name).
+  const std::map<std::string, std::string> arm_of =
+      armByAttachment(*urdf, options.left_prefix, options.right_prefix);
+
   // ---- Check B: count what actually loaded ------------------------------
   for (const std::string& name : model->getLinkModelNames()) {
     const moveit::core::LinkModel* lm = model->getLinkModel(name);
@@ -286,7 +324,10 @@ std::shared_ptr<DualArmScene> DualArmScene::load(const SceneLoadOptions& options
 
     LinkGeometry lg;
     lg.link_name = name;
-    lg.arm = armOf(name, options.left_prefix, options.right_prefix);
+    {
+      const auto it = arm_of.find(name);
+      lg.arm = (it == arm_of.end()) ? "other" : it->second;
+    }
     lg.n_shapes = shapes_vec.size();
     for (const auto& sh : shapes_vec) {
       if (!sh) continue;

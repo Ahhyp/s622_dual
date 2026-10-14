@@ -2,7 +2,7 @@
   "stage": "C4.2-S3",
   "c41_index": {"records": 2777990, "voxel": 0.020000, "left_voxels": 147454, "right_voxels": 147553, "crw_voxels": 53606, "handover_samples": 58144},
   "options": {"p1_max": 60000, "grid_step": 0.030000, "use_p1": true, "use_p3": true},
-  "sweep_seconds": 161.911704,
+  "sweep_seconds": 173.957317,
   "funnels": {
     "ALL": {
       "candidates": 233288,
@@ -20,7 +20,7 @@
       "s4_outside_s0_sampling_gap": 171,
       "hard_pass_left": 148298,
       "hard_pass_right": 144936,
-      "mean_cross_arm_clearance": 0.033452,
+      "mean_cross_arm_clearance": 0.033446,
       "min_cross_arm_clearance": 0.000132
     },
     "P1a_left_hold": {
@@ -39,7 +39,7 @@
       "s4_outside_s0_sampling_gap": 84,
       "hard_pass_left": 62780,
       "hard_pass_right": 43662,
-      "mean_cross_arm_clearance": 0.033431,
+      "mean_cross_arm_clearance": 0.033421,
       "min_cross_arm_clearance": 0.000132
     },
     "P1b_midpoint": {
@@ -77,7 +77,7 @@
       "s4_outside_s0_sampling_gap": 44,
       "hard_pass_left": 32827,
       "hard_pass_right": 29358,
-      "mean_cross_arm_clearance": 0.033371,
+      "mean_cross_arm_clearance": 0.033356,
       "min_cross_arm_clearance": 0.001503
     }
   },

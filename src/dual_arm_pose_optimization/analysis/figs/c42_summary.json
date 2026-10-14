@@ -103,13 +103,13 @@
     "s4_outside_s0_sampling_gap": 171,
     "hard_pass_left": 148298,
     "hard_pass_right": 144936,
-    "mean_cross_arm_clearance": 0.033452,
+    "mean_cross_arm_clearance": 0.033446,
     "min_cross_arm_clearance": 0.000132
   },
   "nesting_violations": 0,
   "s4": {
     "n_s4": 28192,
-    "pareto_8obj_fraction": 0.5848,
+    "pareto_8obj_fraction": 0.5847,
     "pareto_key3_size": 92,
     "poles": {
       "J1_sigma_min_left": 0.15485,
@@ -180,7 +180,7 @@
       "J5_margin": 0.5873,
       "J6_closeness": 0.0,
       "J7_continuity": 0.1544,
-      "J8_arm_prox": 0.9478
+      "J8_arm_prox": 0.9474
     }
   },
   "recommended": {

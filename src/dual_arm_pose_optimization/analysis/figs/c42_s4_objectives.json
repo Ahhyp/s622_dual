@@ -340,8 +340,8 @@
   "pareto": {
     "eight_objective": {
       "subsample": 6000,
-      "front_size": 3509,
-      "fraction": 0.5848,
+      "front_size": 3508,
+      "fraction": 0.5847,
       "note": "computed on a seeded subsample; at m=8 the front is barely selective, so it is reported as a finding rather than used for selection"
     },
     "key_three_objective": {
@@ -1276,7 +1276,7 @@
           "smin_right": 0.03763,
           "w_rel": 0.95503,
           "arm_arm": 0.03366,
-          "arm_proximal": 0.12934,
+          "arm_proximal": 0.11215,
           "joint_margin": 0.46285,
           "deviation": 0.72572,
           "continuity": 1.0

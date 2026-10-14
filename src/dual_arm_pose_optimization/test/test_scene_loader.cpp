@@ -61,13 +61,18 @@ TEST(C42SceneLoader, EveryMeshResolvesAndIsNonEmpty) {
 TEST(C42SceneLoader, CollisionGeometryActuallyLoadedPerArm) {
   const c42::GeometryReport& g = fixtureScene()->geometry();
 
-  // 9 meshes per arm (base/shoulder/upperarm/forearm/wrist1-3/finger1-2),
-  // plus the wrist camera box, which is attached to the right wrist but is NOT
-  // name-prefixed -> it lands in the "other" bucket.  That ambiguity is exactly
-  // why the cross-arm scope is defined by pair membership, not by prefix.
+  // 9 meshes on the left arm (base/shoulder/upperarm/forearm/wrist1-3/finger1-2)
+  // and 10 on the right: the same 9 plus the wrist camera BOX.
+  //
+  // Arm membership is decided by KINEMATIC ATTACHMENT, not by name prefix.
+  // `wrist_camera_link` is rigidly attached to `right_grasp_frame` and therefore
+  // belongs to the RIGHT arm even though its link name carries no `right_`
+  // prefix.  A prefix rule used to file it under "other", which silently dropped
+  // the (left arm x camera) pair from the cross-arm clearance scope -- a real
+  // collision risk that was never measured.
   EXPECT_EQ(g.shapesOfArm("left"), 9u);
-  EXPECT_EQ(g.shapesOfArm("right"), 9u);
-  EXPECT_EQ(g.shapesOfArm("other"), 1u);
+  EXPECT_EQ(g.shapesOfArm("right"), 10u);
+  EXPECT_EQ(g.shapesOfArm("other"), 0u) << "every collision link must belong to an arm";
   EXPECT_EQ(g.total_collision_shapes, 19u);
 
   // The loaded shape count must cover every <collision> block the URDF declares.
@@ -97,10 +102,13 @@ TEST(C42SceneLoader, PerLinkDistributionIsReported) {
 
   EXPECT_NE(g.link("right_finger2"), nullptr);
 
-  // The arm-ambiguous link is reported rather than silently absorbed.
+  // The camera is attached to the right grasp frame -> it is part of the RIGHT
+  // arm, and must be reported as such (see the note in the test above).
   const c42::LinkGeometry* cam = g.link("wrist_camera_link");
   ASSERT_NE(cam, nullptr);
-  EXPECT_EQ(cam->arm, "other");
+  EXPECT_EQ(cam->arm, "right");
+  EXPECT_EQ(cam->shape_types.size(), 1u);
+  EXPECT_EQ(cam->shape_types[0], "box");
 
   // Links with no collision geometry are listed explicitly.
   const auto& no_col = g.urdf_links_without_collision;
