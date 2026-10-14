@@ -1,0 +1,231 @@
+{
+  "n_s4_candidates": 28192,
+  "voxel_m": 0.02,
+  "cooperative_zone": {
+    "voxels": 9839,
+    "volume_l": 78.712,
+    "bbox": [
+      [
+        -0.2211,
+        0.4125
+      ],
+      [
+        -0.4875,
+        0.544
+      ],
+      [
+        0.0353,
+        0.441
+      ]
+    ],
+    "components_total": 1,
+    "components_passing_size_filter": 1,
+    "min_component_voxels": 20,
+    "components": [
+      {
+        "component": 1,
+        "voxels": 9839,
+        "volume_l": 78.712,
+        "mean_score": 0.7467,
+        "max_score": 0.86
+      }
+    ],
+    "best_subregion": {
+      "component": 1,
+      "voxels": 9839,
+      "volume_l": 78.712,
+      "mean_score": 0.7467,
+      "max_score": 0.86
+    }
+  },
+  "containment": {
+    "asserted": "every S4 candidate is an S0 candidate (both induced TCPs point-reachable) -> cooperative zone is inside the point-reachable set",
+    "s0_holds_for_all_s4": false,
+    "object_centres_inside_tcp_space_crw": 27934,
+    "object_centres_total": 28192,
+    "definitional_note": "CRW is a set of TCP POINTS while the cooperative zone is a set of OBJECT CENTRES; a literal subset relation between them is not well defined, so the asserted containment is the S0 layer."
+  },
+  "c41_crw_voxels": 53612,
+  "s5": {
+    "stage": "C4.2-S5",
+    "weight_set": "equal",
+    "scales": [
+      0.153739,
+      0.143295,
+      1.151829,
+      0.05,
+      0.5,
+      1.053581,
+      1.0,
+      0.05
+    ],
+    "baseline_B": {
+      "p_O": [
+        0.054908,
+        0.000295,
+        0.335103
+      ],
+      "rotvec_deg": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "V0": {
+      "score": 0.860655,
+      "feasible": true,
+      "evals": 207,
+      "p_O": [
+        0.115426,
+        0.01542,
+        0.223439
+      ],
+      "rotvec_deg": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "theta_norm_deg": 0.0,
+      "metrics": {
+        "smin_left": 0.141967,
+        "smin_right": 0.133191,
+        "w_rel": 0.703023,
+        "arm_arm": 0.03366,
+        "arm_proximal": 0.19096,
+        "joint_margin": 0.5,
+        "deviation": 0.213384,
+        "continuity": 0.951304
+      },
+      "normalised": [
+        0.923427,
+        0.929489,
+        0.610353,
+        0.673199,
+        1.0,
+        0.797468,
+        0.951304,
+        1.0
+      ]
+    },
+    "V1": {
+      "score": 0.86439,
+      "feasible": true,
+      "evals": 601,
+      "p_O": [
+        0.134151,
+        -0.012335,
+        0.234339
+      ],
+      "rotvec_deg": [
+        -4.277783,
+        -8.673218,
+        -2.544771
+      ],
+      "theta_norm_deg": 10.0,
+      "metrics": {
+        "smin_left": 0.143413,
+        "smin_right": 0.139006,
+        "w_rel": 0.664318,
+        "arm_arm": 0.033659,
+        "arm_proximal": 0.180082,
+        "joint_margin": 0.499998,
+        "deviation": 0.218376,
+        "continuity": 0.969568
+      },
+      "normalised": [
+        0.932832,
+        0.970071,
+        0.576751,
+        0.673172,
+        0.999996,
+        0.79273,
+        0.969568,
+        1.0
+      ]
+    },
+    "theta_sensitivity": [
+      {
+        "theta_max_deg": 5.0,
+        "score": 0.863858,
+        "used_deg": 5.0,
+        "feasible": true
+      },
+      {
+        "theta_max_deg": 10.0,
+        "score": 0.864389,
+        "used_deg": 10.0,
+        "feasible": true
+      },
+      {
+        "theta_max_deg": 15.0,
+        "score": 0.864422,
+        "used_deg": 12.017543,
+        "feasible": true
+      }
+    ],
+    "segment_metric": {
+      "name": "joint-space straight-line segment feasibility",
+      "note": "NOT a motion planner; reported as segment feasibility",
+      "samples": 32,
+      "candidates": 2659,
+      "feasible": 2204,
+      "rate": 0.828883,
+      "sample_sensitivity": [
+        {
+          "N": 8,
+          "feasible": true
+        },
+        {
+          "N": 16,
+          "feasible": true
+        },
+        {
+          "N": 32,
+          "feasible": true
+        },
+        {
+          "N": 64,
+          "feasible": true
+        }
+      ]
+    },
+    "standby": {
+      "pool_sampled": 6000,
+      "after_filters": 2659,
+      "scales": {
+        "path": 8.844676,
+        "joint_motion": 5.329746,
+        "cart": 0.585498,
+        "clearance": 0.05
+      },
+      "best": {
+        "q12": [
+          1.185806,
+          -1.405618,
+          -1.817006,
+          -2.941357,
+          0.467988,
+          -1.392832,
+          1.073986,
+          -2.688862,
+          2.044372,
+          -2.415095,
+          0.662887,
+          -0.372633
+        ],
+        "segment_ok": true,
+        "path": 3.198043,
+        "joint_motion": 1.745466,
+        "clearance": 0.153324,
+        "cart": 0.212956,
+        "score": 0.825814
+      }
+    },
+    "checks_passed": 4,
+    "checks_total": 4,
+    "total_seconds": 126.936076
+  },
+  "figures": [
+    "fig6_cooperative_zone.png"
+  ]
+}

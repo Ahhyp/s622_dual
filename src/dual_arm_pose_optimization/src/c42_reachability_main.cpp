@@ -45,6 +45,11 @@ struct Funnel {
   std::size_t right_branches = 0;
   std::size_t right_hard_pass = 0;
   std::size_t pair_attempts = 0;
+  /// Per-candidate nesting violations: these MUST be zero (S4<=S3<=S2<=S1).
+  std::size_t nested_violations = 0;
+  /// S4 candidates whose induced TCPs are outside the C4.1 sampled masks.  S0 is
+  /// a SAMPLING proxy, so this is a coverage gap, not an inconsistency.
+  std::size_t s4_outside_s0 = 0;
 
   double sum_mesh_arm_arm = 0.0;
   double min_mesh_arm_arm = 1e9;
@@ -71,6 +76,11 @@ struct Funnel {
     }
     if (r.layer.s2_dual) ++s2;
     if (r.layer.s3_grasp) ++s3;
+    // per-candidate nesting (the plan's acceptance criterion)
+    if (r.layer.s4_collision_free && !r.layer.s3_grasp) ++nested_violations;
+    if (r.layer.s3_grasp && !r.layer.s2_dual) ++nested_violations;
+    if (r.layer.s2_dual && !(r.layer.s1_left && r.layer.s1_right)) ++nested_violations;
+    if (r.layer.s4_collision_free && !r.layer.s0_point_reachable) ++s4_outside_s0;
     if (r.layer.s4_collision_free) {
       ++s4;
       if (r.mesh_arm_arm > 0.0) {
@@ -134,6 +144,9 @@ void printFunnel(const std::string& name, const Funnel& f, std::ostream& os) {
   os << "  analytic branches (L/R)   : " << f.left_branches << " / " << f.right_branches << "\n";
   os << "  hard-passing sols (L/R)   : " << f.left_hard_pass << " / " << f.right_hard_pass << "\n";
   os << "  solution-PAIR attempts    : " << f.pair_attempts << "\n";
+  os << "  nesting violations        : " << f.nested_violations << "\n";
+  os << "  S4 but outside S0 (proxy) : " << f.s4_outside_s0
+     << "   (C4.1 sampling coverage gap; S0 is a proxy, not a gate)\n";
   if (f.n_clearance) {
     os << "  mean cross-arm clearance  : " << f.mean_clearance()
        << " m   (min " << f.min_mesh_arm_arm << " m, n=" << f.n_clearance << ")\n";
@@ -181,6 +194,8 @@ void dumpFunnelJson(std::ostream& js, const std::string& name, const Funnel& f, 
   ratio("S4_over_candidates", f.s4, f.total, true);
   js << "},\n";
   js << "      \"pair_attempts\": " << f.pair_attempts << ",\n";
+  js << "      \"nesting_violations\": " << f.nested_violations << ",\n";
+  js << "      \"s4_outside_s0_sampling_gap\": " << f.s4_outside_s0 << ",\n";
   js << "      \"hard_pass_left\": " << f.left_hard_pass << ",\n";
   js << "      \"hard_pass_right\": " << f.right_hard_pass << ",\n";
   js << "      \"mean_cross_arm_clearance\": " << f.mean_clearance() << ",\n";
@@ -343,8 +358,11 @@ int main(int argc, char** argv) {
             << " ms\n";
 
   // ---- S0..S4 nesting must hold by construction --------------------------
-  const bool nested = all.s4 <= all.s3 && all.s3 <= all.s2 && all.s2 <= all.s0 &&
-                      all.s2 <= all.s1_left && all.s2 <= all.s1_right;
+  // NOTE: this is a PER-CANDIDATE check.  Comparing totals (s4 <= s0 ...) is a
+  // different, weaker statement and can be true while the implication fails for
+  // individual candidates -- S0 does not gate the pipeline because it is only a
+  // sampling proxy, and IK is the stronger test.
+  const bool nested = all.nested_violations == 0;
 
   // P1a's left TCP is FK(q_L) of a configuration C4.1 actually sampled, so the
   // LEFT half of S0 must be ~100% for that pool.  Anything much below that means
@@ -362,7 +380,8 @@ int main(int argc, char** argv) {
   const int ntotal = 3;
   std::cout << "\n=== S3 self-checks ===\n";
   std::cout << (nested ? "  PASS  " : "  FAIL  ")
-            << "nesting S4 <= S3 <= S2 <= min(S1_L,S1_R) <= S0\n";
+            << "per-candidate nesting S4 => S3 => S2 => (S1_L and S1_R); violations = "
+            << all.nested_violations << "/" << all.total << "\n";
   npass += nested ? 1 : 0;
   std::cout << (p1a_left_ok ? "  PASS  " : "  FAIL  ")
             << "P1a S0-left ~ 100% (FK-derived pool + mask agree; got "

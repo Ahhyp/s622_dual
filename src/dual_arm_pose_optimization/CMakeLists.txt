@@ -24,6 +24,7 @@ add_library(${PROJECT_NAME} SHARED
   src/m4_baseline.cpp
   src/candidate_pool.cpp
   src/feasibility.cpp
+  src/optimizer.cpp
 )
 target_include_directories(${PROJECT_NAME}
   PUBLIC
@@ -58,11 +59,15 @@ target_link_libraries(c42_baseline_probe ${PROJECT_NAME})
 add_executable(c42_reachability src/c42_reachability_main.cpp)
 target_link_libraries(c42_reachability ${PROJECT_NAME})
 
+# S5: V0/V1 pose refinement + standby search.
+add_executable(c42_optimize_pose src/c42_optimize_pose_main.cpp)
+target_link_libraries(c42_optimize_pose ${PROJECT_NAME})
+
 install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
-install(TARGETS c42_scene_probe c42_baseline_probe c42_reachability
+install(TARGETS c42_scene_probe c42_baseline_probe c42_reachability c42_optimize_pose
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
@@ -86,6 +91,11 @@ if(BUILD_TESTING)
 
   ament_add_gtest(test_ik_layer test/test_ik_layer.cpp)
   target_link_libraries(test_ik_layer ${PROJECT_NAME})
+
+  ament_add_gtest(test_optimizer test/test_optimizer.cpp)
+  target_link_libraries(test_optimizer ${PROJECT_NAME})
+  target_compile_definitions(test_optimizer PRIVATE
+    C42_URDF="${C42_URDF}" C42_SRDF="${C42_SRDF}")
 
   ament_add_gtest(test_feasibility test/test_feasibility.cpp)
   target_link_libraries(test_feasibility ${PROJECT_NAME})
