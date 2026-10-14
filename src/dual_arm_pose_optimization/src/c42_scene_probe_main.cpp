@@ -115,10 +115,31 @@ int main(int argc, char** argv) {
       "left=" + std::to_string(g.shapesOfArm("left")));
   add(checks, "geometry.right_shapes > 0", g.shapesOfArm("right") > 0,
       "right=" + std::to_string(g.shapesOfArm("right")));
-  add(checks, "geometry.arms_symmetric",
-      g.shapesOfArm("left") == g.shapesOfArm("right") && g.shapesOfArm("left") > 0,
-      "left=" + std::to_string(g.shapesOfArm("left")) +
-          " right=" + std::to_string(g.shapesOfArm("right")));
+  // The two arms are NOT symmetric: the right one carries the wrist camera
+  // (wrist_camera_link is rigidly attached to right_grasp_frame).  Arm
+  // membership is decided by KINEMATIC ATTACHMENT, so the camera counts as part
+  // of the right arm even though its link name has no "right_" prefix.  Assert
+  // the asymmetry is exactly the known one instead of pretending they match.
+  {
+    std::size_t extra = 0;
+    bool extra_is_camera = false;
+    for (const auto& lg : g.links) {
+      if (lg.link_name == "wrist_camera_link" && lg.n_shapes > 0) {
+        extra_is_camera = (lg.arm == "right");
+        ++extra;
+      }
+    }
+    const bool ok = extra_is_camera && extra == 1 &&
+                    g.shapesOfArm("right") == g.shapesOfArm("left") + 1 &&
+                    g.shapesOfArm("left") > 0;
+    add(checks, "geometry.right_has_the_wrist_camera_only", ok,
+        "left=" + std::to_string(g.shapesOfArm("left")) +
+            " right=" + std::to_string(g.shapesOfArm("right")) +
+            " (camera on right: " + (extra_is_camera ? "yes" : "NO") + ")");
+  }
+  add(checks, "geometry.no_orphan_collision_links", g.shapesOfArm("other") == 0,
+      "other=" + std::to_string(g.shapesOfArm("other")) +
+          " (every collision link must belong to an arm by attachment)");
   add(checks, "geometry.mesh_vertices > 0", g.total_mesh_vertices > 0,
       "verts=" + std::to_string(g.total_mesh_vertices) +
           " tris=" + std::to_string(g.total_mesh_triangles));
