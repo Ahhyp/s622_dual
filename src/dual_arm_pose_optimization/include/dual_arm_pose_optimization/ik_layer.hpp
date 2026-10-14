@@ -54,6 +54,12 @@ struct IkOutcome {
   std::size_t n_candidates = 0;    ///< candidates the selector scored
   std::size_t n_hard_pass = 0;     ///< candidates that passed the hard filters
   double selected_cost = 0.0;
+  /// Quality of the SELECTED candidate, straight from IKSelector.
+  double selected_sigma_min = 0.0;   ///< sigma_min of the arm Jacobian
+  double selected_S1 = 0.0;          ///< continuity score   [0,1]
+  double selected_S2 = 0.0;          ///< manipulability      [0,1]
+  double selected_S3 = 0.0;          ///< posture             [0,1]
+  double selected_S4 = 0.0;          ///< joint safety        [0,1]
 
   /// ALL hard-passing analytic branches, best-first by the selector's cost.
   /// Required by 额外要求 2: the dual-arm problem must be evaluated over

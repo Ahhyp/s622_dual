@@ -302,7 +302,9 @@ int main(int argc, char** argv) {
   std::ofstream csv;
   if (!csv_out.empty()) {
     csv.open(csv_out);
-    csv << "pool,px,py,pz,s0,s1_left,s1_right,s2,s3,s4,pairs,mesh_arm_arm,pair_a,pair_b\n";
+    csv << "pool,px,py,pz,s0,s1_left,s1_right,s2,s3,s4,pairs,mesh_arm_arm,pair_a,pair_b,"
+           "smin_left,smin_right,w_rel,joint_margin,deviation,continuity,"
+           "arm_proximal,prox_a,prox_b\n";
   }
 
   auto t2 = Clock::now();
@@ -317,7 +319,11 @@ int main(int argc, char** argv) {
           << r.layer.s0_point_reachable << "," << r.layer.s1_left << ","
           << r.layer.s1_right << "," << r.layer.s2_dual << "," << r.layer.s3_grasp << ","
           << r.layer.s4_collision_free << "," << r.pair_attempts << ","
-          << r.mesh_arm_arm << "," << r.mesh_pair_a << "," << r.mesh_pair_b << "\n";
+          << r.mesh_arm_arm << "," << r.mesh_pair_a << "," << r.mesh_pair_b << ","
+          << r.smin_left << "," << r.smin_right << "," << r.w_rel << ","
+          << r.joint_margin << "," << r.deviation << "," << r.continuity << ","
+          << r.arm_proximal_clearance << "," << r.arm_proximal_pair_a << ","
+          << r.arm_proximal_pair_b << "\n";
     }
   }
   const double sweep_s = std::chrono::duration<double>(Clock::now() - t2).count();

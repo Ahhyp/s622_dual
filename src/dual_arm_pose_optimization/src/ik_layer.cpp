@@ -81,7 +81,14 @@ IkOutcome IkLayer::solveAndSelect(const Eigen::Matrix4d& target_base, const Join
       ++out.n_hard_pass;
       passing.emplace_back(d.total_cost, d.q);
     }
-    if (d.selected) out.selected_cost = d.total_cost;
+    if (d.selected) {
+      out.selected_cost = d.total_cost;
+      out.selected_sigma_min = d.metrics.sigma_min;
+      out.selected_S1 = d.S1;
+      out.selected_S2 = d.S2;
+      out.selected_S3 = d.S3;
+      out.selected_S4 = d.S4;
+    }
     hist[rejectReasonName(static_cast<int>(d.reject_reason))] += 1;
   }
   std::sort(passing.begin(), passing.end(),

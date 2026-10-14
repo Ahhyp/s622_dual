@@ -93,6 +93,40 @@ TEST(C42Acm, CrossArmAcmDisablesEverySameArmPair) {
   }
 }
 
+TEST(C42Acm, ProximalScopeIsAStrictSubsetOfTheCrossArmScope) {
+  // The proximal scope exists because a rigid grasp locks every distal-distal
+  // distance (C4.2 S3 finding).  It must therefore be a STRICT subset, and the
+  // minimum over a subset can never be smaller than the minimum over the
+  // superset.
+  EXPECT_GT(backend().crossArmPairCount(), backend().armProximalPairCount());
+  EXPECT_GT(backend().armProximalPairCount(), 0u);
+
+  for (const auto* q : {&kBaselineA, &kBaselineBPrerebuild}) {
+    auto st = scene()->makeStateQ12(*q);
+    const c42::DistanceReading r = backend().distances(st);
+    EXPECT_GE(r.arm_proximal, r.arm_arm - 1e-12)
+        << "min over a subset of pairs cannot be smaller than over the superset";
+  }
+}
+
+TEST(C42Acm, ProximalScopeActuallyVariesWithPosture) {
+  // The whole point of the proximal scope is that it HAS a gradient: the S3
+  // sweep measured a std of 50.6 mm for it against 1.9 mm for all-pairs.
+  std::vector<double> vals;
+  for (double dy : {-0.25, -0.15, 0.0, 0.15, 0.25}) {
+    std::vector<double> q = kBaselineBPrerebuild;
+    q[0] += dy;   // left_j1
+    q[6] -= dy;   // right_j1, opposite sense -> postures change
+    auto st = scene()->makeStateQ12(q);
+    const c42::DistanceReading r = backend().distances(st);
+    if (r.arm_proximal > 0.0) vals.push_back(r.arm_proximal);
+  }
+  ASSERT_GE(vals.size(), 3u);
+  const double lo = *std::min_element(vals.begin(), vals.end());
+  const double hi = *std::max_element(vals.begin(), vals.end());
+  EXPECT_GT(hi - lo, 1e-3) << "the proximal clearance must respond to posture";
+}
+
 TEST(C42Acm, CrossArmAcmKeepsAllCrossArmPairsChecked) {
   const std::size_t expect =
       scene()->leftLinks().size() * scene()->rightLinks().size();

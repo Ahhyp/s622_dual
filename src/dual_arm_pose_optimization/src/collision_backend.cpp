@@ -48,6 +48,8 @@ std::string DistanceReading::to_string() const {
      << whole_link_b << ")";
   os << "  arm_arm=" << arm_arm << " m (" << arm_arm_link_a << " <-> "
      << arm_arm_link_b << ")";
+  os << "  arm_proximal=" << arm_proximal << " m (" << arm_proximal_link_a << " <-> "
+     << arm_proximal_link_b << ")";
   if (capsule_arm_arm >= 0.0) os << "  capsule_arm_arm=" << capsule_arm_arm << " m";
   os << "  colliding=" << (in_collision ? "true" : "false");
   return os.str();
@@ -93,6 +95,29 @@ MoveItCollisionBackend::MoveItCollisionBackend(const std::shared_ptr<DualArmScen
   }
 
   cross_arm_acm_ = buildCrossArmAcm();
+  arm_proximal_acm_ = buildArmProximalAcm();
+}
+
+AllowedCollisionMatrix MoveItCollisionBackend::buildArmProximalAcm() const {
+  AllowedCollisionMatrix acm = cross_arm_acm_;
+  const std::vector<std::string>& left = scene_->leftLinks();
+  const std::vector<std::string>& right = scene_->rightLinks();
+
+  auto isProximal = [&](const std::string& n) {
+    return std::find(env_.proximal_links.begin(), env_.proximal_links.end(), n) !=
+           env_.proximal_links.end();
+  };
+
+  std::size_t checked = 0;
+  for (const std::string& a : left) {
+    for (const std::string& b : right) {
+      const bool keep = isProximal(a) || isProximal(b);
+      acm.setEntry(a, b, !keep);  // allowed == ignored
+      if (keep) ++checked;
+    }
+  }
+  arm_proximal_pairs_ = checked;
+  return acm;
 }
 
 AllowedCollisionMatrix MoveItCollisionBackend::buildCrossArmAcm() const {
@@ -188,6 +213,12 @@ DistanceReading MoveItCollisionBackend::distances(const moveit::core::RobotState
   out.arm_arm_link_b = arm.minimum_distance.link_names[1];
   out.arm_arm_point_a = arm.minimum_distance.nearest_points[0];
   out.arm_arm_point_b = arm.minimum_distance.nearest_points[1];
+
+  // scope 2b: cross-arm with >= 1 proximal link (the one with a gradient)
+  DistanceResult body;
+  out.arm_proximal = queryDistance(env, state, arm_proximal_acm_, &body, /*self=*/true);
+  out.arm_proximal_link_a = body.minimum_distance.link_names[0];
+  out.arm_proximal_link_b = body.minimum_distance.link_names[1];
 
   // scope 3: independent capsule proxy (C2.7)
   if (q12 != nullptr) {
