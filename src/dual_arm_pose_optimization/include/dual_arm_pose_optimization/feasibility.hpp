@@ -86,6 +86,17 @@ struct CandidateResult {
   bool has_chosen_pair = false;
   dual_arm::JointConfig q_left_chosen = dual_arm::JointConfig::Zero();
   dual_arm::JointConfig q_right_chosen = dual_arm::JointConfig::Zero();
+
+  // ---- raw objective inputs (filled for S4 candidates) -------------------
+  // Kept RAW here; normalisation belongs to the optimizer (S4).
+  double smin_left = 0.0;    ///< sigma_min(J_L) of the chosen solution
+  double smin_right = 0.0;   ///< sigma_min(J_R)
+  double w_rel = 0.0;        ///< relative manipulability (BodyR, frame-invariant)
+  double joint_margin = 0.0; ///< min over both arms of min(q-lo, hi-q) [rad]
+  double deviation = 0.0;    ///< ||q12 - q12_baseline||  (limit-normalised span)
+  double continuity = 0.0;   ///< IKSelector S1 of the chosen solution [0,1]
+  double arm_proximal_clearance = -1.0;  ///< cross-arm min with >=1 proximal link [m]
+  std::string arm_proximal_pair_a, arm_proximal_pair_b;
 };
 
 struct FeasibilityOptions {

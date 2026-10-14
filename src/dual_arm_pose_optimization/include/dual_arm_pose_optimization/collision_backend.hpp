@@ -47,18 +47,36 @@ struct EnvironmentOptions {
   double floor_thickness = 0.2;
   /// Links allowed to touch the floor (the arms are bolted to it).
   std::vector<std::string> floor_exempt_links{"left_base_link", "right_base_link"};
+  /// Proximal links, used by the `arm_proximal` clearance scope.
+  ///
+  /// Why this scope exists (C4.2 S3 -> S4 finding): with the rigid-grasp model
+  /// T_rel is fixed, so the two arms' DISTAL chains (wrist3 -> gripper) move
+  /// rigidly together and every distal-distal distance is a geometric CONSTANT
+  /// -- 97.7% of S4 solutions report the identical 33.7 mm (all pairs) / 35.1 mm
+  /// (grippers excluded).  Those two scopes therefore carry no information about
+  /// the candidate.  Only pairs involving at least one PROXIMAL link can change,
+  /// because that is where the 12-DOF redundancy actually acts.  This scope is
+  /// the one with a gradient.
+  std::vector<std::string> proximal_links{
+      "left_base_link", "left_shoulder_link", "left_upperarm_link", "left_forearm_link",
+      "right_base_link", "right_shoulder_link", "right_upperarm_link",
+      "right_forearm_link"};
 };
 
 /// One pose evaluated in three distance scopes.
 struct DistanceReading {
   double whole_robot = 0.0;      ///< [m] min over ALL link pairs (SRDF ACM)
   double arm_arm = 0.0;          ///< [m] min over CROSS-ARM pairs only
+  double arm_proximal = 0.0;     ///< [m] cross-arm, at least one PROXIMAL link
   double capsule_arm_arm = -1.0; ///< [m] C2.7 capsule proxy; <0 when not evaluated
   bool in_collision = false;     ///< dual_arm group self-collision (SRDF ACM)
 
   /// Closest cross-arm pair (empty when nothing was measured).
   std::string arm_arm_link_a;
   std::string arm_arm_link_b;
+  /// Closest cross-arm pair involving at least one proximal link.
+  std::string arm_proximal_link_a;
+  std::string arm_proximal_link_b;
   Eigen::Vector3d arm_arm_point_a = Eigen::Vector3d::Zero();
   Eigen::Vector3d arm_arm_point_b = Eigen::Vector3d::Zero();
 
@@ -111,6 +129,10 @@ public:
   const collision_detection::AllowedCollisionMatrix& crossArmAcm() const {
     return cross_arm_acm_;
   }
+  /// crossArmAcm further restricted to pairs with >= 1 proximal link.
+  const collision_detection::AllowedCollisionMatrix& armProximalAcm() const {
+    return arm_proximal_acm_;
+  }
   /// SRDF ACM + floor exempted for `floor_exempt_links` (and, when the floor
   /// is absent, identical to the SRDF ACM).
   const collision_detection::AllowedCollisionMatrix& robotWorldAcm() const {
@@ -129,17 +151,21 @@ public:
 
   /// Number of link pairs that the cross-arm ACM leaves enabled (diagnostic).
   std::size_t crossArmPairCount() const { return cross_arm_pairs_; }
+  std::size_t armProximalPairCount() const { return arm_proximal_pairs_; }
 
 private:
   collision_detection::AllowedCollisionMatrix buildCrossArmAcm() const;
+  collision_detection::AllowedCollisionMatrix buildArmProximalAcm() const;
 
   std::shared_ptr<DualArmScene> scene_;
   EnvironmentOptions env_;
   bool floor_added_ = false;
   mutable std::size_t cross_arm_pairs_ = 0;
+  mutable std::size_t arm_proximal_pairs_ = 0;
 
   collision_detection::AllowedCollisionMatrix srdf_acm_;
   collision_detection::AllowedCollisionMatrix cross_arm_acm_;
+  collision_detection::AllowedCollisionMatrix arm_proximal_acm_;
   collision_detection::AllowedCollisionMatrix robot_world_acm_;
   collision_detection::AllowedCollisionMatrix robot_world_acm_no_exemption_;
 

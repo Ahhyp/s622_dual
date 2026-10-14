@@ -1,6 +1,9 @@
 // src/feasibility.cpp
 #include "dual_arm_pose_optimization/feasibility.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 #include <moveit_msgs/msg/collision_object.hpp>
 
 namespace dual_arm_pose_optimization {
@@ -166,6 +169,44 @@ CandidateResult FeasibilityPipeline::evaluate(const Candidate& c,
         r.capsule_arm_arm = d.capsule_arm_arm;
         r.mesh_pair_a = d.arm_arm_link_a;
         r.mesh_pair_b = d.arm_arm_link_b;
+        r.arm_proximal_clearance = d.arm_proximal;
+        r.arm_proximal_pair_a = d.arm_proximal_link_a;
+        r.arm_proximal_pair_b = d.arm_proximal_link_b;
+      }
+      // ---- raw objective inputs -----------------------------------------
+      {
+        static const double LO[6] = {-3.0543, -4.6251, -2.8274,
+                                     -4.6251, -3.0543, -3.0543};
+        static const double HI[6] = {3.0543, 1.4835, 2.8274,
+                                     1.4835, 3.0543, 3.0543};
+        double margin = 1e9;
+        for (int j = 0; j < 6; ++j) {
+          margin = std::min(margin, std::min(ql[j] - LO[j], HI[j] - ql[j]));
+          margin = std::min(margin, std::min(qr[j] - LO[j], HI[j] - qr[j]));
+        }
+        r.joint_margin = margin;
+
+        double dev2 = 0.0;
+        for (int j = 0; j < 6; ++j) {
+          const double span_l = HI[j] - LO[j];
+          const double dl = (ql[j] - baseline_.q_left[j]) / span_l;
+          const double dr = (qr[j] - baseline_.q_right[j]) / span_l;
+          dev2 += dl * dl + dr * dr;
+        }
+        r.deviation = std::sqrt(dev2);
+
+        r.smin_left = r.left_ik.selected_sigma_min;
+        r.smin_right = r.right_ik.selected_sigma_min;
+        r.continuity = 0.5 * (r.left_ik.selected_S1 + r.right_ik.selected_S1);
+
+        // relative manipulability, BodyR (frame-invariant product of sigmas)
+        const Eigen::MatrixXd Jrel =
+            kin().relativeJacobian(q12, dual_arm::RelativeFrame::BodyR);
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd(Jrel);
+        const auto& sv = svd.singularValues();
+        double logsum = 0.0;
+        for (int i = 0; i < sv.size(); ++i) logsum += std::log(std::max(sv(i), 1e-300));
+        r.w_rel = std::exp(logsum);
       }
       return r;
     }
