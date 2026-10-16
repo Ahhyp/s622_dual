@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd"
+            schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dual_arm_transport</name>
+  <version>0.1.0</version>
+  <description>
+    C4.3 S2: dual-end grasp starting configuration and the transport baseline.
+
+    Scope (正式执行规划 §6 S2): freeze the object + grasp geometry, enumerate ALL
+    hard-passing analytic IK branches per arm (never "one solution per arm"),
+    screen the left x right CARTESIAN PRODUCT, validate the full geometry
+    collision in explicit scopes, check pre-grasp path reachability, and freeze an
+    INDEPENDENT transport_baseline.yaml with explicit failure attribution.
+
+    The math primitives (GraspGeometry / anchoredObjectPose / closureResidual)
+    live in dual_arm_kinematics (C4.3 S1) and are reused, never re-derived here.
+    The IK layer / offline scene / scope-aware collision backend are reused from
+    dual_arm_pose_optimization through its PUBLIC exported interface (see
+    C4.3_S2_实施方案.md §10.2) -- no private relative-path includes, no copied IK.
+
+    Frame discipline (user m02331 D2): grasp regions, contact faces and approach
+    directions are defined in the OBJECT LOCAL frame and must be invariant under
+    any rigid transform of the object.
+  </description>
+
+  <maintainer email="1056651817@qq.com">Ahhyp</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>eigen</depend>
+  <depend>yaml-cpp</depend>
+  <depend>moveit_core</depend>
+  <depend>dual_arm_kinematics</depend>
+  <depend>dual_arm_collision</depend>
+  <!--
+    fairino_planning_core is declared EXPLICITLY here even though it also arrives
+    transitively through dual_arm_kinematics -> fairino_planning_core.
+    Reason (C4.3_S2_实施方案.md §10.1): dual_arm_pose_optimization's PUBLIC header
+    ik_layer.hpp includes fairino_planning_core headers, but that package declares
+    neither find_package() nor <depend> for it.  Declaring it here keeps this
+    package's dependency closure correct without touching C4.2 (user m02331 D5).
+  -->
+  <depend>fairino_planning_core</depend>
+  <depend>dual_arm_pose_optimization</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
