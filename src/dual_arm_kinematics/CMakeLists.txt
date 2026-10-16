@@ -50,6 +50,22 @@ if(BUILD_TESTING)
   target_link_libraries(test_step0_relative ${PROJECT_NAME})
   ament_add_gtest(test_object_frame test/test_object_frame.cpp)
   target_link_libraries(test_object_frame ${PROJECT_NAME})
+
+  # ---- C4.3 S1 (D1 / D3 / D4, tests T1..T7) --------------------------------
+  ament_add_gtest(test_grasp_geometry test/test_grasp_geometry.cpp)
+  target_link_libraries(test_grasp_geometry ${PROJECT_NAME})
+
+  ament_add_gtest(test_closure_residual test/test_closure_residual.cpp)
+  target_link_libraries(test_closure_residual ${PROJECT_NAME})
+
+  ament_add_gtest(test_object_jacobian_pi test/test_object_jacobian_pi.cpp)
+  target_link_libraries(test_object_jacobian_pi ${PROJECT_NAME})
+  # testonly/legacy_midpoint_negative.hpp is a TEST-ONLY negative implementation
+  # of the old midpoint algorithm; it must never be visible outside the test tree.
+  target_include_directories(test_object_jacobian_pi PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test)
+
+  ament_add_gtest(test_anchored_object_frame test/test_anchored_object_frame.cpp)
+  target_link_libraries(test_anchored_object_frame ${PROJECT_NAME})
 endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
