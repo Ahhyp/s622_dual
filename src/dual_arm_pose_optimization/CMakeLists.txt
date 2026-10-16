@@ -16,6 +16,8 @@ find_package(srdfdom REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(dual_arm_kinematics REQUIRED)
 find_package(dual_arm_collision REQUIRED)
+# Public header ik_layer.hpp includes fairino_planning_core headers directly.
+find_package(fairino_planning_core REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/scene_loader.cpp
@@ -44,6 +46,7 @@ target_link_libraries(${PROJECT_NAME}
          ament_index_cpp::ament_index_cpp
          dual_arm_kinematics::dual_arm_kinematics
          dual_arm_collision::dual_arm_collision
+         fairino_planning_core::fairino_planning_core
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -118,7 +121,8 @@ endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(Eigen3 moveit_core urdf srdfdom ament_index_cpp
-                          dual_arm_kinematics dual_arm_collision)
+                          dual_arm_kinematics dual_arm_collision
+                          fairino_planning_core)
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
 
