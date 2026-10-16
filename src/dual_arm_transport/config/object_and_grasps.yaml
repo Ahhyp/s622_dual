@@ -1,0 +1,121 @@
+# config/object_and_grasps.yaml
+# C4.3 S2 / W1 -- the sample + grasp geometry the whole transport baseline is
+# built on, in ONE machine-checked place.
+#
+# STATUS OF THESE NUMBERS (user m02331 D1/D4)
+# ------------------------------------------
+# The {0.05, 0.12, 0.05} m / 0.35 kg body and the 0.30 m support top are
+# CANDIDATES.  They are inputs to screening, not conclusions.  Only the values
+# written into config/transport_baseline.yaml by a passing screening run are
+# frozen results, and `support.top_z_status` is promoted from "candidate" to
+# "screened" ONLY by the driver, never by hand.
+#
+# AXIS ASSIGNMENT (user m02331 D1 + D2)
+# -------------------------------------
+# D2 fixes the grasp regions at the object's local +/-X ENDS, so X is the ROD
+# AXIS and carries the 0.12 m dimension.  That is an axis RELABELLING of the
+# same 0.05 x 0.12 x 0.05 body, not a change of the body, and it is recorded here
+# because D1 requires any geometry bookkeeping to be explicit.
+#
+# FRAMES (user m02331 D2)
+# -----------------------
+# Every `regions.*` quantity is in the OBJECT LOCAL frame and is therefore
+# invariant under any world placement of the object.  `world_object_star` is the
+# only world-frame block.
+#
+# APPROACH (measured, not assumed)
+# --------------------------------
+# Each arm takes ONE end and comes DOWN onto it: the tool z axis points from the
+# TCP into the sample, so -z_tcp = +z_obj, and the pads close along +y_obj.  The
+# pad separation is therefore the object's Y extent, which is what
+# `grip_thickness_m` must equal.
+#
+# A horizontal approach along the rod axis was tried first and REJECTED by the
+# screening: this arm carries its TCP 0.2168 m in front of the wrist, so reaching
+# inward with -z_tcp = +/-x_obj puts each wrist centre ~0.073 m from its own base
+# axis and the analytic solver fails at the grasp itself with `rho_sq`.  See
+# `placement_log` in config/transport_baseline.yaml.
+
+object:
+  frame: object
+  size_xyz: [0.12, 0.05, 0.05]     # [m]  x = rod / grasp axis, y = pad closing axis, z = up
+  mass: 0.35                       # [kg]
+  provenance: "provisional simulation sample (candidate per user m02331 D1)"
+  collision_links: ["object_link"]
+  sample_geometry:
+    # "box" == the plain rectangular body above.  Any other variant REQUIRES the
+    # two explanation strings below to be non-empty (user m02331 D1: a geometry
+    # change must be recorded explicitly, never silent).
+    variant: "box"
+    reason: ""
+    diff_vs_box: ""
+
+# T_WO* -- the task-given object pose at grasp time.  Not a midpoint of anything.
+world_object_star:
+  frame: world
+  translation: [0.0, 0.0, 0.275]   # [m] above the 0.25 m candidate support top
+  rpy: [0.0, 0.0, 0.0]             # [rad] fixed-axis XYZ
+
+grasps:
+  left:
+    tcp_frame: left_grasp_frame
+    # Which object-local end this arm takes: +1 => the +x end.
+    sign: +1
+    tcp_offset_along_normal_m: 0.0
+  right:
+    tcp_frame: right_grasp_frame
+    sign: -1
+    tcp_offset_along_normal_m: 0.0
+
+regions:
+  left:
+    # Grasped END face polygon, object local [m], in order, planar, +x face.
+    polygon_local:
+      - [0.06,  0.025,  0.025]
+      - [0.06, -0.025,  0.025]
+      - [0.06, -0.025, -0.025]
+      - [0.06,  0.025, -0.025]
+    # Outward normal of the grasped end face (region marker, per D2).
+    approach_dir_local: [1.0, 0.0, 0.0]
+    # The two pad contact bands: the +/-y faces of the rod, within the end region.
+    contact_faces:
+      - [[0.06, -0.025,  0.025], [0.06, -0.025, -0.025]]
+      - [[0.06,  0.025,  0.025], [0.06,  0.025, -0.025]]
+    # Distance from the grasped end face to the object centre [m] = size_x/2.
+    grasp_depth_m: 0.06
+  right:
+    polygon_local:
+      - [-0.06, -0.025,  0.025]
+      - [-0.06,  0.025,  0.025]
+      - [-0.06,  0.025, -0.025]
+      - [-0.06, -0.025, -0.025]
+    approach_dir_local: [-1.0, 0.0, 0.0]
+    contact_faces:
+      - [[-0.06, -0.025,  0.025], [-0.06, -0.025, -0.025]]
+      - [[-0.06,  0.025,  0.025], [-0.06,  0.025, -0.025]]
+    grasp_depth_m: 0.06
+
+# Pad separation along the closing axis (+y_obj) [m].  Must equal size_y and must
+# stay within the closing stroke.
+grip_thickness_m: 0.05
+
+# Finger/object interference budgets (D1).  Filled in by W1's measurement; the
+# loader only checks internal consistency and the stroke bound.
+clearance:
+  left:  { intrusion_m: 0.0, margin_m: 0.0, note: "" }
+  right: { intrusion_m: 0.0, margin_m: 0.0, note: "" }
+
+support:
+  id: c43_support
+  shape: cylinder
+  radius_m: 0.04
+  height_m: 0.25
+  top_z_m: 0.25
+  top_z_status: candidate       # candidate | screened | rejected -- driver-owned
+
+# Pre-grasp retreat distance [m] along -z_tcp (i.e. upward) -- candidate per user
+# m02331 D7, verified in W5.
+d_approach_m: 0.08
+
+# Closing stroke read from the URDF finger prismatic limits (NOT a body envelope).
+gripper_max_opening_m: 0.061

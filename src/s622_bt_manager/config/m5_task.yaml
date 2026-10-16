@@ -1,0 +1,54 @@
+# ============================================================================
+# M5「夹具辅助重抓 + 闭环放置」参数（M5 规划 §15；§7 Joint Anchor 清单）
+#
+# 唯一来源原则同 m4_handover.yaml：bt_executor 启动时把 "bb.*" 灌进 blackboard，
+# 行为树里用 {var} 引用。
+#
+# Anchor 数值来源（全部**实测**，非估算）：
+#   tmp/m5_round/fixture_solve.py  —— 修正真实限位后 FK-DLS 求解
+#   tmp/m5_round/fixture_reach_check.py —— KDL IK 交叉验证（回代残差 ≤0.005mm）
+#   tmp/m5_round/r_fixture_clear_check.py —— 与夹具间隙 ≥17.23mm、连杆不触地
+#   tmp/m5_round/anchor_roundtrip.py —— 20 次关节往返（见 logs/anchor_roundtrip.log）
+#
+# ⚠️ 关节限位（urdf.xacro ${prefix}j1..j6，左右共用）：
+#     j1 ±3.0543  j2 [-4.6251, 1.4835]  j3 ±2.8274
+#     j4 [-4.6251, 1.4835]  j5 ±3.0543  j6 ±3.0543
+# ============================================================================
+bt_executor:
+  ros__parameters:
+
+    # ---------------- 夹具（§4；与 gz_launch/models/regrasp_fixture/model.sdf 对应）----------------
+    bb.fixture_origin: [0.10, -0.20, 0.0]   # 夹具落地中心（launch 的 fixture_x/y/z）
+    # 支撑面 z=0.105 → 杆心落在 0.120（实测两次独立放置均 0.1200，与滚转无关）
+    bb.fixture_support_z: 0.105
+    bb.rod_center_on_fixture: [0.10, -0.20, 0.120]
+    bb.fixture_valid_region_xy: [0.05, 0.05]   # 质心容许的 XY 半径（§10 FIXTURE_ESCAPE 判据用）
+
+    # ---------------- Right Joint Anchors（§7）----------------
+    # 持 -54mm 端把杆放到夹具上（grasp 位姿 = rod_center + receive_offset）
+    bb.right_fixture_place_pre_joints: [1.9919, -1.1663, 1.7845, -0.7864, 0.4310, -1.3967]
+    bb.right_fixture_place_joints:     [1.9919, -1.0456, 1.8560, -0.9782, 0.4309, -1.3972]
+    # 释放后退回 place_pre（抬起 50mm 离开杆）——首版；§7 建议后续单独标定 retreat
+    bb.right_fixture_retreat_joints:   [1.9919, -1.1663, 1.7845, -0.7864, 0.4310, -1.3967]
+
+    # 从 +54mm 端重抓（杆已在夹具上）
+    bb.right_regrasp_pre_joints: [-0.2375, -1.7870, -2.3669, -2.0575, -1.8031, -1.5333]
+    bb.right_regrasp_joints:     [-0.1815, -1.9266, -2.1485, -2.1371, -1.7473, -1.5373]
+
+    # 观察锚点 / 最终放置锚点：待标定（§5 / M5-P2），先留空由后续步骤填入
+    # bb.right_fixture_observe_joints: []
+    # bb.right_final_pre_joints: []
+    # bb.right_final_place_joints: []
+    # bb.right_final_verify_joints: []
+
+    # ---------------- 抓取关系（与 m4_handover.yaml 一致，此处只做文档性引用）----------------
+    # 交接/放置抓取端 = 杆心 -54mm；重抓端 = 杆心 +54mm
+    bb.grasp_long_offset_handover_mm: -54.0
+    bb.grasp_long_offset_regrasp_mm: 54.0
+    # d_min（§7）：w_g 实测 20.61mm（finger1/2.STL 沿杆轴包络）+ 2×margin
+    bb.w_g_mm: 20.61
+    bb.d_min_mm: 45.0        # = 20.61 + 2×12；两抓取区实际间距 108mm，余量充足
+
+    # ---------------- 运动原语统一参数 ----------------
+    bb.plan_velocity_scale: 0.15     # 与 M4-C 冻结配方一致（0.30 会让右臂高速扫到杆）
+    bb.plan_time: 12.0

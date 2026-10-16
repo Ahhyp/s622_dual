@@ -1,0 +1,115 @@
+# C4.3 S2 c43_s2_baseline: independent C4.3 transport baseline produced by branch enumeration + cartesian-product screening + reachability check
+provenance: "C4.3 S2 c43_s2_baseline: independent C4.3 transport baseline produced by branch enumeration + cartesian-product screening + reachability check"
+schema: "c43_s2_transport_baseline/v1"
+stage: "C4.3-S2"
+object:
+  frame: "object"
+  size_xyz: [0.120000000, 0.050000000, 0.050000000]
+  mass: 0.350000000
+  world_T_object: "1.000000000000,0.000000000000,0.000000000000,0.000000000000;0.000000000000,1.000000000000,0.000000000000,0.000000000000;0.000000000000,0.000000000000,1.000000000000,0.275000000000;0.000000000000,0.000000000000,0.000000000000,1.000000000000"
+support:
+  id: "c43_support"
+  shape: "cylinder"
+  radius_m: 0.040000000
+  height_m: 0.250000000
+  top_z_m: 0.250000000
+  top_z_status: "screened"
+standby:
+  id: "c43_standby_retreat_0.05"
+  source: "C4.3 independent standby search (not C4.2 A6)"
+  q12: [2.795036909814,-1.604022234680,0.945042432557,-0.911816524672,-1.570796326795,-0.346555743776,0.346555743776,-1.537570418910,-0.945042432557,-2.229776128918,1.570796326795,-2.795036909814]
+  candidates:
+    - id: "c43_standby_retreat_0.05"
+      code: "ok"
+      valid: true
+      min_clearance_m: 0.013117371
+      detail: "whole=0.013117371 arm_arm=0.019387063 arm_prox=0.136422414 hit=right_wrist3_link<->wrist_camera_link"
+    - id: "c43_standby_retreat_0.08"
+      code: "ok"
+      valid: true
+      min_clearance_m: 0.013117371
+      detail: "whole=0.013117371 arm_arm=0.019389194 arm_prox=0.136414295 hit=right_wrist3_link<->wrist_camera_link"
+    - id: "c43_standby_retreat_0.10"
+      code: "ok"
+      valid: true
+      min_clearance_m: 0.013117371
+      detail: "whole=0.013117371 arm_arm=0.019391561 arm_prox=0.136386616 hit=right_wrist3_link<->wrist_camera_link"
+    - id: "c43_standby_retreat_0.12"
+      code: "ik_failed"
+      valid: false
+      min_clearance_m: 0.000000000
+      detail: "standby IK failed for arm left at retreat 0.120000 (D_domain)"
+    - id: "c43_standby_retreat_0.15"
+      code: "ik_failed"
+      valid: false
+      min_clearance_m: 0.000000000
+      detail: "standby IK failed for arm left at retreat 0.150000 (D_domain)"
+    - id: "c43_standby_retreat_0.18"
+      code: "ik_failed"
+      valid: false
+      min_clearance_m: 0.000000000
+      detail: "standby IK failed for arm left at retreat 0.180000 (D_domain)"
+    - id: "c43_standby_retreat_0.22"
+      code: "ik_failed"
+      valid: false
+      min_clearance_m: 0.000000000
+      detail: "standby IK failed for arm left at retreat 0.220000 (D_domain)"
+    - id: "c43_standby_retreat_0.28"
+      code: "ik_failed"
+      valid: false
+      min_clearance_m: 0.000000000
+      detail: "standby IK failed for arm left at retreat 0.280000 (D_domain)"
+grasp:
+  left_index: 1
+  right_index: 0
+  grip_thickness_m: 0.050000000
+  q_grasp12: [2.795036909814,-1.706950857914,1.279963524342,-1.143808993223,-1.570796326795,-0.346555743776,0.346555743776,-1.434641795676,-1.279963524342,-1.997783660367,1.570796326795,-2.795036909814]
+  frames:
+    left_tcp: "left_grasp_frame"
+    right_tcp: "right_grasp_frame"
+  world_T_left_tcp: "0.000000000000,1.000000000000,0.000000000000,0.049700000000;1.000000000000,0.000000000000,0.000000000000,0.000000000000;0.000000000000,0.000000000000,-1.000000000000,0.300000000000;0.000000000000,0.000000000000,0.000000000000,1.000000000000"
+  world_T_right_tcp: "0.000000000000,1.000000000000,0.000000000000,-0.049700000000;1.000000000000,0.000000000000,0.000000000000,0.000000000000;0.000000000000,0.000000000000,-1.000000000000,0.300000000000;0.000000000000,0.000000000000,0.000000000000,1.000000000000"
+  object_T_left_tcp: "0.000000000000,1.000000000000,0.000000000000,0.049700000000;1.000000000000,0.000000000000,0.000000000000,0.000000000000;0.000000000000,0.000000000000,-1.000000000000,0.025000000000;0.000000000000,0.000000000000,0.000000000000,1.000000000000"
+  object_T_right_tcp: "0.000000000000,1.000000000000,0.000000000000,-0.049700000000;1.000000000000,0.000000000000,0.000000000000,0.000000000000;0.000000000000,0.000000000000,-1.000000000000,0.025000000000;0.000000000000,0.000000000000,0.000000000000,1.000000000000"
+  d_approach_m: 0.080000000
+measured:
+  clearance_m: 0.013117371
+  sigma_min: 0.187025285
+  anchor_pos_gap_m: 0.000000000
+  anchor_rot_gap_rad: 0.000000000
+  closure_pos_m: 0.000000000
+  closure_rot_rad: 0.000000000
+  legacy_midpoint_err_pos_m: 0.025000000
+  legacy_midpoint_err_rot_rad: 3.141592654
+search:
+  n_pairs: 9
+  n_feasible: 4
+  reject_histogram:
+    collision_self: 5
+reachability:
+  standby_segment:
+    ok: true
+    code: "ok"
+    detail: ""
+    samples: 33
+    first_bad_sample: -1
+    min_clearance_m: 0.013117371
+    max_line_dev_m: 0.000000000
+    max_angle_dev_rad: 0.000000000
+    q_bad: [0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000]
+  approach_segment:
+    ok: true
+    code: "ok"
+    detail: ""
+    samples: 33
+    first_bad_sample: -1
+    min_clearance_m: 0.012021904
+    max_line_dev_m: 0.005841501
+    max_angle_dev_rad: 0.000000000
+    q_bad: [0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000,0.000000000000]
+placement_log:
+  - "placement x=0.000000000 z=0.275000000 pairs=9 feasible=4 ik=(3,3) collision_self=5"
+not_covered:
+  - "post-grasp transport trajectory (S3)"
+  - "grasp force / contact dynamics"
+  - "real-hardware execution"

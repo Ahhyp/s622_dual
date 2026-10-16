@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<!--
+  M5 第一轮开发用树：Right Hold → Fixture Place → Planned Release（规划 §8）
+
+  前置条件（由调用者保证，M5 Core 入口 §3）：
+    M4 handover_rod.xml 已 SUCCESS
+    object_owner = RIGHT，物体 attached 在 right_grasp_frame
+
+  流程（对应 §8 的 Fixture Placement）：
+    WaitObjectSettle(占位) → R→place_pre → R→place → [确认夹具区，在 harness 侧断言]
+    → Right Open → DetachObject → Right Retreat → owner=NONE / support=FIXTURE
+
+  注意：
+   * 这是**第一轮开发树**，不是最终 m5_core.xml（§30 第 13 步）。
+   * §8 要求的 "Confirm Fixture Region" 目前由 harness 用 Gazebo GT 断言，
+     尚未做成 BT 节点；state（object_support）同理。两条都记在待办里。
+   * 复用已通过 M4 验收的节点：PlanToJoints / SetGripper / DetachObject。
+-->
+<root BTCPP_format="4">
+
+  <BehaviorTree ID="M5FixturePlaceTest">
+    <Fallback name="FixturePlaceWithRecovery">
+
+      <Sequence name="FixturePlaceMain">
+        <CheckSystemReady />
+        <PrintMessage msg="=== M5 fixture place: start (owner=RIGHT, bar in right gripper) ===" />
+
+        <!-- [T5 风格：此处不注入故障；保留结构以便后续加 InjectFailure] -->
+
+        <!-- 1. 抬到 place_pre（离开 M4 搬运终点，进入夹具上方） -->
+        <PlanToJoints arm_prefix="right"
+            joint_positions="{right_fixture_place_pre_joints}"
+            velocity_scale="{plan_velocity_scale}"
+            planning_time="{plan_time}"
+            timeout_sec="150.0"
+            log_tag="R->FIX_PRE" />
+
+        <!-- 2. 下降到 place：把杆放到支撑面上（实测杆心落在 z=0.1200） -->
+        <PlanToJoints arm_prefix="right"
+            joint_positions="{right_fixture_place_joints}"
+            velocity_scale="{plan_velocity_scale}"
+            planning_time="{plan_time}"
+            timeout_sec="150.0"
+            log_tag="R->FIX_PLACE" />
+
+        <!-- 3. 停稳（力控夹爪漂移，等物理稳定再松手） -->
+        <Wait sec="2.0" />
+
+        <!-- 4. Planned Release：开爪（这一步之后物体由夹具支撑，不是 drop） -->
+        <SetGripper arm_prefix="right" command="open" timeout_sec="8.0" />
+
+        <!-- 5. DetachObject：物体回到 world，support=FIXTURE -->
+        <DetachObject object_name="{object_name}"
+            arm_prefix="right"
+            put_back_in_world="true"
+            timeout_sec="5.0" />
+
+        <PrintMessage msg="M5 fixture place: released, owner=NONE support=FIXTURE" />
+
+        <!-- 6. Retreat：回到 place_pre（垂直抬起离开杆） -->
+        <PlanToJoints arm_prefix="right"
+            joint_positions="{right_fixture_retreat_joints}"
+            velocity_scale="{plan_velocity_scale}"
+            planning_time="{plan_time}"
+            timeout_sec="150.0"
+            log_tag="R retreat from fixture" />
+
+        <PrintMessage msg="=== M5 fixture place: SUCCESS ===" />
+      </Sequence>
+
+      <!-- Recovery：持物状态下退回安全位，绝不在地面上方乱开爪（§19/§23） -->
+      <Sequence name="FixturePlaceRecovery">
+        <PrintMessage msg="=== M5 FIXTURE PLACE RECOVERY (keep holding) ===" />
+        <ForceSuccess><StopServo arm_prefix="right" /></ForceSuccess>
+        <ForceSuccess>
+          <PlanToJoints arm_prefix="right"
+              joint_positions="{right_fixture_retreat_joints}"
+              velocity_scale="0.10" planning_time="{plan_time}" timeout_sec="150.0"
+              log_tag="RECOVERY retreat" />
+        </ForceSuccess>
+        <PrintMessage msg="=== M5 FIXTURE PLACE RECOVERY DONE (object still held) ===" />
+        <AlwaysFailure />
+      </Sequence>
+
+    </Fallback>
+  </BehaviorTree>
+
+</root>

@@ -4,8 +4,9 @@
 // The plan calls out three traps that make collision results silently wrong
 // (C4.2_执行规划.md §2.5).  This header encodes the fix for each:
 //
-//  trap 2  distanceSelf(state) without an ACM always returns 0, because 34
-//          adjacent link pairs in the SRDF are "designed to touch".
+//  trap 2  distanceSelf(state) without an ACM always returns 0, because 32
+//          adjacent link pairs in the SRDF are "designed to touch"
+//          (s622_moveit_config/config/s622_dual_arm.srdf, grep -c disable_collisions).
 //          -> every query here takes an ACM; there is no ACM-less overload.
 //
 //  trap 3  the global minimum distance is NOT the arm-arm clearance -- it is

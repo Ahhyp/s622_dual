@@ -16,6 +16,8 @@ find_package(srdfdom REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(dual_arm_kinematics REQUIRED)
 find_package(dual_arm_collision REQUIRED)
+# Public header ik_layer.hpp includes fairino_planning_core headers directly.
+find_package(fairino_planning_core REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/scene_loader.cpp
@@ -44,6 +46,7 @@ target_link_libraries(${PROJECT_NAME}
          ament_index_cpp::ament_index_cpp
          dual_arm_kinematics::dual_arm_kinematics
          dual_arm_collision::dual_arm_collision
+         fairino_planning_core::fairino_planning_core
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -63,11 +66,19 @@ target_link_libraries(c42_reachability ${PROJECT_NAME})
 add_executable(c42_optimize_pose src/c42_optimize_pose_main.cpp)
 target_link_libraries(c42_optimize_pose ${PROJECT_NAME})
 
+# S7 bridge: C4.2 handover POSE -> executable JOINT target for the simulator.
+add_executable(c42_handover_target src/c42_handover_target_main.cpp)
+target_link_libraries(c42_handover_target ${PROJECT_NAME})
+
 install(DIRECTORY include/ DESTINATION include)
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
-install(TARGETS c42_scene_probe c42_baseline_probe c42_reachability c42_optimize_pose
+install(DIRECTORY launch config
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(TARGETS c42_scene_probe c42_baseline_probe c42_reachability c42_optimize_pose c42_handover_target
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
@@ -110,7 +121,8 @@ endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(Eigen3 moveit_core urdf srdfdom ament_index_cpp
-                          dual_arm_kinematics dual_arm_collision)
+                          dual_arm_kinematics dual_arm_collision
+                          fairino_planning_core)
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
 

@@ -15,6 +15,29 @@ from s622_bt_manager.srv import AttachObject, DetachObject, TransferObject
 
 
 class PlanningSceneService(Node):
+    @staticmethod
+    def _arm_prefix_of_link(link: str) -> str:
+        """'left_grasp_frame' -> 'left'; 'grasp_frame' -> '' (单臂 compat)."""
+        for suffix in ('_grasp_frame', '_finger1', '_finger2'):
+            if link.endswith(suffix):
+                return link[: -len(suffix)]
+        return ''
+
+    def _touch_links_for(self, link: str, req_touch) -> list:
+        """[M4 G7] 默认 touch_links 按目标 link 的臂前缀过滤。
+
+        双臂 launch 的 default_touch_links 是左右共 6 个 link；若 attach/transfer 到
+        left_grasp_frame 却把 right_* 也算 touch，则 LEFT 归属期间右指接近 cube 不会被
+        MoveIt 判碰撞（touch = 忽略），ownership 语义过宽。这里按 link 前缀收敛到单臂。
+        """
+        if req_touch:
+            return list(req_touch)
+        prefix = self._arm_prefix_of_link(link)
+        if not prefix:
+            return list(self._default_touch)
+        return [t for t in self._default_touch
+                if t == link or t.startswith(prefix + '_')]
+
     def __init__(self):
         super().__init__('planning_scene_service')
 
@@ -98,7 +121,7 @@ class PlanningSceneService(Node):
             size = [req.size.x, req.size.y, req.size.z]
             if size == [0.0, 0.0, 0.0]:
                 size = self._default_size
-            touch = list(req.touch_links) if req.touch_links else self._default_touch
+            touch = self._touch_links_for(req.link_name, req.touch_links)
 
             aco = AttachedCollisionObject()
             aco.link_name = req.link_name
@@ -216,7 +239,7 @@ class PlanningSceneService(Node):
                 self.get_logger().warn(resp.error_msg)
                 return resp
 
-            touch = list(req.touch_links) if req.touch_links else self._default_touch
+            touch = self._touch_links_for(new_link, req.touch_links)
 
             # ---- 1. detach from old_link ----
             aco_detach = AttachedCollisionObject()

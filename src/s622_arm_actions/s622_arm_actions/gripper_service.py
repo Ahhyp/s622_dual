@@ -6,8 +6,12 @@ import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.action import ActionClient
 
+from builtin_interfaces.msg import Duration
+from control_msgs.action import FollowJointTrajectory
 from sensor_msgs.msg import JointState
+from trajectory_msgs.msg import JointTrajectoryPoint
 
 from s622_bt_manager.srv import SetGripper
 
@@ -29,6 +33,27 @@ class GripperService(Node):
                                ['finger1_joint', 'finger2_joint'])
         self.declare_parameter('open_positions', [0.025, -0.025])
         self.declare_parameter('close_positions', [0.0, 0.0])
+        # [M4 §7.21] 仿真侧"机械限位(拧螺丝)"等效参数。
+        #   >0 时 close 的目标改为 ±close_stop_gap/2 —— 指板停在该间隙、不再继续压向 0，
+        #   与真机"螺丝决定最小闭合间隙、气压决定夹持力"的语义一致。
+        #   默认 0.0 = 保持原行为（close → close_positions），
+        #   因为真机 fairino_hardware 把 position 命令当开关量
+        #   （opening > GRIPPER_OPEN_THRESHOLD(0.010) → 张开），
+        #   真机路径绝不能收到"中间位置"的命令值。仿真启动时用 launch 参数显式打开。
+        self.declare_parameter('close_stop_gap', 0.0)
+        # [M4_2 / A''] 仿真专用：close 时【绕过 MoveIt】直发 FollowJointTrajectory 到 hand controller。
+        #   背景：A'' 用"关节限位=螺丝 + 命令越界(0/0)"产生持续夹持力；而 MoveIt 会拒绝越界目标，
+        #   故仿真侧 close 必须直发。默认 False = 真机原路径（MoveIt 计划→JTC→驱动开阀阈值）。
+        self.declare_parameter('finger_direct_close', False)
+        # [M4_2 / Plan B'] 仿真专用：**纯力控**夹爪（= 气动模型）。
+        #   位置伺服+硬限位结构上无法产生稳定夹持力（见 M4_2 §12 结构性结论），故改用力源：
+        #   close=每指施加闭合恒力 clamp_force；open=施加张开力 open_force（gz apply_joint_force 插件）。
+        #   默认 False = 真机原路径（真机夹持力由调压阀提供，软件只需开/关阀）。
+        self.declare_parameter('finger_force_mode', False)
+        self.declare_parameter('clamp_force', 5.0)
+        self.declare_parameter('open_force', 2.0)
+        self.declare_parameter('force_topic_template',
+                               '/model/s622_dual_arm/joint/{joint}/cmd_force')
         self.declare_parameter('command_duration_sec', 1.0)
         self.declare_parameter('settle_sec', 1.2)
         self.declare_parameter('feedback_joint', 'finger1_joint')
@@ -46,6 +71,12 @@ class GripperService(Node):
         self._joint_names = list(self.get_parameter('finger_joint_names').value)
         self._open = [float(x) for x in self.get_parameter('open_positions').value]
         self._close = [float(x) for x in self.get_parameter('close_positions').value]
+        # [M4 §7.21] 有效 close 目标：stop_gap>0 → ±gap/2（仿真限位）；否则原值（真机行为）
+        self._stop_gap = float(self.get_parameter('close_stop_gap').value)
+        self._close_eff = list(self._close)
+        if self._stop_gap > 0.0:
+            half = 0.5 * self._stop_gap
+            self._close_eff = [(half if o >= 0.0 else -half) for o in self._open]
         self._settle = float(self.get_parameter('settle_sec').value)
         self._fb_joint = self.get_parameter('feedback_joint').value
         base_link = self.get_parameter('base_link').value
@@ -55,6 +86,26 @@ class GripperService(Node):
         arm_group_name = self.get_parameter('arm_group_name').value
         gripper_group_name = self.get_parameter('gripper_group_name').value
         gripper_controller_action = self.get_parameter('gripper_controller_action').value
+        self._direct_close = bool(self.get_parameter('finger_direct_close').value)
+        self._force_mode = bool(self.get_parameter('finger_force_mode').value)
+        self._clamp_force = float(self.get_parameter('clamp_force').value)
+        # [修法 B / 2026-09-15] 力控合爪后再补一次"过盈"位置指令（停位 − squeeze_mm），
+        # 对应 §7.19 的 hold_at_stall 思路（力控模式下被丢掉了）。
+        # 0 = 原行为（只施力，指板停在"贴合"位置 → 几乎零过盈 → 杆会滑）。
+        if not self.has_parameter('squeeze_mm'):
+            self.declare_parameter('squeeze_mm', 0.0)
+        self._squeeze_mm = float(self.get_parameter('squeeze_mm').value)
+        self._open_force = float(self.get_parameter('open_force').value)
+        self._force_topic_tpl = self.get_parameter('force_topic_template').value
+        self._gripper_action = gripper_controller_action
+        # 每指一个力话题发布者（仿真力控用；真机模式下不创建）
+        self._force_pubs = {}
+        if self._force_mode:
+            from std_msgs.msg import Float64
+            for jn, op in zip(self._joint_names, self._open):
+                topic = self._force_topic_tpl.format(joint=jn)
+                self._force_pubs[jn] = (self.create_publisher(Float64, topic, 10),
+                                        (1.0 if op >= 0.0 else -1.0))   # sign: 张开方向
 
         cb = ReentrantCallbackGroup()
         self.js_sub = self.create_subscription(
@@ -97,7 +148,7 @@ class GripperService(Node):
             gripper=self.moveit2_gripper,
             abort=self.abort,
             open_positions=tuple(self._open),
-            close_positions=tuple(self._close),
+            close_positions=tuple(self._close_eff),
             action_delay=0.0,
         )
 
@@ -105,9 +156,74 @@ class GripperService(Node):
             SetGripper, 'set_gripper', self._on_set_gripper, callback_group=cb)
 
         self.get_logger().info(
-            f'gripper_service ready (MoveItMotion): open={self._open}, close={self._close}, '
+            f'gripper_service ready (MoveItMotion): open={self._open}, close={self._close_eff}, '
             f'mg_ns={move_group_namespace}, arm_group={arm_group_name}, '
             f'gripper_group={gripper_group_name}')
+        if self._stop_gap > 0.0:
+            self.get_logger().warn(
+                f'[M4] close_stop_gap={self._stop_gap:.4f}m 生效: close 目标 = {self._close_eff} '
+                f'(仿真限位, 等效真机螺丝; 真机请勿设置该参数)')
+        if self._direct_close:
+            self.get_logger().warn(
+                f'[M4/A\'\'] finger_direct_close=True 生效: close 将绕过 MoveIt, 直发 '
+                f'{self._gripper_action} 目标={self._close} '
+                f'(仿真专用: 配合关节限位产生持续夹持力; 真机请勿设置)')
+        if self._force_mode:
+            self.get_logger().warn(
+                f'[M4/Plan B\'] finger_force_mode=True 生效: close=施加 {self._clamp_force}N 闭合恒力, '
+                f'open=施加 {self._open_force}N 张开力; 位置伺服将被旁路(仿真专用)')
+
+    def _force_grip(self, opening: bool, force_override: float = 0.0) -> bool:
+        """[M4_2 / Plan B'] 纯力控：把(开/合)恒力发到 gz apply_joint_force 插件。
+        插件会把关节变成力控（位置伺服失效）——这正是气动模型的要点。"""
+        if not self._force_pubs:
+            return False
+        from std_msgs.msg import Float64
+        for jn, (pub, sgn) in self._force_pubs.items():
+            mag = self._open_force if opening else (
+                force_override if force_override > 0.0 else self._clamp_force)
+            msg = Float64()
+            msg.data = float(sgn * mag) if opening else float(-sgn * mag)
+            pub.publish(msg)
+        time.sleep(0.2)
+        return True
+
+    def _direct_gripper_traj(self, targets) -> bool:
+        """[M4_2 / A''] 绕过 MoveIt, 直发单点轨迹给 hand controller。
+        越界目标（如限位下的 0/0）MoveIt 会拒绝, 而 A'' 正需要"命令越界 + 机械限位挡位"来产生
+        持续夹持力。回调内不 spin（节点由 MultiThreadedExecutor 驱动），沿用项目既有轮询等待写法。"""
+        ac = ActionClient(self, FollowJointTrajectory, self._gripper_action)
+        if not ac.wait_for_server(timeout_sec=5.0):
+            self.get_logger().error(f'[M4] 直发失败: action {self._gripper_action} 不可用')
+            return False
+        goal = FollowJointTrajectory.Goal()
+        goal.trajectory.joint_names = list(self._joint_names)
+        pt = JointTrajectoryPoint()
+        pt.positions = [float(v) for v in targets]
+        pt.velocities = [0.0] * len(targets)
+        pt.time_from_start = Duration(sec=2, nanosec=0)
+        goal.trajectory.points = [pt]
+        send_fut = ac.send_goal_async(goal)
+        t0 = time.monotonic()
+        while not send_fut.done() and time.monotonic() - t0 < 10.0:
+            time.sleep(0.02)
+        handle = send_fut.result() if send_fut.done() else None
+        if handle is None or not handle.accepted:
+            self.get_logger().error('[M4] 直发轨迹被拒绝')
+            return False
+        res_fut = handle.get_result_async()
+        t0 = time.monotonic()
+        while not res_fut.done() and time.monotonic() - t0 < 30.0:
+            time.sleep(0.02)
+        if not res_fut.done():
+            self.get_logger().warn('[M4] 直发轨迹等待结果超时（可能因限位挡住未报 SUCCEEDED）')
+            return False
+        code = res_fut.result().result.error_code
+        # 被机械限位挡住时 JTC 可能返回 GOAL_TOLERANCE_VIOLATED(-5)/PATH_TOLERANCE(-4) 之类:
+        # 对 A'' 而言"被挡住"= 正是我们要的持续夹持力, 故这些码不算失败。
+        ok = code in (0, -4, -5)
+        self.get_logger().info(f'[M4] 直发轨迹 error_code={code} -> {"ok" if ok else "FAILED"}')
+        return ok
 
     def _on_joint_states(self, msg: JointState):
         self._latest_js = msg
@@ -121,17 +237,75 @@ class GripperService(Node):
         except ValueError:
             return float('nan')
 
+    def _apply_squeeze(self, squeeze_mm: float) -> bool:
+        """[修法 B] 等指板停稳 → 直接给 hand controller 发"停位 − 挤压量"的位置轨迹。
+        力控模式下位置指令与力指令互斥（gz JointForceCmd vs JointVelocityCmd），
+        所以这一步会把指板**真正压进杆里 squeeze_mm**（产生真实过盈/摩擦）。"""
+        t0 = time.monotonic()
+        g1 = g2 = None
+        last = None
+        stable = 0
+        while time.monotonic() - t0 < 8.0:
+            g1 = self._read_joint(self._joint_names[0])
+            g2 = self._read_joint(self._joint_names[1])
+            if g1 is None or g2 is None:
+                time.sleep(0.1)
+                continue
+            gap = abs(g1) + abs(g2)
+            if gap < 0.005:
+                self.get_logger().warn(
+                    f'[修法B] 停位间隙仅 {gap*1000:.1f}mm，疑似空夹，跳过过盈')
+                return True
+            if last is not None and abs(gap - last) < 2e-4:
+                stable += 1
+                if stable >= 5:
+                    break
+            else:
+                stable = 0
+            last = gap
+            time.sleep(0.1)
+        gap = abs(g1) + abs(g2)
+        k = max(0.3, (gap - squeeze_mm / 1000.0) / gap)
+        self.get_logger().info(
+            f'[修法B] 过盈合爪: 停位间隙={gap*1000:.1f}mm → 目标={(gap*k)*1000:.1f}mm '
+            f'(压 {squeeze_mm:.1f}mm)')
+        return self._direct_gripper_traj([g1 * k, g2 * k])
+
+    def _read_joint(self, name):
+        js = self._latest_js
+        if js is None:
+            return None
+        try:
+            return float(js.position[list(js.name).index(name)])
+        except (ValueError, IndexError):
+            return None
+
     def _on_set_gripper(self, request, response):
+        ov = float(getattr(request, 'clamp_force_override', 0.0) or 0.0)
         if request.command == 'open':
-            ok = self.motion.control_gripper(
-                open_gripper=True, action_name='SetGripper open')
+            if self._force_mode:
+                ok = self._force_grip(opening=True)
+            else:
+                ok = self.motion.control_gripper(
+                    open_gripper=True, action_name='SetGripper open')
         elif request.command == 'close':
-            ok = self.motion.control_gripper(
-                open_gripper=False, action_name='SetGripper close')
+            if self._force_mode:
+                if ov > 0.0:
+                    self.get_logger().info(f'[M4] close 使用本次夹持力 {ov}N（覆盖默认 {self._clamp_force}N）')
+                ok = self._force_grip(opening=False, force_override=ov)
+            elif self._direct_close:
+                # [M4_2 / A''] 仿真：绕过 MoveIt 直发（目标=close_positions=[0,0]，被关节限位挡住）
+                ok = self._direct_gripper_traj(self._close)
+            else:
+                ok = self.motion.control_gripper(
+                    open_gripper=False, action_name='SetGripper close')
         else:
             response.success = False
             response.error_msg = f'unknown command: {request.command}'
             return response
+
+        if ok and request.command == 'close' and self._force_mode and self._squeeze_mm > 0.0:
+            ok = self._apply_squeeze(self._squeeze_mm)
 
         self.get_logger().info(f'set_gripper: {request.command} -> {"ok" if ok else "FAILED"}')
         time.sleep(self._settle)
