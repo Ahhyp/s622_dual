@@ -1,16 +1,24 @@
 # C4.2 -> simulation bridge controllers.
 #
 # WHY A SEPARATE FILE: the JTC profile (s622_dual_arm.launch.py +
-# s622_moveit_config/config/dual_arm_controllers.yaml) asks for VELOCITY command
-# interfaces on the arms, but the robot spawned by that launch only exposes
-# POSITION command interfaces -- so left_arm_controller fails to activate with
+# s622_moveit_config/config/dual_arm_controllers.yaml) declares VELOCITY command
+# interfaces on the arms, and that launch spawns the robot with the xacro default
+# arm_command_mode=velocity -- the two match, and the JTC profile activates.
+#
+# This bridge instead runs the POSITION profile (arm_command_mode:=position in
+# c42_handover_sim.launch.py, the same mode the C2.9a QP profile uses), so the
+# arm JTCs below MUST declare [position] to match the spawned URDF.
+#
+# A velocity JTC here is refused at the ros2_control resource layer -- the two
+# profiles are mutually exclusive by construction, not by convention:
 #   [resource_manager]: Not acceptable command interfaces combination
 #   [controller_manager]: Could not switch controllers since prepare command mode
 #                         switch was rejected.
-# That is the documented C2.9b leftover ("JTC<->QP profile mutual exclusion was
-# never verified"), still open.  Rather than edit the existing profile, this file
-# gives the C4.2 bridge its own position-interface JTCs, which is all the
-# handover bridge needs: drive both arms to a joint target and measure.
+# Measured and documented in docs/双臂协同/双臂协同运动控制与优化/
+# C2.9b_执行记录_互斥测试与Gazebo误差.md §1 (3/3: under the position profile a
+# velocity JTC is refused because no velocity command interface exists).
+# Keeping this file in sync with arm_command_mode is what lets the arm JTCs
+# activate; a mismatch fails silently at spawn time.
 gz_ros2_control:
   ros__parameters:
     position_proportional_gain: 20.0
@@ -32,7 +40,7 @@ controller_manager:
 left_arm_controller:
   ros__parameters:
     joints: [left_j1, left_j2, left_j3, left_j4, left_j5, left_j6]
-    command_interfaces: [velocity]
+    command_interfaces: [position]
     gains: {left_j1: {p: 100.0, i: 0.0, d: 1.0}, left_j2: {p: 100.0, i: 0.0, d: 1.0},
             left_j3: {p: 100.0, i: 0.0, d: 1.0}, left_j4: {p: 100.0, i: 0.0, d: 1.0},
             left_j5: {p: 100.0, i: 0.0, d: 1.0}, left_j6: {p: 100.0, i: 0.0, d: 1.0}}
@@ -42,7 +50,7 @@ left_arm_controller:
 right_arm_controller:
   ros__parameters:
     joints: [right_j1, right_j2, right_j3, right_j4, right_j5, right_j6]
-    command_interfaces: [velocity]
+    command_interfaces: [position]
     gains: {right_j1: {p: 100.0, i: 0.0, d: 1.0}, right_j2: {p: 100.0, i: 0.0, d: 1.0},
             right_j3: {p: 100.0, i: 0.0, d: 1.0}, right_j4: {p: 100.0, i: 0.0, d: 1.0},
             right_j5: {p: 100.0, i: 0.0, d: 1.0}, right_j6: {p: 100.0, i: 0.0, d: 1.0}}
