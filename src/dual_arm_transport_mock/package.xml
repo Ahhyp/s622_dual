@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd"
+            schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dual_arm_transport_mock</name>
+  <version>0.1.0</version>
+  <description>
+    C4.3 S3: minimal offline dual-arm coordinated transport under a FIXED grasp
+    relation (no re-grasping, no handover inside the segment).
+
+    Scope (C4.3_S3_实施方案.md):
+      - The object task that the C2 QP has always had but never used is finally
+        driven from an ANCHORED object frame T_hat(q_L) = T_WL(q_L) * G_L^-1.
+        The legacy midpoint estimate is never used for the object task.
+      - The expected object trajectory is precomputed and FROZEN (yaml), with a
+        velocity feed-forward; the closed loop only tracks it.
+      - Every control cycle is TWO-PHASE: compute a candidate q_cand, run the
+        per-cycle and swept collision checks on the CANDIDATE configuration and
+        object placement, and only then commit.  A rejected cycle is recorded as
+        committed=false and is never counted as executed.
+      - Three independent object-pose sources (left anchor / right anchor /
+        desired) are all reported every cycle.
+
+    This package is deliberately SEPARATE from dual_arm_transport (S2) because S2
+    is a frozen deliverable: S3 must not widen its build surface (it would need a
+    new dual_arm_qp_core dependency).  S2 artifacts (transport_baseline.yaml,
+    grasp geometry) are consumed through its PUBLIC interface, never copied.
+
+    Non-goals: no Gazebo, no hardware, no re-planning, no re-grasping, no
+    modification of the S2 frozen baseline, no refactor of the C2 algorithms.
+  </description>
+
+  <maintainer email="1056651817@qq.com">Ahhyp</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>eigen</depend>
+  <depend>yaml-cpp</depend>
+  <depend>moveit_core</depend>
+  <depend>dual_arm_kinematics</depend>
+  <depend>dual_arm_collision</depend>
+  <depend>dual_arm_qp_core</depend>
+  <depend>dual_arm_transport</depend>
+  <!--
+    Declared EXPLICITLY here for the same reason as in dual_arm_transport
+    (C4.3_S2_实施方案.md §10.1 / C4.3_S3_实施方案.md §3.1): a public header of
+    dual_arm_pose_optimization includes fairino_planning_core headers without
+    declaring it.  We close our own dependency closure instead of touching C4.2
+    (user m03080: do not refactor unrelated C2 packages).
+  -->
+  <depend>fairino_planning_core</depend>
+  <depend>dual_arm_pose_optimization</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,20 @@
+# C4.3 S3 -- frozen piecewise SE(3) transport trajectory (§2.4).
+# This file is DATA.  Changing it changes the experiment, so it is versioned and
+# its SHA-256 is recorded with every run (see §8 and S3-T16).
+dt: 0.008                        # = DualArmQpParams::dt -> 125 Hz
+start: from_baseline             # T_WO_star / q_grasp12 come from the S2 baseline
+time_scaling: smoothstep         # ds/dt = 0 at both phase boundaries
+
+# Total scheduled motion: +5 cm up, -6 cm in x, -5 cm down (net -1 cm in z).
+phases:
+  - {name: settle,    duration: 0.30, dx:  0.000, dy: 0.0, dz:  0.000}
+  - {name: lift,      duration: 1.50, dx:  0.000, dy: 0.0, dz: +0.050}
+  - {name: translate, duration: 1.50, dx: -0.060, dy: 0.0, dz:  0.000}
+  - {name: lower,     duration: 1.50, dx:  0.000, dy: 0.0, dz: -0.050}
+  - {name: settle2,   duration: 0.30, dx:  0.000, dy: 0.0, dz:  0.000}
+
+# Yaw excitation (deg about world z).  Either ONE entry (constant; 0.0 = no
+# rotation, the default) or phases.size()+1 = 6 boundary nodes.  Nodes keep the
+# smoothstep inside each phase, so yaw rate -- and therefore the feed-forward --
+# is zero at every phase boundary.
+yaw_sweep_deg: [0.0]
