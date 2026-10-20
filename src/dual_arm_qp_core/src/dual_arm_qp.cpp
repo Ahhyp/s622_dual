@@ -6,6 +6,8 @@
 
 #include "dual_arm_qp_core/dual_arm_qp.hpp"
 
+#include "dual_arm_kinematics/grasp_geometry.hpp"
+
 #include <algorithm>
 #include <limits>
 
@@ -88,20 +90,86 @@ DualArmQp::DualArmQp(const DualArmKinematics& kinematics, const DualArmQpParams&
                      QpSolverPtr solver)
     : kin_(kinematics), params_(params), solver_(solver ? std::move(solver) : makeDefaultSolver()) {}
 
+// ---- legacy overloads: unchanged behaviour, object_task_row == nullptr -------
 DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target) {
-    return solve(q, left_T_right_target, kin_.worldTobject(q));
+    return solveImpl(q, left_T_right_target, kin_.worldTobject(q), Vec6::Zero(), nullptr);
 }
 
 DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
                                  const Iso3& world_T_object_target) {
-    return solve(q, left_T_right_target, world_T_object_target, Vec6::Zero());
+    return solveImpl(q, left_T_right_target, world_T_object_target, Vec6::Zero(), nullptr);
 }
 
 DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
                                  const Iso3& world_T_object_target,
                                  const Vec6& object_body_twist_ff) {
+    return solveImpl(q, left_T_right_target, world_T_object_target, object_body_twist_ff,
+                     nullptr);
+}
+
+// ---- C4.3 S3: external object task row (R24) -------------------------------
+namespace {
+
+/// Explicit-failure result.  No allocation, no throw, and it does NOT advance
+/// the warm start nor mutate any member.
+DualArmQpResult rejectResult(ObjectTaskRowCheck code) {
+    DualArmQpResult r;
+    r.dq.setZero();
+    r.slack.setZero();
+    r.slack_object.setZero();
+    r.converged = false;
+    r.iterations = 0;
+    r.solve_time_ms = 0.0;
+    r.object_task_external = true;
+    r.object_task_check = code;
+    return r;
+}
+
+}  // namespace
+
+const char* objectTaskRowCheckName(ObjectTaskRowCheck c) noexcept {
+    switch (c) {
+        case ObjectTaskRowCheck::Ok:
+            return "Ok";
+        case ObjectTaskRowCheck::NotValid:
+            return "NotValid";
+        case ObjectTaskRowCheck::NonFinite:
+            return "NonFinite";
+        case ObjectTaskRowCheck::BadInput:
+            return "BadInput";
+    }
+    return "Unknown";
+}
+
+ObjectTaskRowCheck validateObjectTaskRow(const ObjectTaskRow& row) noexcept {
+    if (!row.valid) return ObjectTaskRowCheck::NotValid;
+    if (!row.J.allFinite() || !row.e.allFinite() || !row.body_twist_ff.allFinite()) {
+        return ObjectTaskRowCheck::NonFinite;
+    }
+    return ObjectTaskRowCheck::Ok;
+}
+
+DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
+                                 const ObjectTaskRow& object_task) {
+    if (!q.allFinite() || !left_T_right_target.matrix().allFinite() ||
+        !dual_arm::isRigidTransform(left_T_right_target)) {
+        return rejectResult(ObjectTaskRowCheck::BadInput);
+    }
+    const ObjectTaskRowCheck check = validateObjectTaskRow(object_task);
+    if (check != ObjectTaskRowCheck::Ok) {
+        return rejectResult(check);  // NEVER falls back to the legacy object task
+    }
+    return solveImpl(q, left_T_right_target, Iso3::Identity(), Vec6::Zero(), &object_task);
+}
+
+DualArmQpResult DualArmQp::solveImpl(const Q12& q, const Iso3& left_T_right_target,
+                                     const Iso3& world_T_object_target,
+                                     const Vec6& object_body_twist_ff,
+                                     const ObjectTaskRow* object_task_row) {
     DualArmQpResult result;
     result.solver_name = solver_->name();
+    const bool use_row = (object_task_row != nullptr);
+    result.object_task_external = use_row;
 
     constexpr int kNumVars = 24;
     constexpr int kSRel0 = 12;
@@ -114,7 +182,10 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
     const dual_arm::Mat6x12 J_rel =
         kin_.relativeJacobian(q, dual_arm::RelativeFrame::BodyR);
 
-    const Vec6 e_obj = kin_.objectError(q, world_T_object_target);
+    // C4.3 S3 / R24: with an external row the legacy object-frame APIs are
+    // never evaluated (the conditional operator evaluates exactly one branch).
+    const Vec6 e_obj = use_row ? object_task_row->e
+                               : kin_.objectError(q, world_T_object_target);
     result.object_error_norm = e_obj.norm();
 
     // ---- C2.6: continuous singularity degradation --------------------------
@@ -158,7 +229,8 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
     A_task_rel_.block<6, 6>(0, kSRel0) = -I6;
 
     // ---- object task row block: [J_obj, 0, -I6] ---------------------------
-    const dual_arm::Mat6x12 J_obj = kin_.objectJacobianBody(q);
+    const dual_arm::Mat6x12 J_obj = use_row ? object_task_row->J
+                                            : kin_.objectJacobianBody(q);
     A_task_obj_.setZero();
     if (object_on) {
         A_task_obj_.block<6, 12>(0, 0) = J_obj;
@@ -169,7 +241,8 @@ DualArmQpResult DualArmQp::solve(const Q12& q, const Iso3& left_T_right_target,
     const Vec6 bias_rel = -alpha_rel * e_rel;
     // bias = -(alpha*e + dt*v_ff): the proportional term removes error, the
     // feed-forward term removes the velocity-dependent lag (C2.4c).
-    const Vec6 bias_obj = -(alpha_obj * e_obj + dt * object_body_twist_ff);
+    const Vec6 ff = use_row ? object_task_row->body_twist_ff : object_body_twist_ff;
+    const Vec6 bias_obj = -(alpha_obj * e_obj + dt * ff);
 
     P_ = params_.w_rel * (A_task_rel_.transpose() * A_task_rel_);
     q_cost_ = params_.w_rel * (A_task_rel_.transpose() * bias_rel);

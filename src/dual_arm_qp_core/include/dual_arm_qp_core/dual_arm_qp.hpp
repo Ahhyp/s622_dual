@@ -6,9 +6,13 @@
 //   s_rel : slack of the relative-pose task (twist, right-grasp frame)
 //   s_obj : slack of the object/coordination-frame task (twist, object frame)
 //
-// Cost:
-//   w_rel    * || J_rel dq + alpha_rel e_rel - s_rel ||^2   (relative task)
-//   w_obj    * || J_obj dq + alpha_obj e_obj - s_obj ||^2   (object task)
+// Cost (NOTE: the code assembles bias = -(alpha*e + dt*ff) and P/q_cost give
+// ||A z + bias||^2 minimised at A z = -bias, so the residual below is the
+// NEGATIVE of the historical comment -- the older "+ alpha*e" form contradicted
+// the implementation and was the origin of a real sign bug in C4.3 S3 §2.3.1.
+// Comment corrected only; no behaviour change.):
+//   w_rel    * || J_rel dq - alpha_rel e_rel - s_rel ||^2   (relative task)
+//   w_obj    * || J_obj dq - (alpha_obj e_obj + dt*ff) - s_obj ||^2 (object)
 //   w_slack  * || s_rel ||^2
 //   w_slack_obj * || s_obj ||^2
 //   w_center * || dq - dq_center ||^2
@@ -91,6 +95,20 @@ struct DualArmQpParams {
     DualArmQpParams();
 };
 
+/// Legality verdict for an externally supplied object task row (C4.3 S3).
+/// No heap allocation, no exceptions -- safe on the control path.
+/// User m03513 revision point 1: valid == false or illegal input MUST fail
+/// explicitly.  Silently falling back to the legacy object task is forbidden.
+enum class ObjectTaskRowCheck : int {
+    Ok = 0,
+    NotValid,   // row.valid == false
+    NonFinite,  // J / e / body_twist_ff contain NaN or Inf
+    BadInput,   // q or left_T_right_target is not finite / not rigid
+};
+
+/// Constant string, never allocates.
+const char* objectTaskRowCheckName(ObjectTaskRowCheck c) noexcept;
+
 struct DualArmQpResult {
     Vec12 dq = Vec12::Zero();
     Vec6 slack = Vec6::Zero();        // relative-task slack
@@ -104,7 +122,35 @@ struct DualArmQpResult {
     double singularity_factor = 1.0;   // 1 = healthy, 0 = maximum degradation
     double error_factor = 1.0;         // 1 = small error, 0 = |e| beyond e_critical
     std::string solver_name;
+    /// C4.3 S3: true when this solve consumed an external ObjectTaskRow.
+    bool object_task_external = false;
+    /// C4.3 S3: Ok unless this solve failed explicitly on the object task row.
+    /// != Ok implies converged == false and dq == 0.
+    ObjectTaskRowCheck object_task_check = ObjectTaskRowCheck::Ok;
 };
+
+/// Externally supplied object task row (C4.3 S3, R24).
+/// When passed non-null to solveImpl(), core will NEVER call
+/// kin_.objectError() / kin_.objectJacobianBody() / kin_.worldTobject()
+/// -- the object-frame convention is owned entirely by the caller; core only
+/// assembles the QP.
+///
+/// SIGN CONTRACT (see C4.3_S3_实施方案.md §2.3.1(c)): this row is in the SAME
+/// convention as the legacy object task, i.e.
+///     J dq  ==  "the motion that reduces the error"      (a motion Jacobian)
+///     e     ==  "how much is still left"                 (a remaining error)
+///     QP drives J dq = +alpha*e  =>  e <- (1-alpha)*e
+/// The S1 anchored pair gives J_O = d(e_O)/dq with e_O = "current - desired",
+/// so a caller feeding the anchored form must pass J = J_O and e = -e_O.
+struct ObjectTaskRow {
+    dual_arm::Mat6x12 J = dual_arm::Mat6x12::Zero();  // motion Jacobian, 6x12
+    Vec6              e = Vec6::Zero();               // remaining error [m; rad]
+    Vec6              body_twist_ff = Vec6::Zero();   // object body twist FF
+    bool              valid = false;                  // caller must set true
+};
+
+/// Verdict for a row; Ok means it is safe to hand to the QP.
+ObjectTaskRowCheck validateObjectTaskRow(const ObjectTaskRow& row) noexcept;
 
 class DualArmQp {
 public:
@@ -125,6 +171,17 @@ public:
                           const Iso3& world_T_object_target,
                           const Vec6& object_body_twist_ff);
 
+    /// External object task row (C4.3 S3).
+    /// row.valid == true:  e_obj := row.e, J_obj := row.J, feed-forward :=
+    ///                     row.body_twist_ff; the legacy symmetric-midpoint
+    ///                     object frame is never constructed nor accessed.
+    /// row.valid == false, or J/e/ff non-finite, or q/target illegal:
+    ///                     returns an EXPLICIT FAILURE (converged == false,
+    ///                     dq == 0, object_task_check != Ok) without running
+    ///                     the solver; it NEVER falls back to the legacy task.
+    DualArmQpResult solve(const Q12& q, const Iso3& left_T_right_target,
+                          const ObjectTaskRow& object_task);
+
     const DualArmQpParams& params() const { return params_; }
     std::string solverName() const { return solver_->name(); }
     void setParams(const DualArmQpParams& params) { params_ = params; }
@@ -137,6 +194,13 @@ public:
     bool warmStartEnabled() const { return warm_start_enabled_; }
 
 private:
+    /// Single assembly + solve path.  object_task_row == nullptr reproduces the
+    /// legacy behaviour bit for bit (w_obj == 0 implies identical output).
+    DualArmQpResult solveImpl(const Q12& q, const Iso3& left_T_right_target,
+                              const Iso3& world_T_object_target,
+                              const Vec6& object_body_twist_ff,
+                              const ObjectTaskRow* object_task_row);
+
     const DualArmKinematics& kin_;
     DualArmQpParams params_;
     QpSolverPtr solver_;
