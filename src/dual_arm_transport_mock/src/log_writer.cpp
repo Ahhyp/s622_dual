@@ -132,6 +132,7 @@ const std::vector<std::string>& cycleColumnNames() {
         // the independent judge's own verdict on the candidate
         "state_code", "robot_world_m", "arm_arm_check_m", "in_collision",
         "min_clearance_m", "swept_ok",
+        "sweep_tracked_ok", "sweep_tracked_min_clearance_m", "sweep_tracked_code",
         "world_T_object_desired_px", "world_T_object_desired_py", "world_T_object_desired_pz"};
     return kCols;
 }
@@ -192,6 +193,9 @@ std::vector<std::string> cycleRow(const CycleRecord& r) {
             r.state_check.in_collision ? "1" : "0",
             g17(r.state_check.min_clearance),
             r.swept_ok ? "1" : "0",
+            r.sweep_tracked_ok ? "1" : "0",
+            g17(r.sweep_tracked_min_clearance_m),
+            r.sweep_tracked_code,
             g17(T.translation().x()),
             g17(T.translation().y()),
             g17(T.translation().z())};

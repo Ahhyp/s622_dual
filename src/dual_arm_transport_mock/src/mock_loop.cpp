@@ -207,6 +207,23 @@ CycleOutcome MockTransportLoop::step(const Q12& q, double t, int k,
         rec.e_rel_rot_rad = n3r(e_rel);
     }
 
+    // ---- 3b. object-attitude error too close to pi: refuse, do not solve ----
+    // The anchored row is exact at any ARM-RELATIVE rotation, but the object error is
+    // a logSO3 coordinate: its derivative w.r.t. q blows up as ||e_rot|| -> pi
+    // (S3-T21 measured 20 % FD mismatch at pi-1e-4, 115 % at pi-1e-5).  Handing such a
+    // row to the QP would command a direction that is quantitatively wrong in a
+    // regime nobody can check by eye, so the honest action is to stop.
+    if (n3r(task.e) > opt_.obj_rot_error_refuse_rad) {
+        rec.failure_code = "object_error_near_pi";
+        rec.state_check.code = "object_error_near_pi";
+        rec.state_check.detail =
+            "object rotation error " + fmt(n3r(task.e)) + " rad exceeds " +
+            fmt(opt_.obj_rot_error_refuse_rad) + " rad (pi margin " +
+            fmt(3.14159265358979323846 - n3r(task.e)) + " rad)";
+        out.abort = true;
+        return out;
+    }
+
     // ---- 4-5. independent judge on the CURRENT state ----
     checker_->applyWorld(sourcePose(task, world_T_object_desired, opt_.check.object_source),
                          opt_.check.object_source);
@@ -341,6 +358,40 @@ CycleOutcome MockTransportLoop::step(const Q12& q, double t, int k,
         }
         rec.sweeps.push_back(swept);
     }
+    // ---- 11b. the same segment with the sample CARRIED along (S3-T22) ----
+    // The fixed-pose sweeps above model an object that stays where it started while
+    // the arms move.  That is not what a transport is, so it cannot be the evidence
+    // for continuous safety.  The adopted source tells us which arm holds the sample;
+    // track that anchor across the segment and check the real pose at every sample.
+    // Only an anchored source can be tracked: `desired` is a prescription, not a
+    // pose the object can be measured at.
+    {
+        const std::string& src = opt_.check.object_source;
+        const bool anchored =
+            (src == kObjectSourceLeftAnchor) || (src == kObjectSourceRightAnchor);
+        if (anchored) {
+            const bool use_left = (src == kObjectSourceLeftAnchor);
+            const dual_arm::Iso3& G = use_left ? task_->leftGrasp() : task_->rightGrasp();
+            SweepCheck tracked = checker_->checkSweepTracking(
+                q, q_cand, G, use_left ? dual_arm::Arm::Left : dual_arm::Arm::Right);
+            tracked.object_source = src + "@tracked";
+            rec.sweep_tracked_ok = tracked.ok;
+            rec.sweep_tracked_min_clearance_m = tracked.min_clearance_m;
+            rec.sweep_tracked_code = tracked.ok ? "ok" : tracked.code;
+            rec.sweeps.push_back(tracked);
+            if (!tracked.ok) {
+                rec.failure_code = (tracked.code == "insufficient_clearance")
+                                       ? "insufficient_clearance"
+                                       : "swept_collision";
+                rec.state_check.detail = "tracked(" + src + "): " + tracked.detail;
+                out.abort = true;
+                return out;
+            }
+        } else {
+            rec.sweep_tracked_code = "not_applicable";
+        }
+    }
+
     if (!swept_ok) {
         rec.failure_code =
             (sweep_code == "insufficient_clearance") ? "insufficient_clearance" : "swept_collision";
