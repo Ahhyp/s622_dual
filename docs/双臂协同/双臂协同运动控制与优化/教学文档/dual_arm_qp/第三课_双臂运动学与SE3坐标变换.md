@@ -268,7 +268,52 @@ $$
 
 这些约定非常重要。不同机器人工具库有时使用 `[angular; linear]`，因此不能不核对直接相乘。
 
-## 6.1 `jacobianBase()` 与 `jacobianBody()`
+**Body Jacobian 和 Spatial Jacobian**
+
+Body Jacobian 和 Spatial Jacobian 都在描述机械臂关节速度与末端运动速度之间的关系。它们最重要的区别在于速度采用哪个坐标系表达，以及线速度的参考点如何定义。Adjoint 则是连接不同刚体坐标系下 twist 表达的数学工具。
+
+$$
+V = J(q) \dot q
+$$
+这个速度 V 中的 X、Y、Z，究竟是世界坐标系的，还是夹爪自己的？
+
+Body Jacobian：用夹爪自己的坐标轴 (base, left, right 坐标系) 描述运动
+$$
+V_b = J_b(q) \dot q
+$$
+Body Jacobian 的作用
+- 在你的项目中，它特别适合描述：
+- 某个夹爪相对于自身坐标轴的运动；
+- 右夹爪坐标系下的双臂相对运动；
+- 把位姿误差与 Jacobian 统一到相容的坐标系；
+- 计算相对抓取约束。
+
+对于两端固定抓住箱子的任务，末端局部坐标系往往比世界系更自然。
+
+Spatial Jacobian：用固定世界坐标系描述空间运动
+$$
+V_s = J_s(q) \dot q
+$$
+
+你可以先把它理解为“从世界坐标系观察刚体怎么运动”。
+
+例如夹爪沿世界 X 方向运动，即使夹爪自己已经旋转了，空间系下的 X 方向仍然固定。
+
+不过这里有一个容易出错的数学细节：
+
+严格的 Spatial twist 的线速度分量，不一定是夹爪原点在世界坐标系中的线速度。
+
+要分清：
+
+|类型 | 线速度代表什世界系几何 |
+| --- | --- |
+|Jacobian | 通常是末端参考点的真实世界线速度 |
+|严格 Spatial Jacobian | Spatial twist 的线性分量，通常以世界原点为参考|
+|Body Jacobian | Body twist 在末端系中的表达|
+
+这也是为什么阅读你的 jacobianBase()、jacobianBody()、spatialJacobianWorld() 时，必须同时检查坐标系、速度排列和参考点。
+
+## 6.1 `jacobianBase()` 与 `jacobianBody()` 与 `spatialJacobianWorld()`
 
 `jacobianBase()` 直接从 DH 后端取得 Jacobian。
 
@@ -283,11 +328,108 @@ $$
 
 这里 $R_{GB}$ 把 base 中表达的分量变为 grasp 中表达，**线速度参考点仍是抓取原点**。这正对应源码第 46～52 行的块矩阵乘法。
 
+> 线速度参考点， 指的就是我们在算哪个点的线速度， 因为一根在旋转的杆上有无数个点， 每个点的角速度虽然相同，但是线速度是不同的。
+
 这一步只是在**同一参考点**转动速度分量的坐标轴，并不自动包括把参考点改到 world 原点的平移交叉项。
 
+比较这两个关键的函数
+
+jacobianBody(): 只做坐标轴旋转
+```cpp
+Mat6 DualArmKinematics::jacobianBody(
+    Arm a, const JointConfig& q) const
+{
+    const Mat3 R_gb = baseTgrasp(a, q).linear().transpose();
+    Mat6 R6 = Mat6::Zero();
+    R6.topLeftCorner<3, 3>() = R_gb;
+    R6.bottomRightCorner<3, 3>() = R_gb;
+    return R6 * jacobianBase(a, q);
+}
+```
+这里需要关注三个量：
+| 量 | 线速度参考点 | 速度表达坐标轴|
+| --- | --- | --- |
+| jacobianBase() | grasp原点 G | base 坐标轴 |
+| jacobianBody() | grasp原点 G | grasp 坐标轴 |
+|二者差异 | 没有换参考点 | 换了坐标轴 |
+
+两个 Jacobian 描述的都是同一个夹爪抓取点。
+
+唯一的变化是观察速度的坐标轴。
+
+假设夹爪沿世界正 X 方向运动，但夹爪自身已旋转，那么这一运动在夹爪的局部 XYZ 坐标轴中就会有不同的分量。
+要完成这个转换，只需用旋转矩阵：
+$$
+{}^Gv_G = R_{GB} {}^Bv_G
+$$
+角速度也是旋转
+$$
+{}^G\omega = R_{GB}{}^B\omega
+$$
+拼接成六维表达就是：
+$$
+J_{\mathrm{body,geom}}=
+\begin{bmatrix}
+R_{GB}&0\\0&R_{GB}
+\end{bmatrix}J_{\mathrm{base}}.
+$$
+为什么没有平移叉乘项？
+
+因为线速度参考点始终都是 G，没有从夹爪中心改到另一个点。
+
+`spatialJacobianWorld()`: 使用完整的 Adjoint
+
+```cpp
+Mat6 DualArmKinematics::spatialJacobianWorld(
+    Arm a, const JointConfig& q) const
+{
+    return adjoint(worldTgrasp(a, q)) * jacobianBody(a, q);
+}
+```
+第一步：
+
+`jacobianBody()` 得到抓取坐标系中的 twist。
+
+第二步：
+
+`adjoint(worldTgrasp(...))` 把它转换成世界坐标系下的 spatial twist。
+
+数学上：
+$$
+J^W_s = Ad_{ {}^W T _G } J_b^G
+$$
 ---
 
+
+这一块可以参考 [QA.md](QA.md)
+
+
 # 7. Adjoint：六维运动的坐标系变换器
+
+Adjoint（伴随变换）是用来把同一个刚体运动的 twist，从一个坐标系转换到另一个坐标系的矩阵。
+
+![alt text](image.png)
+
+假设旋转中心 A 不动，但杆子绕 A 转动。
+
+那么：
+- A 点的线速度是零；
+- B 点的线速度却不是零；
+- A 和 B 的角速度相同。
+
+两点线速度满足$v_B = v_A + \omega \times r_{AB}$， 是从 A 指向 B 的向量。
+
+这就是核心：
+描述刚体运动时，改变参考点不仅需要旋转坐标轴，还可能需要额外计算旋转造成的线速度。
+Adjoint 将坐标系旋转、平移及这种速度耦合统一写进一个矩阵。
+对于严格定义的 body 和 spatial twist：
+$$
+V_s = Ad_T V_b
+$$
+它是一个 6×6 矩阵，因为输入、输出都是六维 twist。
+
+特别注意：这个式子针对的是严格的 twist 定义。如果两边都是“某个指定末端点的几何线速度”，就必须按参考点规则处理，不能不加区分地套同一个 Adjoint。
+
 
 对：
 
@@ -380,12 +522,37 @@ J_{rel}^{BodyR}=
 \end{bmatrix}.
 }
 $$
+右半边 $J_{bR}$
+
+右夹爪的 Jacobian 本来就在右夹爪坐标系中，所以直接使用。
+
+左半边 $-\operatorname{Ad}_{T_{LR}^{-1}}J_{bL}$
+
+左夹爪的 Jacobian 在左夹爪坐标系中，所以通过 Adjoint 转换到右夹爪坐标系。
+
+前面的负号：
+
+因为计算的是右手相对于左手的运动。左手如果动了，也会改变右手相对于左手的位置关系，其贡献与右手运动方向相反。
+
+最终得出：
+$$
+V^R_{rel} = J^{BodyR}_{rel} 
+\begin{bmatrix} \dot q_L \\ \dot q_R\end{bmatrix}
+$$
 
 这就是已核对源码 `relativeJacobian()` `BodyR` 分支的核心公式。你可以把它读为：
 
 - 左手运动使右手相对于左手的运动产生负贡献；
 - 但左手 Jacobian 原本在左手坐标系中，必须先变换到右手坐标系；
 - 右手 body Jacobian 本来就在右手坐标系中，可直接放到右半边。
+
+
+一张表格：
+|概念 | 它是什么 | 主要解决什么问题|
+| -- | -- | -- |
+|Body Jacobian J_b | 从关节速度映射到末端自身坐标系的 twist | 用末端自己的方向描述运动|
+|Spatial Jacobian J_s | 从关节速度映射到固定空间坐标系的 twist | 用世界参考系描述刚体运动|
+|Adjoint Ad_T | 将同一刚体运动的 twist 在不同坐标系之间转换的 6×6 矩阵 | 统一速度表达坐标系及参考点|
 
 ## 8.2 `LeftL` 模式
 
