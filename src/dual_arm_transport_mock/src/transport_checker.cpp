@@ -9,6 +9,7 @@
 #include <moveit_msgs/msg/collision_object.h>
 #include <shape_msgs/msg/solid_primitive.h>
 
+#include "dual_arm_kinematics/object_frame.hpp"
 #include "dual_arm_transport/ik_enum.hpp"
 
 namespace dual_arm_transport_mock {
@@ -205,10 +206,69 @@ SweepCheck TransportChecker::checkSweep(const dual_arm::Q12& q0, const dual_arm:
         if (out.min_clearance_m < 0.0 || sc.min_clearance < out.min_clearance_m) {
             out.min_clearance_m = sc.min_clearance;
         }
+        if (out.min_robot_world_m < 0.0 || sc.robot_world < out.min_robot_world_m) {
+            out.min_robot_world_m = sc.robot_world;
+        }
         if (!sc.ok) {
             out.ok = false;
             out.code = (sc.code == "collision") ? "swept_collision" : "insufficient_clearance";
             out.detail = "sample " + std::to_string(i) + "/" + std::to_string(n) + ": " + sc.detail;
+            out.first_bad_sample = i;
+            return out;
+        }
+    }
+    out.ok = true;
+    out.code = "ok";
+    return out;
+}
+
+SweepCheck TransportChecker::checkSweepTracking(const dual_arm::Q12& q0, const dual_arm::Q12& q1,
+                                                const dual_arm::Iso3& object_T_tcp,
+                                                dual_arm::Arm anchor) {
+    SweepCheck out;
+    out.object_source = object_source_ + "@tracked";
+    out.min_clearance_m = -1.0;
+
+    if (!opt_.swept_check_enabled) {
+        out.ok = true;
+        out.code = "ok";
+        out.detail = "swept check disabled";
+        return out;
+    }
+    if (!q0.allFinite() || !q1.allFinite()) {
+        out.ok = false;
+        out.code = "swept_collision";
+        out.detail = "non-finite endpoint";
+        out.first_bad_sample = 0;
+        return out;
+    }
+
+    const dual_arm::DualArmKinematics kin;
+    const int n = opt_.sweep_samples;
+    for (int i = 0; i < n; ++i) {
+        const double a = (n > 1) ? static_cast<double>(i) / static_cast<double>(n - 1) : 0.0;
+        const dual_arm::Q12 q = q0 + a * (q1 - q0);
+
+        // Where the carried sample really is at this point of the segment.
+        dual_arm::JointConfig qa;
+        const int base = (anchor == dual_arm::Arm::Left) ? 0 : 6;
+        for (int j = 0; j < 6; ++j) qa[j] = q[base + j];
+        const dual_arm::Iso3 T_O =
+            dual_arm::anchoredObjectPose(kin.worldTgrasp(anchor, qa), object_T_tcp);
+        applyWorld(T_O, out.object_source);
+
+        const StateCheck sc = checkState(q);
+        if (out.min_clearance_m < 0.0 || sc.min_clearance < out.min_clearance_m) {
+            out.min_clearance_m = sc.min_clearance;
+        }
+        if (out.min_robot_world_m < 0.0 || sc.robot_world < out.min_robot_world_m) {
+            out.min_robot_world_m = sc.robot_world;
+        }
+        if (!sc.ok) {
+            out.ok = false;
+            out.code = (sc.code == "collision") ? "swept_collision" : "insufficient_clearance";
+            out.detail = "tracked sample " + std::to_string(i) + "/" + std::to_string(n) + ": " +
+                         sc.detail;
             out.first_bad_sample = i;
             return out;
         }

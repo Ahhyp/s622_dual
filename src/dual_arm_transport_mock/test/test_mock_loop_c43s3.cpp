@@ -22,12 +22,14 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <set>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "dual_arm_kinematics/object_frame.hpp"
 #include "dual_arm_kinematics/se3.hpp"
 #include "dual_arm_pose_optimization/scene_loader.hpp"
 #include "dual_arm_qp_core/dual_arm_qp.hpp"
@@ -36,6 +38,7 @@
 #include "dual_arm_transport_mock/log_writer.hpp"
 #include "dual_arm_transport_mock/mock_loop.hpp"
 #include "dual_arm_transport_mock/trajectory.hpp"
+#include "dual_arm_transport_mock/transport_checker.hpp"
 
 namespace {
 
@@ -293,6 +296,145 @@ TEST_F(MockLoopC43S3, T7_FeedforwardRemovesTheTrackingLag) {
                 sum_ff.max_e_obj_norm, sum_noff.max_e_obj_norm, ratio);
 }
 
+// -------------------------------------------------------------------------- T22
+// What the fixed-pose sweep can and cannot say, measured rather than asserted.
+//
+// checkSweep() interpolates the arm configurations but tests the sample at ONE
+// painted world pose.  For a CARRIED object the sample's pose is a function of the
+// configuration, so a segment has a different world at every sample.  Three
+// measurements pin that down:
+//   1. IDENTITY  the tracked sweep's minima equal a manual per-sample recomputation
+//                (so it really re-paints the world at every sample);
+//   2. BLINDNESS the fixed sweep's minima come from ONE painting: changing only the
+//                painting changes its answer, with the arms and the segment fixed;
+//   3. VERDICT   a table over candidate segments, printed, so that "does a
+//                fixed-passes/tracked-fails pair exist in this scene" is answered
+//                by data instead of by hope.
+// Step 3 is deliberately NOT asserted as a flip.  A rigidly grasped sample still
+// drags the FINGERS along, so the fixed sweep does see most of the motion, and the
+// remaining gap is the sample's own pose -- which the world layer only measures
+// against ROBOT links (the sample's resting contact with the support is a contact,
+// not a collision).  That limitation is recorded in C4.3_S3_验收记录.md instead of
+// being hidden behind a test that happens to pass.
+TEST_F(MockLoopC43S3, T22_TheFixedPoseSweepCannotSeeTheObjectBeingCarried) {
+    using dual_arm::Arm;
+    using dual_arm_transport_mock::CheckOptions;
+    using dual_arm_transport_mock::TransportChecker;
+
+    const dual_arm::DualArmKinematics kin;
+    const Iso3 G_L = baseline.object_T_left_tcp;
+    auto objectAt = [&](const Q12& q) {
+        dual_arm::JointConfig ql;
+        for (int j = 0; j < 6; ++j) ql[j] = q[j];
+        return dual_arm::anchoredObjectPose(kin.worldTgrasp(Arm::Left, ql), G_L);
+    };
+
+    CheckOptions co;
+    co.sweep_samples = 8;
+    co.object_source = "left_anchor";
+    TransportChecker checker(scene, cfg, co);
+    const Q12 q0 = baseline.q_grasp;
+
+    struct Row {
+        int joint;
+        double delta;
+        double travel_m;
+        bool fixed_ok;
+        bool tracked_ok;
+        bool end_ok;
+        double fixed_world;
+        double tracked_world;
+        double end_world;
+    };
+    std::vector<Row> rows;
+    double worst_paint_gap = 0.0;
+    int worst_row = -1;
+
+    // Small deltas on purpose: a large one simply self-collides the two arms and then
+    // every check agrees on "collision", which would prove nothing about the model.
+    for (int joint : {0, 1, 3, 5}) {
+        for (double delta : {0.04, -0.04}) {
+            Q12 q1 = q0;
+            q1[joint] += delta;
+            const double travel =
+                (objectAt(q1).translation() - objectAt(q0).translation()).norm();
+
+            checker.applyWorld(objectAt(q0), "left_anchor");
+            const auto fixed = checker.checkSweep(q0, q1);
+
+            checker.applyWorld(objectAt(q1), "left_anchor");  // same arms, other world
+            const auto at_end = checker.checkSweep(q0, q1);
+
+            checker.applyWorld(objectAt(q0), "left_anchor");
+            const auto tracked = checker.checkSweepTracking(q0, q1, G_L, Arm::Left);
+
+            rows.push_back({joint, delta, travel, fixed.ok, tracked.ok, at_end.ok,
+                            fixed.min_robot_world_m, tracked.min_robot_world_m,
+                            at_end.min_robot_world_m});
+            const double gap = std::fabs(fixed.min_robot_world_m - tracked.min_robot_world_m);
+            if (gap > worst_paint_gap) {
+                worst_paint_gap = gap;
+                worst_row = static_cast<int>(rows.size()) - 1;
+            }
+        }
+    }
+
+    std::printf("\n[ S3-T22 ] fixed(=start painting) vs tracked(carried) vs at_end(same segment, "
+                "end painting)\n");
+    for (const Row& r : rows) {
+        std::printf(
+            "  j=%d d=%+.2f travel=%.4f m | fixed(ok=%d world=%.6f) tracked(ok=%d world=%.6f) "
+            "at_end(ok=%d world=%.6f)\n",
+            r.joint, r.delta, r.travel_m, r.fixed_ok ? 1 : 0, r.fixed_world, r.tracked_ok ? 1 : 0,
+            r.tracked_world, r.end_ok ? 1 : 0, r.end_world);
+    }
+
+    ASSERT_GT(rows.size(), 0u);
+    ASSERT_GE(worst_row, 0) << "no candidate moved the painted world at all";
+
+    // ---- 1. IDENTITY: the tracked sweep is per-sample re-painting, nothing else ----
+    {
+        const Row& r = rows[static_cast<std::size_t>(worst_row)];
+        Q12 q1 = q0;
+        q1[r.joint] += r.delta;
+        double manual_world = std::numeric_limits<double>::max();
+        double manual_clear = std::numeric_limits<double>::max();
+        for (int i = 0; i < co.sweep_samples; ++i) {
+            const double a = static_cast<double>(i) / static_cast<double>(co.sweep_samples - 1);
+            const Q12 q = q0 + a * (q1 - q0);
+            checker.applyWorld(objectAt(q), "left_anchor@manual");
+            const auto sc = checker.checkState(q);
+            manual_world = std::min(manual_world, sc.robot_world);
+            manual_clear = std::min(manual_clear, sc.min_clearance);
+        }
+        checker.applyWorld(objectAt(q0), "left_anchor");
+        const auto tracked = checker.checkSweepTracking(q0, q1, G_L, Arm::Left);
+        EXPECT_NEAR(tracked.min_robot_world_m, manual_world, 1e-12);
+        EXPECT_NEAR(tracked.min_clearance_m, manual_clear, 1e-12);
+        EXPECT_EQ(tracked.object_source, "left_anchor@tracked");
+    }
+
+    // ---- 2. BLINDNESS: the fixed sweep's answer is a property of the painting ----
+    EXPECT_GT(worst_paint_gap, 1e-9)
+        << "if the fixed sweep's world minimum does not move when only the painting moves, "
+           "it is not measuring the transport at all";
+    {
+        const Row& r = rows[static_cast<std::size_t>(worst_row)];
+        EXPECT_GT(std::fabs(r.fixed_world - r.end_world), 1e-9)
+            << "same arms, same segment, different object paint -> different world minimum";
+    }
+
+    // ---- 3. VERDICT table: report, do not manufacture ----
+    std::size_t flips = 0;
+    for (const Row& r : rows) {
+        if (r.fixed_ok && !r.tracked_ok) ++flips;
+    }
+    std::printf("[ S3-T22 ] worst paint gap %.6f m (joint %d, delta %+.2f); %zu/%zu segments pass "
+                "the fixed sweep yet fail the carried sweep\n",
+                worst_paint_gap, rows[static_cast<std::size_t>(worst_row)].joint,
+                rows[static_cast<std::size_t>(worst_row)].delta, flips, rows.size());
+}
+
 // -------------------------------------------------------------------------- T20
 TEST_F(MockLoopC43S3, T20_AllThreeObjectPoseSourcesAreReported) {
     MockTransportLoop loop(scene, cfg, baseline, fastSpec(), options());
@@ -309,18 +451,28 @@ TEST_F(MockLoopC43S3, T20_AllThreeObjectPoseSourcesAreReported) {
         // the three reports.
         if (r.sweeps.empty()) continue;
         ++checked_cycles;
-        ASSERT_EQ(r.sweeps.size(), 3u) << "cycle " << r.k;
+        // 3 fixed-pose placements + 1 carried-sample (tracked) sweep of the adopted
+        // source -- the tracked one is what actually says the transport is safe
+        // (S3-T22); the other three say the arms may move at that one world.
+        ASSERT_EQ(r.sweeps.size(), 4u) << "cycle " << r.k;
         std::set<std::string> got;
         for (const auto& sc : r.sweeps) {
             got.insert(sc.object_source);
             EXPECT_TRUE(std::isfinite(sc.min_clearance_m)) << sc.object_source;
             EXPECT_LE(sc.first_bad_sample, 3);  // -1 (ok) .. sweep_samples-1
         }
-        EXPECT_EQ(got, expected) << "cycle " << r.k << " did not report all three sources";
-        // The emitted rows carry one entry per source, in the fixed source order.
+        for (const std::string& src : expected) {
+            EXPECT_EQ(got.count(src), 1u) << "cycle " << r.k << " missed source " << src;
+        }
+        EXPECT_EQ(got.count("left_anchor@tracked"), 1u) << "cycle " << r.k;
+        EXPECT_TRUE(r.sweep_tracked_ok) << "cycle " << r.k;
+        EXPECT_EQ(r.sweep_tracked_code, "ok") << "cycle " << r.k;
+        // The emitted rows carry one entry per source, in the fixed source order,
+        // followed by the tracked placement.
         const auto rows = dual_arm_transport_mock::sweepRows(r);
-        ASSERT_EQ(rows.size(), 3u);
+        ASSERT_EQ(rows.size(), 4u);
         for (std::size_t i = 0; i < 3; ++i) EXPECT_EQ(rows[i][1], sources[i]);
+        EXPECT_EQ(rows[3][1], "left_anchor@tracked");
     }
     EXPECT_GT(checked_cycles, 10u);
     const std::string header = dual_arm_transport_mock::sweepsCsvHeader();

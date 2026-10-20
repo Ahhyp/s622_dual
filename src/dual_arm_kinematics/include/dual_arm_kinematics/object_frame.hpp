@@ -135,12 +135,24 @@ inline Mat6 decoupledErrorRateMap(const Iso3& T_hat, const Iso3& T_desired) {
     return A;
 }
 
-/// EXACT anchored object error-rate Jacobian (6x6):
+/// Anchored object error-rate Jacobian (6x6):
 ///   d/dt decoupledPoseError(T_hat_{O,arm}, T_desired) = J * qdot_arm.
 ///
-/// Composed as  A(e) * Ad(G) * J_body(q).  Exact for any relative arm rotation,
-/// including pi, and regardless of how large the object error is (no
-/// small-error approximation is taken).
+/// Composed as  A(e) * Ad(G) * J_body(q).  No small-error approximation is taken
+/// anywhere, and it is exact for ANY relative arm rotation, including pi -- the
+/// arm-relative rotation never enters this expression.
+///
+/// BOUNDARY (measured, not assumed -- see C4.3 S3-T21).  The object-attitude error
+/// does enter, through logSO3(R_d^T R_hat).  A(e) itself stays finite and
+/// well-conditioned right up to pi (cond ~1.57, sigma_min ~1.0), but the ERROR
+/// VECTOR it differentiates stops being differentiable there: as the object
+/// attitude error approaches pi the finite-difference agreement degrades to
+///   pi - |e_rot| = 1e-2 -> 1.3e-05 rel,  1e-3 -> 4.0e-03,  1e-4 -> 0.52,  1e-5 -> 1.14,
+/// i.e. the analytic row is no longer the derivative of the returned error.  So the
+/// honest statement is "exact at any arm-relative rotation, and exact in the OBJECT
+/// error only away from |e_rot| ~ pi"; a caller must refuse inside that band rather
+/// than trust the row.  MockTransportLoop does exactly that
+/// (obj_rot_error_refuse_rad).
 inline Mat6 anchoredObjectErrorJacobian(const Mat6& jacobian_body, const Iso3& object_T_tcp,
                                         const Iso3& T_hat, const Iso3& T_desired) {
     return decoupledErrorRateMap(T_hat, T_desired) * anchoredObjectTwistJacobian(jacobian_body,

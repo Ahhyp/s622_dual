@@ -316,3 +316,77 @@ TEST(NearPiC43S3, T17_MidpointGuardPassesWhileItsObjectFrameIsWrong) {
     EXPECT_LE(left_gap, 1e-10) << "the anchored estimate must BE the frozen object pose";
     EXPECT_LE(right_gap, 1e-10);
 }
+
+// ------------------------------------------------------------------- S3-T21
+// Reviewer finding (m03811): "the anchored row is exact regardless of how large the
+// object error is" is too strong.  Two different pi's:
+//
+//   * ARM-RELATIVE rotation near pi  -> the anchored row never evaluates it. Safe.
+//   * OBJECT attitude error near pi  -> it IS a logSO3 coordinate. Not safe.
+//
+// This test measures where the second one stops being usable, instead of arguing
+// about it.  Note what does NOT happen: e_rot does not jump and A(e) does not blow
+// up -- cond(A) stays ~1.57 all the way to pi.  The failure is in the COORDINATE:
+// finite-differencing the returned error vector stops agreeing with the analytic row.
+TEST(NearPiC43S3, T21_ObjectAttitudeErrorAtPiDegradesTheRow) {
+    const dual_arm::DualArmKinematics kin;
+    const Q12 q = legacy_golden::graspQ();
+    const Iso3 G_L = frozenGraspLeft();
+    const Iso3 T_hat = dual_arm::anchoredObjectPose(kin.worldTgrasp(Arm::Left, armJoints(q, true)),
+                                                    G_L);
+    const Mat6 J_L = kin.jacobianBody(Arm::Left, armJoints(q, true));
+    const Iso3 T_star = objectStar();
+
+    std::printf("\n[ S3-T21 ] object ATTITUDE error swept toward pi (arm-relative rotation fixed)\n");
+    std::printf("  %-9s %-14s %-16s %-12s %-12s\n", "pi - |e|", "|e_rot|", "FD vs analytic",
+                "sigma_min(A)", "cond(A)");
+
+    const std::array<double, 6> eps{1.0, 1e-1, 1e-2, 1e-3, 1e-4, 1e-5};
+    std::array<double, 6> rel{};
+    for (std::size_t i = 0; i < eps.size(); ++i) {
+        Iso3 T_d = T_star;
+        T_d.linear() = T_hat.linear() * dual_arm::expSO3(Vec3(0.0, 0.0, kPi - eps[i]));
+        const Mat6 J_O = dual_arm::anchoredObjectErrorJacobian(J_L, G_L, T_hat, T_d);
+        const Vec6 e0 = dual_arm::decoupledPoseError(T_hat, T_d);
+        EXPECT_TRUE(J_O.allFinite()) << "pi - |e| = " << eps[i];
+        // The returned MAGNITUDE stays meaningful, but NOT to 1e-9: logSO3 itself loses
+        // precision near pi (F-S1-1).  Measured drift |e_rot| - (pi - eps): 7.8e-08 at
+        // pi-1e-4 and 7.1e-06 at pi-1e-5.  Assert it neither collapses nor jumps, and
+        // keep the bound loose enough to be a real bound rather than a restatement of
+        // the same floating-point pipeline.
+        EXPECT_LE(std::fabs(e0.tail<3>().norm() - (kPi - eps[i])), 1e-4)
+            << "pi - |e| = " << eps[i];
+        EXPECT_GT(e0.tail<3>().norm(), 2.0)
+            << "the error MAGNITUDE must not collapse (eps = 1.0 alone is pi - 1 = 2.14)";
+
+        const double h = 1e-7;
+        double worst = 0.0;
+        for (int j = 0; j < 6; ++j) {
+            dual_arm::JointConfig qp = armJoints(q, true);
+            dual_arm::JointConfig qm = armJoints(q, true);
+            qp[j] += h;
+            qm[j] -= h;
+            const Vec6 ep = dual_arm::decoupledPoseError(
+                dual_arm::anchoredObjectPose(kin.worldTgrasp(Arm::Left, qp), G_L), T_d);
+            const Vec6 em = dual_arm::decoupledPoseError(
+                dual_arm::anchoredObjectPose(kin.worldTgrasp(Arm::Left, qm), G_L), T_d);
+            const Vec6 fd = (ep - em) / (2.0 * h);
+            worst = std::max(worst, (fd - J_O.col(j)).norm() / std::max(1e-30, fd.norm()));
+        }
+        rel[i] = worst;
+        const Eigen::JacobiSVD<Mat6> svd(J_O);
+        std::printf("  %-9.1e %-14.9f %-16.4e %-12.4e %-12.4e\n", eps[i], e0.tail<3>().norm(),
+                    worst, svd.singularValues()(5),
+                    svd.singularValues()(0) / svd.singularValues()(5));
+    }
+
+    // Exact far away (no small-error approximation anywhere), still usable at 1e-2...
+    EXPECT_LE(rel[0], 1e-7);
+    EXPECT_LE(rel[1], 1e-5);
+    EXPECT_LE(rel[2], 1e-4);
+    // ...and NOT usable near pi. This is the boundary the reviewer asked for, in
+    // numbers, so S4 cannot inherit an unbounded claim.
+    EXPECT_GE(rel[4], 1e-2) << "expected the breakdown by pi-1e-4";
+    EXPECT_GE(rel[5], 0.5) << "expected the row to be useless at pi-1e-5";
+    EXPECT_GT(rel[5] / std::max(rel[2], 1e-30), 100.0);
+}

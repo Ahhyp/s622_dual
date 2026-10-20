@@ -38,6 +38,7 @@ namespace {
 using dual_arm::Iso3;
 using dual_arm::Mat6x12;
 using dual_arm::Q12;
+using dual_arm::Vec3;
 using dual_arm::Vec6;
 using dual_arm_pose_optimization::DualArmScene;
 using dual_arm_pose_optimization::SceneLoadOptions;
@@ -395,4 +396,34 @@ TEST_F(FailurePolicyC43S3, T16_S2BaselineIsUnmodified) {
     std::printf("\n[ S3-T16 ] transport_baseline.yaml sha256 = %s\n", got.c_str());
     EXPECT_EQ(got, "8587f3647f270dee09c65aa127f173b7f0fc45cbaaff5ba06cd2f77c16276615")
         << "the S2 frozen baseline changed; S3's results are no longer comparable";
+}
+
+// ------------------------------------------------------------------- S3-T21b
+// The other half of S3-T21: when the object-attitude error is inside the band where
+// the row stops being the derivative, the loop must REFUSE.  A wrong direction that
+// looks like a normal cycle is worse than a stopped run.
+TEST_F(FailurePolicyC43S3, T21b_LoopRefusesWhenTheObjectRotationErrorIsNearPi) {
+    MockLoopOptions opt = options();
+    MockTransportLoop loop(scene, cfg, baseline, fastSpec(), opt);
+    const Q12 q = baseline.q_grasp;
+    const double pi = 3.14159265358979323846;
+
+    Iso3 T_bad = baseline.world_T_object;
+    T_bad.linear() = baseline.world_T_object.linear() * dual_arm::expSO3(Vec3(0.0, 0.0, pi - 0.01));
+    const dual_arm_transport_mock::CycleOutcome bad = loop.step(q, 0.0, 0, T_bad, Vec6::Zero());
+
+    Iso3 T_ok = baseline.world_T_object;
+    T_ok.linear() = baseline.world_T_object.linear() * dual_arm::expSO3(Vec3(0.0, 0.0, pi - 0.2));
+    const dual_arm_transport_mock::CycleOutcome ok = loop.step(q, 0.0, 0, T_ok, Vec6::Zero());
+
+    std::printf("\n[ S3-T21b ] pi-0.01: code=%s abort=%d committed=%d | pi-0.2: code=%s\n",
+                bad.record.failure_code.c_str(), bad.abort ? 1 : 0, bad.record.committed ? 1 : 0,
+                ok.record.failure_code.c_str());
+    EXPECT_EQ(bad.record.failure_code, "object_error_near_pi");
+    EXPECT_TRUE(bad.abort);
+    EXPECT_FALSE(bad.record.committed);
+    EXPECT_TRUE(bad.record.dq.cwiseAbs().maxCoeff() == 0.0)
+        << "the guard must fire before the QP, not after it produced something";
+    EXPECT_NE(ok.record.failure_code, "object_error_near_pi")
+        << "0.2 rad inside pi must still be allowed, or the guard is eating the workspace";
 }

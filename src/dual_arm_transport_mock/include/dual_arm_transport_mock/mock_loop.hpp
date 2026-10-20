@@ -55,6 +55,13 @@ struct MockLoopOptions {
     /// exactly that.  1e-3 matches the relative-task tolerance we actually promise
     /// and is still two orders below the 0.12 m sample, so it catches a broken or
     /// mis-wired anchor (which produces centimetres) without chasing round-off.
+    /// Refuse to act when ||logSO3(R_d^T R_hat)|| gets this close to pi.  The anchored
+    /// row is exact at any ARM-RELATIVE rotation, but the object-attitude error is a
+    /// logSO3 coordinate whose derivative degrades near pi (measured in S3-T21:
+    /// 3e-05 rel at pi-1e-2, 20 % at pi-1e-4, 115 % at pi-1e-5).  Default = pi - 0.05,
+    /// i.e. 500x away from the measured onset of the breakdown.
+    double obj_rot_error_refuse_rad = 3.0915926535897933;  // pi - 0.05
+
     double anchor_pos_gap_max_m = 1.0e-3;
     double anchor_rot_gap_max_rad = 1.0e-3;
 
@@ -138,6 +145,12 @@ struct CycleRecord {
     double solve_time_ms = 0.0;
     StateCheck state_check;
     bool swept_ok = false;
+    /// The same segment with the sample carried along the grasp (S3-T22).  `false`
+    /// unless the tracking sweep actually ran; `sweep_tracked_code == "not_applicable"`
+    /// marks the `desired` source, which has no configuration to be anchored to.
+    bool sweep_tracked_ok = false;
+    double sweep_tracked_min_clearance_m = -1.0;
+    std::string sweep_tracked_code = "not_run";
     /// One entry per §8 object source, always all three (S3-T20).  A cycle is
     /// only "checked" when every source has been evaluated and none failed;
     /// discarding the passing sources would make the log unable to answer

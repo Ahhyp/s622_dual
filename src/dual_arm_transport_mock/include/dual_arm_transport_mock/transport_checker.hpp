@@ -74,6 +74,10 @@ struct SweepCheck {
     std::string detail;
     int first_bad_sample = -1;
     double min_clearance_m = 0.0;
+    /// The WORLD layer alone (robot vs sample/support/floor).  Reported separately
+    /// because min_clearance_m is usually dominated by a constant self-collision pair
+    /// and therefore cannot show that the painted world changed at all (S3-T22).
+    double min_robot_world_m = -1.0;
     std::string object_source;
 };
 
@@ -94,6 +98,26 @@ public:
     /// Discretised straight-line joint interpolation q0 -> q1, each sample checked
     /// with the full two-layer check.  Returns the first offending sample.
     SweepCheck checkSweep(const dual_arm::Q12& q0, const dual_arm::Q12& q1) const;
+
+    /// The same segment, but with the sample CARRIED ALONG the grasp (S3-T22).
+    ///
+    /// WHY THIS EXISTS (review).  checkSweep() interpolates the arm configurations and
+    /// tests the sample at ONE FIXED world pose -- the pose it had when applyWorld()
+    /// was last called.  That models an object that stays put while the arms move, so
+    /// it is evidence for "the arms can travel between these two configurations with
+    /// the object where it started", NOT for "the object is collision-free along the
+    /// way".  In a real transport the object is held: at sample a its pose is the
+    /// anchored grasp pose of q(a), i.e. a different world for every sample.
+    ///
+    /// `object_T_tcp` is the frozen grasp G_arm and `anchor` the arm it is anchored to
+    /// (Left for left_anchor, Right for right_anchor), so the check tests exactly the
+    /// pose the adopted source claims.  There is no general form for `desired`: that
+    /// source is a prescription, not a measurable pose, so callers must not pretend it
+    /// tracks a configuration.
+    ///
+    /// Non-const: every sample re-paints the collision world.
+    SweepCheck checkSweepTracking(const dual_arm::Q12& q0, const dual_arm::Q12& q1,
+                                  const dual_arm::Iso3& object_T_tcp, dual_arm::Arm anchor);
 
     const CheckOptions& options() const { return opt_; }
     const std::string& currentObjectSource() const { return object_source_; }
