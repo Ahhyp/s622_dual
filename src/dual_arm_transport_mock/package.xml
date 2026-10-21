@@ -42,6 +42,7 @@
   <depend>dual_arm_collision</depend>
   <depend>dual_arm_qp_core</depend>
   <depend>dual_arm_transport</depend>
+  <depend>dual_arm_object_task</depend>
   <!--
     Declared EXPLICITLY here for the same reason as in dual_arm_transport
     (C4.3_S2_实施方案.md §10.1 / C4.3_S3_实施方案.md §3.1): a public header of

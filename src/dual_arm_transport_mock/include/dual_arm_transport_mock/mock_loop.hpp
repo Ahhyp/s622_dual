@@ -23,11 +23,18 @@
 #include "dual_arm_qp_core/dual_arm_qp.hpp"
 #include "dual_arm_transport/baseline.hpp"
 #include "dual_arm_transport/grasp_config.hpp"
-#include "dual_arm_transport_mock/object_task.hpp"
-#include "dual_arm_transport_mock/trajectory.hpp"
+#include "dual_arm_object_task/anchored_object_task.hpp"
+#include "dual_arm_object_task/trajectory.hpp"
 #include "dual_arm_transport_mock/transport_checker.hpp"
 
 namespace dual_arm_transport_mock {
+
+// C4.3 S4 W0: the anchored object task now lives in dual_arm_object_task (it
+// moved out of this mock package so the production controller can use it).
+// A using-directive -- NOT a second definition: there is exactly one
+// AnchoredObjectTaskBuilder in src/, enforced by
+// dual_arm_object_task/cmake/check_single_object_task_definition.cmake.
+using namespace dual_arm_object_task;  // NOLINT(build/namespaces)
 
 /// §2.3.2 pre-check constant: the stacked [J_rel; J_O] must be full rank AND not
 /// merely near-singular.  Below this the 12-DOF stack cannot track both tasks and

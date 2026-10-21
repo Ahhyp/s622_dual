@@ -37,7 +37,7 @@
 #include "dual_arm_transport/grasp_config.hpp"
 #include "dual_arm_transport_mock/log_writer.hpp"
 #include "dual_arm_transport_mock/mock_loop.hpp"
-#include "dual_arm_transport_mock/trajectory.hpp"
+#include "dual_arm_object_task/trajectory.hpp"
 #include "dual_arm_transport_mock/transport_checker.hpp"
 
 namespace {
@@ -54,9 +54,9 @@ using dual_arm_transport_mock::CycleRecord;
 using dual_arm_transport_mock::MockLoopOptions;
 using dual_arm_transport_mock::MockTransportLoop;
 using dual_arm_transport_mock::RunSummary;
-using dual_arm_transport_mock::TrajectoryPhase;
-using dual_arm_transport_mock::TrajectorySpec;
-using dual_arm_transport_mock::loadTrajectorySpec;
+using dual_arm_object_task::TrajectoryPhase;
+using dual_arm_object_task::TrajectorySpec;
+using dual_arm_object_task::loadTrajectorySpec;
 
 std::string readFile(const std::string& path) {
     std::ifstream f(path);
@@ -193,9 +193,9 @@ TEST_F(MockLoopC43S3, T5a_ThinAdapterProducesSameDqAsTheDirectCoreCall) {
     // The same computation, spelled out by hand: build the row, call the core overload.
     MockLoopOptions opt = options();
     dual_arm::DualArmKinematics kin;
-    dual_arm_transport_mock::AnchoredObjectTaskBuilder builder(kin, baseline.object_T_left_tcp,
+    dual_arm_object_task::AnchoredObjectTaskBuilder builder(kin, baseline.object_T_left_tcp,
                                                              baseline.object_T_right_tcp);
-    const dual_arm_transport_mock::AnchoredObjectTask task = builder.build(q, T_d, v);
+    const dual_arm_object_task::AnchoredObjectTask task = builder.build(q, T_d, v);
     dual_arm_qp::ObjectTaskRow row;
     row.J = task.J;
     row.e = -task.e;  // 2.3.1(c)

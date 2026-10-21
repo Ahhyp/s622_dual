@@ -17,7 +17,7 @@
 #include "dual_arm_kinematics/dual_arm_kinematics.hpp"
 #include "dual_arm_kinematics/object_frame.hpp"
 #include "dual_arm_kinematics/se3.hpp"
-#include "dual_arm_transport_mock/object_task.hpp"
+#include "dual_arm_object_task/anchored_object_task.hpp"
 
 namespace {
 
@@ -28,9 +28,9 @@ using dual_arm::JointConfig;
 using dual_arm::Mat6x12;
 using dual_arm::Q12;
 using dual_arm::Vec6;
-using dual_arm_transport_mock::AnchoredObjectTask;
-using dual_arm_transport_mock::AnchoredObjectTaskBuilder;
-using dual_arm_transport_mock::anchorGap;
+using dual_arm_object_task::AnchoredObjectTask;
+using dual_arm_object_task::AnchoredObjectTaskBuilder;
+using dual_arm_object_task::anchorGap;
 
 constexpr std::array<double, 12> kGraspQ = {
     2.795036909814,  -1.706950857914, 1.279963524342,  -1.143808993223,

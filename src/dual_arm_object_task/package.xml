@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dual_arm_object_task</name>
+  <version>0.1.0</version>
+  <description>
+    C4.3 S4 -- the anchored object task and the frozen object trajectory.
+    Extracted verbatim from dual_arm_transport_mock (C4.3 S3 W3/W4) so that the
+    production controller can build the object task without depending on a mock
+    package.  Dependency direction: dual_arm_transport_mock -> this package ->
+    {dual_arm_kinematics, Eigen3, yaml-cpp}.  This package must never depend on
+    moveit, on the QP, or on the mock.
+  </description>
+  <maintainer email="yep@example.com">yep</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>eigen</depend>
+  <depend>yaml-cpp</depend>
+  <depend>dual_arm_kinematics</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

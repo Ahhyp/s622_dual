@@ -22,7 +22,7 @@
 #include "dual_arm_transport/grasp_config.hpp"
 #include "dual_arm_transport_mock/log_writer.hpp"
 #include "dual_arm_transport_mock/mock_loop.hpp"
-#include "dual_arm_transport_mock/trajectory.hpp"
+#include "dual_arm_object_task/trajectory.hpp"
 #include "dual_arm_transport_mock/version.hpp"
 
 #ifndef C43_GIT_HEAD
@@ -53,8 +53,8 @@ using dual_arm_transport_mock::MockLoopOptions;
 using dual_arm_transport_mock::MockTransportLoop;
 using dual_arm_transport_mock::RunSummary;
 using dual_arm_transport_mock::ScenarioRun;
-using dual_arm_transport_mock::TrajectorySpec;
-using dual_arm_transport_mock::loadTrajectorySpec;
+using dual_arm_object_task::TrajectorySpec;
+using dual_arm_object_task::loadTrajectorySpec;
 
 void usage() {
     std::printf(

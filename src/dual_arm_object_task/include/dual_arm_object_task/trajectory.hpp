@@ -8,8 +8,8 @@
 // Convention (C4.3_S3_实施方案.md §2.4): the returned twist is the DESIRED object BODY
 // twist v_d = [R_dᵀ ṗ_d ; ω_body], and it enters the QP as
 //     row.body_twist_ff = +v_d      (paired with row.e = -e_O, see §2.3.1(c)(d))
-#ifndef DUAL_ARM_TRANSPORT_MOCK__TRAJECTORY_HPP_
-#define DUAL_ARM_TRANSPORT_MOCK__TRAJECTORY_HPP_
+#ifndef DUAL_ARM_OBJECT_TASK__TRAJECTORY_HPP_
+#define DUAL_ARM_OBJECT_TASK__TRAJECTORY_HPP_
 
 #include <Eigen/Dense>
 #include <cstddef>
@@ -19,7 +19,7 @@
 
 #include "dual_arm_kinematics/se3.hpp"
 
-namespace dual_arm_transport_mock {
+namespace dual_arm_object_task {
 
 /// Thrown for any malformed spec (missing key, negative duration, yaw node count
 /// mismatch, ...).  A trajectory that cannot be parsed must never silently become
@@ -81,6 +81,6 @@ private:
     std::vector<Eigen::Vector3d> phase_start_p_;
 };
 
-}  // namespace dual_arm_transport_mock
+}  // namespace dual_arm_object_task
 
-#endif  // DUAL_ARM_TRANSPORT_MOCK__TRAJECTORY_HPP_
+#endif  // DUAL_ARM_OBJECT_TASK__TRAJECTORY_HPP_
