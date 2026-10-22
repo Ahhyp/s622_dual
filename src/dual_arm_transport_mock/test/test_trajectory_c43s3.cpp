@@ -14,17 +14,17 @@
 
 #include "dual_arm_kinematics/object_frame.hpp"
 #include "dual_arm_kinematics/se3.hpp"
-#include "dual_arm_transport_mock/trajectory.hpp"
+#include "dual_arm_object_task/trajectory.hpp"
 
 namespace {
 
 using dual_arm::Iso3;
 using dual_arm::Vec6;
-using dual_arm_transport_mock::FrozenObjectTrajectory;
-using dual_arm_transport_mock::TrajectoryError;
-using dual_arm_transport_mock::TrajectoryPhase;
-using dual_arm_transport_mock::TrajectorySpec;
-using dual_arm_transport_mock::loadTrajectorySpec;
+using dual_arm_object_task::FrozenObjectTrajectory;
+using dual_arm_object_task::TrajectoryError;
+using dual_arm_object_task::TrajectoryPhase;
+using dual_arm_object_task::TrajectorySpec;
+using dual_arm_object_task::loadTrajectorySpec;
 
 TrajectoryPhase phase(const char* name, double dur, double dx, double dy, double dz) {
     TrajectoryPhase p;

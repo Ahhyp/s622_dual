@@ -1,5 +1,5 @@
-// C4.3 S3 -- W4 implementation.  See trajectory.hpp for the contract.
-#include "dual_arm_transport_mock/trajectory.hpp"
+// C4.3 S4 W0: trajectory (moved from dual_arm_transport_mock, numerics unchanged).  See trajectory.hpp for the contract.
+#include "dual_arm_object_task/trajectory.hpp"
 
 #include <yaml-cpp/yaml.h>
 
@@ -9,7 +9,7 @@
 
 #include "dual_arm_kinematics/object_frame.hpp"
 
-namespace dual_arm_transport_mock {
+namespace dual_arm_object_task {
 
 namespace {
 
@@ -225,4 +225,4 @@ dual_arm::Iso3 FrozenObjectTrajectory::at(double t, dual_arm::Vec6* body_twist_f
     return T_d;
 }
 
-}  // namespace dual_arm_transport_mock
+}  // namespace dual_arm_object_task

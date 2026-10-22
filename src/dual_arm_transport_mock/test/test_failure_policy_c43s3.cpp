@@ -29,9 +29,9 @@
 #include "dual_arm_transport/baseline.hpp"
 #include "dual_arm_transport/grasp_config.hpp"
 #include "dual_arm_transport_mock/mock_loop.hpp"
-#include "dual_arm_transport_mock/object_task.hpp"
+#include "dual_arm_object_task/anchored_object_task.hpp"
 #include "dual_arm_transport_mock/sha256.hpp"
-#include "dual_arm_transport_mock/trajectory.hpp"
+#include "dual_arm_object_task/trajectory.hpp"
 
 namespace {
 
@@ -45,16 +45,16 @@ using dual_arm_pose_optimization::SceneLoadOptions;
 using dual_arm_transport::GraspConfig;
 using dual_arm_transport::TransportBaseline;
 using dual_arm_transport::loadGraspConfig;
-using dual_arm_transport_mock::AnchoredObjectTaskBuilder;
+using dual_arm_object_task::AnchoredObjectTaskBuilder;
 using dual_arm_transport_mock::CheckOptions;
 using dual_arm_transport_mock::CycleRecord;
 using dual_arm_transport_mock::MockLoopOptions;
 using dual_arm_transport_mock::MockTransportLoop;
 using dual_arm_transport_mock::RunSummary;
 using dual_arm_transport_mock::StackRank;
-using dual_arm_transport_mock::TrajectoryPhase;
-using dual_arm_transport_mock::TrajectorySpec;
-using dual_arm_transport_mock::loadTrajectorySpec;
+using dual_arm_object_task::TrajectoryPhase;
+using dual_arm_object_task::TrajectorySpec;
+using dual_arm_object_task::loadTrajectorySpec;
 
 std::string readFile(const std::string& path) {
     std::ifstream f(path);
@@ -282,7 +282,7 @@ TEST_F(FailurePolicyC43S3, T18a_StackIsFullRankAtTheFrozenGrasp) {
     const AnchoredObjectTaskBuilder builder(kin, baseline.object_T_left_tcp,
                                             baseline.object_T_right_tcp);
     const Q12 q = baseline.q_grasp;
-    const dual_arm_transport_mock::AnchoredObjectTask task =
+    const dual_arm_object_task::AnchoredObjectTask task =
         builder.build(q, baseline.world_T_object, Vec6::Zero());
     const Mat6x12 J_rel = kin.relativeJacobian(q);
     const StackRank rk = dual_arm_transport_mock::computeStackRank(J_rel, task.J);

@@ -4,13 +4,13 @@
 // (dual_arm_kinematics/object_frame.hpp) and of C4.3_S3_实施方案.md §2.3.  There
 // is no tuning constant, no approximation and nothing to fit: S3's object task
 // is fully determined by (q, G_L, G_R, T_desired, v_ff).
-#include "dual_arm_transport_mock/object_task.hpp"
+#include "dual_arm_object_task/anchored_object_task.hpp"
 
 #include <cmath>
 
 #include "dual_arm_kinematics/object_frame.hpp"
 
-namespace dual_arm_transport_mock {
+namespace dual_arm_object_task {
 
 namespace {
 
@@ -108,4 +108,4 @@ AnchoredObjectTask AnchoredObjectTaskBuilder::build(const Q12& q,
     return out;
 }
 
-}  // namespace dual_arm_transport_mock
+}  // namespace dual_arm_object_task

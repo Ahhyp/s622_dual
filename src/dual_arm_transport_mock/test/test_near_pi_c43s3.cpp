@@ -20,7 +20,7 @@
 
 #include "dual_arm_kinematics/dual_arm_kinematics.hpp"
 #include "dual_arm_kinematics/object_frame.hpp"
-#include "dual_arm_transport_mock/object_task.hpp"
+#include "dual_arm_object_task/anchored_object_task.hpp"
 #include "dual_arm_transport_mock/version.hpp"
 #include "legacy_cases.hpp"
 

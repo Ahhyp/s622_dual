@@ -16,6 +16,7 @@ find_package(dual_arm_kinematics REQUIRED)
 find_package(dual_arm_collision REQUIRED)
 find_package(dual_arm_qp_core REQUIRED)
 find_package(dual_arm_transport REQUIRED)
+find_package(dual_arm_object_task REQUIRED)
 # Declared explicitly on purpose -- see package.xml and
 # C4.3_S3_实施方案.md §3.1 (same rationale as C4.3_S2_实施方案.md §10.1).
 find_package(fairino_planning_core REQUIRED)
@@ -24,8 +25,6 @@ find_package(dual_arm_pose_optimization REQUIRED)
 # W1: skeleton.  Sources are appended by W3..W7, one work item at a time.
 set(S3_SOURCES
   src/version.cpp
-  src/object_task.cpp
-  src/trajectory.cpp
   src/transport_checker.cpp
   src/mock_loop.cpp
   src/log_writer.cpp
@@ -58,6 +57,7 @@ target_link_libraries(${PROJECT_NAME}
          dual_arm_kinematics::dual_arm_kinematics
          dual_arm_collision::dual_arm_collision
          dual_arm_qp_core::dual_arm_qp_core
+         dual_arm_object_task::dual_arm_object_task
          dual_arm_transport::dual_arm_transport
          fairino_planning_core::fairino_planning_core
          dual_arm_pose_optimization::dual_arm_pose_optimization

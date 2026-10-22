@@ -1,4 +1,4 @@
-// C4.3 S3 -- W3: the anchored object task.
+// C4.3 S4 W0: the anchored object task (moved from dual_arm_transport_mock, numerics unchanged).
 //
 // WHY THIS EXISTS (C4.3_S3_实施方案.md §2.6): the legacy object task (the
 // DualArmKinematics object-error / object-Jacobian entry points) lives in the
@@ -19,15 +19,15 @@
 //
 // Deliberately does NOT include the QP header: this package must stay unit
 // testable without pulling in the solver.
-#ifndef DUAL_ARM_TRANSPORT_MOCK__OBJECT_TASK_HPP_
-#define DUAL_ARM_TRANSPORT_MOCK__OBJECT_TASK_HPP_
+#ifndef DUAL_ARM_OBJECT_TASK__ANCHORED_OBJECT_TASK_HPP_
+#define DUAL_ARM_OBJECT_TASK__ANCHORED_OBJECT_TASK_HPP_
 
 #include <string>
 
 #include "dual_arm_kinematics/dual_arm_kinematics.hpp"
 #include "dual_arm_kinematics/se3.hpp"
 
-namespace dual_arm_transport_mock {
+namespace dual_arm_object_task {
 
 /// Tolerance on the disagreement between the two independent anchored estimates.
 /// Zero when the closed chain holds exactly; grows only if the grasp really slips.
@@ -114,6 +114,6 @@ private:
     dual_arm::Iso3 left_T_right_grasp_;  ///< G_L^-1 G_R (frozen relative grasp)
 };
 
-}  // namespace dual_arm_transport_mock
+}  // namespace dual_arm_object_task
 
-#endif  // DUAL_ARM_TRANSPORT_MOCK__OBJECT_TASK_HPP_
+#endif  // DUAL_ARM_OBJECT_TASK__ANCHORED_OBJECT_TASK_HPP_
