@@ -1,0 +1,1 @@
+cmp -s before.txt after.txt  -> 0 (identical)

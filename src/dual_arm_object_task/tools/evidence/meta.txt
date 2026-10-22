@@ -1,0 +1,12 @@
+generated_utc: 2026-10-22T09:11:53Z
+cwd: /home/yep/my_S622
+after_source: /home/yep/my_S622 @ bd9c9feb539e56d08478c07788c4cd2292179dc5
+before_source: /tmp/w0_before @ 627a761a503e762acd5ee07fc6992750083b33dc
+compiler: g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
+flags: -std=c++17 -O3 -Wall -Wextra
+ldd_libdual_arm_kinematics: af11d2d1734debd379ed6edc1b544f9404cdecc7a95dfb0f6b01700dfebe6308
+dump_source: /home/yep/my_S622/src/dual_arm_object_task/tools/dump_anchored_task_samples.cpp  sha256=85e0373031a522aee80274d54a87440f76595362cab1aad5ff259f46ba431d6c
+after_units: /home/yep/my_S622/src/dual_arm_object_task/src/anchored_object_task.cpp sha256=aef855eb258bce2f5e70489e92a02b0ffd69e025dd6928abc1b58cdd60f17003
+after_units: /home/yep/my_S622/src/dual_arm_object_task/src/trajectory.cpp sha256=7350c28501e7ef813dbaf6efeed31ac5f7a091d16baff1a684f97cf56f2d2158
+before_units: /tmp/w0_before/src/dual_arm_transport_mock/src/object_task.cpp sha256=9beec68887bf6d245fc4472c8b3d35fb70d31e822b5d5ccf83f727f2c0475be5
+before_units: /tmp/w0_before/src/dual_arm_transport_mock/src/trajectory.cpp sha256=72c07d45acba7eff8a19d004b0b6d8aa18b0855d45a88650098b1ccc80b5b4d6
