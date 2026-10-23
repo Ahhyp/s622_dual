@@ -107,6 +107,19 @@ if(BUILD_TESTING)
     dual_arm_qp_controller_lib
     dual_arm_object_task::dual_arm_object_task
     dual_arm_qp_core::dual_arm_qp_core)
+
+  # C4.3 S4 W2: S4-T2 (per-cycle dq must match the frozen S3 ff_1 baseline to
+  # <= 1 ULP) and S4-T13 (mock-bench closure + the real E8 executor-heartbeat
+  # interlock: never-received, timeout, frozen trajectory clock, re-arm).
+  # The bench case forks a `ros2 launch`, so the timeout is generous.
+  ament_add_gtest(test_mock_closure test/test_mock_closure.cpp TIMEOUT 900)
+  target_link_libraries(test_mock_closure
+    dual_arm_qp_controller_lib
+    dual_arm_object_task::dual_arm_object_task
+    dual_arm_qp_core::dual_arm_qp_core)
+  target_compile_definitions(test_mock_closure PRIVATE
+    S4_FIXTURE_CSV="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/s3_ff_1_dq.csv"
+    S4_TRANSPORT_YAML="${CMAKE_CURRENT_SOURCE_DIR}/config/c43_s4_transport.yaml")
 endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)

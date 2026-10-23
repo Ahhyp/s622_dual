@@ -25,6 +25,7 @@
 #include "dual_arm_kinematics/dual_arm_kinematics.hpp"
 #include "dual_arm_object_task/anchored_object_task.hpp"
 #include "dual_arm_object_task/trajectory.hpp"
+#include "dual_arm_qp_controller/frozen_baseline.hpp"
 #include "dual_arm_qp_core/dual_arm_qp.hpp"
 
 namespace dual_arm_qp_controller {
@@ -50,9 +51,11 @@ dual_arm::Q12 defaultHomeQ();
 
 struct TransportTaskConfig {
     /// Frozen S2 baseline grasp transforms G_L / G_R (never measured, never
-    /// re-derived).  The controller fills these from its parameters.
-    dual_arm::Iso3 object_T_left_tcp = dual_arm::Iso3::Identity();
-    dual_arm::Iso3 object_T_right_tcp = dual_arm::Iso3::Identity();
+    /// re-derived).  The controller fills these from its parameters; the
+    /// defaults come from frozen_baseline.hpp so a direct user of this struct
+    /// cannot silently get an identity grasp.
+    dual_arm::Iso3 object_T_left_tcp = frozenObjectTLeftTcp();
+    dual_arm::Iso3 object_T_right_tcp = frozenObjectTRightTcp();
 
     /// S4 plan §4.7.1 E6: refuse before the QP when the object attitude error
     /// exceeds pi - 0.05.  Frozen by user decision (C4.3 S3 收口, m06104).
