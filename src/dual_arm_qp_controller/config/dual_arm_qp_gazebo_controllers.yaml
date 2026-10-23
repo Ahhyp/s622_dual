@@ -82,3 +82,41 @@ dual_arm_qp_controller:
     collision_link_radius: 0.06
     test_sweep_amp_m: 0.0
     test_sweep_period_s: 4.0
+    # ---- C4.3 S4 W1 review (A/B/D): protection & start-gate parameters -------
+    # Every parameter below states WHEN it applies and WHAT IT DOES NOT COVER.
+    # The controller publishes this coverage in TransportStatus.protection; it
+    # is deliberately a three-value report (implemented / degraded / missing)
+    # rather than a boolean "protected" flag.
+    #
+    # require_executor_heartbeat (default false)
+    #   Applies to: the transport executor publishing ~/heartbeat at >= 10 Hz.
+    #   Effect when true: heartbeat age > executor_heartbeat_timeout_s latches a
+    #     local HOLD with code "executor_lost"; both arms freeze.  Fails closed:
+    #     "never received" is treated as stale.
+    #   NOT covered: the controller cannot tell a crashed executor from a
+    #     graceful stop -- it only sees silence.  S4.1 has no executor at all,
+    #     so the default is false and ~/status reports e8 as MISSING.  The RT
+    #     latch action itself is only exercised on the mock bench (see the W1
+    #     acceptance record); no Gazebo fault injection has been done for it.
+    require_executor_heartbeat: false
+    executor_heartbeat_timeout_s: 0.1
+    #
+    # home_q / start_pose_tolerance_rad (default: S2 frozen q_grasp12, 0.05 rad)
+    #   Applies to: ~/start_transport.  The anchored start pose of a transport is
+    #     T_hat_{O,L}(q_grasp), so starting elsewhere would silently redefine
+    #     "where the object is".  max|q_state - home_q| > tolerance is refused
+    #     (service response + per-cycle re-check on the control thread).
+    #   NOT covered: it only checks the 12 joint values' max deviation, so it
+    #     does NOT verify that the arms are collision-free, that the grippers are
+    #     open, or that the object is actually between the pads.  tolerance <= 0
+    #     disables the check (documented escape hatch, not a supported mode).
+    # start_pose_tolerance_rad: 0.05
+    #
+    # Uncovered protection scenarios (reported, not implemented):
+    #   e2_state_staleness -- ros2_control hands values without timestamps; a
+    #     failed read returns ERROR, so a frozen-but-finite sensor is NOT
+    #     detectable at this layer.  Reported as "degraded".
+    #   e7_arm_gap -- disabled while collision_d_stop <= 0; then reported as
+    #     "missing" rather than silently assumed to be active.
+    #   e4_deadline -- implemented stricter than the plan: a SINGLE measured
+    #     period overrun latches HOLD (the plan allowed 5 consecutive).

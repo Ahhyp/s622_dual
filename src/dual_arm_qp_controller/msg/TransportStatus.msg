@@ -20,3 +20,16 @@ float64 sigma_min_stack
 float64 anchor_pos_gap_m
 float64 anchor_rot_gap_rad
 float64 qp_solve_time_ms
+
+# ---- S4 W1 review (A): honest protection statement -------------------------
+# "PARTIAL(e1,...) degraded(e2) missing(e8)" -- never claims completeness while
+# a criterion is not actually detected by this controller.
+string protection
+bool   protection_complete
+# Executor heartbeat: -1.0 means "never received".
+float64 executor_heartbeat_age_s
+bool    executor_heartbeat_seen
+bool    executor_heartbeat_required
+# B: standing-configuration check at start_transport time.
+float64 start_pose_deviation_rad
+bool    start_pose_ok

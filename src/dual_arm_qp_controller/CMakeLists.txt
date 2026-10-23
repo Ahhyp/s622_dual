@@ -99,6 +99,14 @@ if(BUILD_TESTING)
     dual_arm_qp_controller_lib
     dual_arm_object_task::dual_arm_object_task
     dual_arm_qp_core::dual_arm_qp_core)
+
+  # C4.3 S4 W1 review (A/B/C): protection report honesty, start-pose gate,
+  # latch semantics (HOLD-only resume, two failures -> ABORT, FAULT needs reset).
+  ament_add_gtest(test_transport_latches test/test_transport_latches.cpp)
+  target_link_libraries(test_transport_latches
+    dual_arm_qp_controller_lib
+    dual_arm_object_task::dual_arm_object_task
+    dual_arm_qp_core::dual_arm_qp_core)
 endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)

@@ -11,6 +11,24 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "pluginlib/class_list_macros.hpp"
 
+namespace {
+
+/// S4 W1 review (A): map the interlock's free-text reason onto a stable code.
+/// The old code emitted "stale_state" for EVERY non-deadline health failure,
+/// including tracking errors and solve streaks -- a code named after a fault it
+/// never measured.  Genuine state staleness is not detectable at this layer
+/// (see protection: e2 is "degraded"), so the name is now reserved for it.
+const char* healthHoldCode(const dual_arm_qp_controller::StreamHealth& h) {
+    if (h.reason == "control period overrun") return "deadline_missed";
+    if (h.reason == "non-finite state/command") return "non_finite_state";
+    if (h.reason == "injected stream stall") return "stall_injected";
+    if (h.reason == "QP solve failures") return "qp_solver_failed";
+    if (h.reason.compare(0, 14, "tracking error") == 0) return "tracking_error";
+    return "stream_unhealthy";
+}
+
+}  // namespace
+
 namespace dual_arm_qp_controller {
 
 using controller_interface::CallbackReturn;
@@ -85,6 +103,12 @@ CallbackReturn DualArmQpController::on_init() {
     // ---- C4.3 S4 W1: object / coordination task -------------------------
     declareIfNeeded<double>("kp_obj", 20.0);
     declareIfNeeded<double>("w_obj", 1.0);
+    // S4 W1 review (A/B): honest protection + standing-configuration check.
+    declareIfNeeded<std::vector<double>>("home_q", std::vector<double>(
+        defaultHomeQ().data(), defaultHomeQ().data() + 12));
+    declareIfNeeded<double>("start_pose_tolerance_rad", 0.05);
+    declareIfNeeded<bool>("require_executor_heartbeat", false);
+    declareIfNeeded<double>("executor_heartbeat_timeout_s", 0.1);
     declareIfNeeded<double>("w_slack_obj", 1e3);
     declareIfNeeded<double>("w_null_margin", 0.0);
     declareIfNeeded<double>("w_null_manip", 0.0);
@@ -150,6 +174,22 @@ CallbackReturn DualArmQpController::on_configure(
     solve_fail_streak_max_ = std::max(1, static_cast<int>(
                                            get_node()->get_parameter("solve_fail_streak_max").as_int()));
     status_rate_hz_ = get_node()->get_parameter("transport_status_rate_hz").as_double();
+    start_pose_tolerance_rad_ =
+        get_node()->get_parameter("start_pose_tolerance_rad").as_double();
+    require_executor_heartbeat_ =
+        get_node()->get_parameter("require_executor_heartbeat").as_bool();
+    executor_heartbeat_timeout_s_ =
+        get_node()->get_parameter("executor_heartbeat_timeout_s").as_double();
+    {
+        const auto hv = get_node()->get_parameter("home_q").as_double_array();
+        if (hv.size() == 12) {
+            for (int i = 0; i < 12; ++i) home_q_[i] = hv[static_cast<size_t>(i)];
+        } else {
+            RCLCPP_ERROR(get_node()->get_logger(),
+                         "home_q must have 12 values (got %zu); using the S2 q_grasp default",
+                         hv.size());
+        }
+    }
 
     if (w_obj_ > 0.0 && w_slack_obj_ < 1e2) {
         // A toothless object task: slack would absorb the whole residual and the
@@ -243,7 +283,21 @@ CallbackReturn DualArmQpController::on_configure(
     tcfg.obj_rot_error_refuse_rad = obj_rot_error_refuse_rad_;
     tcfg.dt = dt_;
     tcfg.solve_fail_streak_max = solve_fail_streak_max_;
+    tcfg.home_q = home_q_;
+    tcfg.start_pose_tolerance_rad = start_pose_tolerance_rad_;
     transport_ = std::make_unique<TransportTask>(*kinematics_, tcfg);
+
+    // S4 W1 review (A): publish what is actually protected, not what the plan
+    // intended.  A controller that says "protected" while E2/E8 are absent is
+    // worse than one that admits the gap.
+    protection_ = buildProtectionReport(collision_d_stop_ > 0.0, require_executor_heartbeat_);
+    if (protection_.complete) {
+        RCLCPP_INFO(get_node()->get_logger(), "protection: %s", protection_.summary.c_str());
+    } else {
+        RCLCPP_WARN(get_node()->get_logger(),
+                    "protection is NOT complete: %s (see ~/status.protection)",
+                    protection_.summary.c_str());
+    }
 
     status_period_ticks_ = std::max(
         1, static_cast<int>(std::lround(1.0 / (dt_ * std::max(1e-3, status_rate_hz_)))));
@@ -280,6 +334,12 @@ void DualArmQpController::createInterfaces() {
         "~/resume_transport",
         [this](const std::shared_ptr<std_srvs::srv::Trigger::Request>,
                std::shared_ptr<std_srvs::srv::Trigger::Response> res) { onResume(res); });
+    // S4 W1 review (A): E8.  The executor (W2) publishes ~/heartbeat; if this
+    // interlock is required and the heartbeat goes stale, both arms hold.
+    // Default OFF because S4.1 has no executor yet -- and ~/status says so.
+    heartbeat_sub_ = get_node()->create_subscription<std_msgs::msg::Empty>(
+        "~/heartbeat", rclcpp::QoS(10),
+        [this](std_msgs::msg::Empty::ConstSharedPtr msg) { onHeartbeat(msg); });
     reset_srv_ = get_node()->create_service<std_srvs::srv::Trigger>(
         "~/reset_transport",
         [this](const std::shared_ptr<std_srvs::srv::Trigger::Request>,
@@ -334,6 +394,30 @@ void DualArmQpController::onStartTransport(
         res->accepted = false;
         res->message = "controller is not active";
         return;
+    }
+    // B (S4 W1 review): refuse to start from an arbitrary pose.  The anchored
+    // start pose is derived from the CURRENT joint state, so starting somewhere
+    // else silently redefines "the object is here".  TransportTask::start()
+    // enforces the same rule on the control thread; this is the friendly path.
+    if (start_pose_tolerance_rad_ > 0.0) {
+        double worst = 0.0;
+        int worst_i = 0;
+        for (int i = 0; i < kNumJoints; ++i) {
+            const double d = std::abs(q_state_[i] - home_q_[i]);
+            if (d > worst) {
+                worst = d;
+                worst_i = i;
+            }
+        }
+        if (!(worst <= start_pose_tolerance_rad_)) {
+            res->accepted = false;
+            res->message = "start pose deviation " + std::to_string(worst) +
+                           " rad at joint " + std::to_string(worst_i % 6 + 1) + " (" +
+                           (worst_i < 6 ? "left" : "right") + " arm) exceeds " +
+                           std::to_string(start_pose_tolerance_rad_) +
+                           " rad; move both arms to the standing configuration first";
+            return;
+        }
     }
     const size_t n = req->phase_duration.size();
     if (n == 0) {
@@ -423,9 +507,20 @@ void DualArmQpController::onAbortTransport(
 
 void DualArmQpController::onResume(
     std::shared_ptr<std_srvs::srv::Trigger::Response> res) {
+    // C (S4 W1 review): ~/resume only acts on a HOLD.  FAULT needs ~/reset and
+    // ABORT needs a new ~/start_transport; TransportTask enforces this on the
+    // control thread and reports which of the three applies.
     pending_cmd_.store(1, std::memory_order_relaxed);
     res->success = true;
-    res->message = "resume queued (three checks run on the control thread)";
+    res->message = "resume queued (HOLD only; FAULT needs ~/reset_transport, ABORT needs "
+                   "a new ~/start_transport)";
+}
+
+void DualArmQpController::onHeartbeat(std_msgs::msg::Empty::ConstSharedPtr /*msg*/) {
+    // Executor thread.  Two relaxed atomics: update() only needs a recent value,
+    // never a consistent pair.
+    last_heartbeat_s_.store(get_node()->now().seconds(), std::memory_order_relaxed);
+    heartbeat_seen_.store(true, std::memory_order_relaxed);
 }
 
 void DualArmQpController::onReset(std::shared_ptr<std_srvs::srv::Trigger::Response> res) {
@@ -541,7 +636,7 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
                         health.reason.c_str(), health.unhealthy_arm);
         }
         hold_active_ = true;
-        if (transport_active) transport_->hold(deadline_fault ? "deadline_missed" : "stale_state");
+        if (transport_active) transport_->hold(healthHoldCode(health));
         writeCommand(q_cmd_);  // freeze BOTH arms
         publishStatus();
         return return_type::OK;
@@ -550,6 +645,28 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
         RCLCPP_INFO(get_node()->get_logger(), "D7 HOLD exit @ t=%.3fs", elapsed);
     }
     hold_active_ = false;
+
+    // ---- C4.3 S4 W1 review (A): E8 executor heartbeat ------------------------
+    // Only enforced when explicitly required (default off in S4.1: there is no
+    // executor yet).  When off, ~/status reports e8 as MISSING -- the controller
+    // must never imply it is watching something it is not.
+    if (require_executor_heartbeat_) {
+        const double hb_s = last_heartbeat_s_.load(std::memory_order_relaxed);
+        const bool seen = heartbeat_seen_.load(std::memory_order_relaxed);
+        const bool stale = executorHeartbeatStale(seen, hb_s, time.seconds(),
+                                                  executor_heartbeat_timeout_s_);
+        if (stale) {
+            hold_active_ = true;
+            if (transport_active) transport_->hold("executor_lost");
+            writeCommand(q_cmd_);
+            RCLCPP_ERROR_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 500,
+                                  "E8: executor heartbeat %s (age %.3fs > %.3fs) -> HOLD",
+                                  seen ? "stale" : "never received", seen ? time.seconds() - hb_s : -1.0,
+                                  executor_heartbeat_timeout_s_);
+            publishStatus();
+            return return_type::OK;
+        }
+    }
 
     // ---- C4.3 S4 W1: cooperative-transport mode -----------------------------
     if (transport_active) {
@@ -688,6 +805,28 @@ void DualArmQpController::publishStatus() {
         Eigen::JacobiSVD<Eigen::Matrix<double, 12, 12>> svd(stack);
         m.sigma_min_stack = svd.singularValues()(11);
     }
+    // S4 W1 review (A/B): never publish "fine" by omission.
+    m.protection = protection_.summary;
+    m.protection_complete = protection_.complete;
+    m.executor_heartbeat_required = require_executor_heartbeat_;
+    m.executor_heartbeat_seen = heartbeat_seen_.load(std::memory_order_relaxed);
+    if (m.executor_heartbeat_seen) {
+        const double hb_s = last_heartbeat_s_.load(std::memory_order_relaxed);
+        const double now_s = get_node()->now().seconds();
+        m.executor_heartbeat_age_s = std::isfinite(hb_s) ? std::max(0.0, now_s - hb_s) : -1.0;
+    } else {
+        m.executor_heartbeat_age_s = -1.0;
+    }
+    // B: report the live deviation from the standing configuration even while
+    // idle, so an operator can see whether ~/start_transport would be accepted.
+    double start_dev = 0.0;
+    for (int i = 0; i < kNumJoints; ++i) {
+        start_dev = std::max(start_dev, std::abs(q_state_[i] - home_q_[i]));
+    }
+    m.start_pose_deviation_rad = start_dev;
+    m.start_pose_ok = !(start_pose_tolerance_rad_ > 0.0) ||
+                      start_dev <= start_pose_tolerance_rad_;
+
     status_pub_->unlockAndPublish();
 }
 

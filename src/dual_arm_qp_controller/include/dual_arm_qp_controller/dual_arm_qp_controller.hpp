@@ -34,6 +34,7 @@
 #include <realtime_tools/realtime_buffer.hpp>
 #include <realtime_tools/realtime_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/empty.hpp>
 #include <rclcpp_lifecycle/state.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
@@ -84,6 +85,7 @@ private:
     void onAbortTransport(const std::shared_ptr<dual_arm_qp_controller::srv::AbortTransport::Request> req,
                           std::shared_ptr<dual_arm_qp_controller::srv::AbortTransport::Response> res);
     void onResume(std::shared_ptr<std_srvs::srv::Trigger::Response> res);
+    void onHeartbeat(std_msgs::msg::Empty::ConstSharedPtr msg);
     void onReset(std::shared_ptr<std_srvs::srv::Trigger::Response> res);
     /// Apply a queued start request.  One-off allocation at a state transition.
     void applyPendingStart();
@@ -125,6 +127,12 @@ private:
     rclcpp::Service<dual_arm_qp_controller::srv::AbortTransport>::SharedPtr abort_srv_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_srv_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_srv_;
+    // ---- S4 W1 review (A): executor heartbeat + honest protection reporting ----
+    rclcpp::Subscription<std_msgs::msg::Empty>::SharedPtr heartbeat_sub_;
+    std::atomic<double> last_heartbeat_s_{-1.0};
+    std::atomic<bool> heartbeat_seen_{false};
+    ProtectionReport protection_;
+    Vec12 home_q_ = defaultHomeQ();
 
     Vec12 last_dq_ = Vec12::Zero();
     bool last_committed_ = false;
@@ -156,6 +164,9 @@ private:
     double obj_rot_error_refuse_rad_ = 3.0915926535897933;  // pi - 0.05, frozen
     int solve_fail_streak_max_ = 10;
     double status_rate_hz_ = 10.0;
+    bool require_executor_heartbeat_ = false;
+    double executor_heartbeat_timeout_s_ = 0.1;
+    double start_pose_tolerance_rad_ = 0.05;
     Vec12 dq_center_ = Vec12::Zero();
     dual_arm::Iso3 object_T_left_tcp_ = dual_arm::Iso3::Identity();
     dual_arm::Iso3 object_T_right_tcp_ = dual_arm::Iso3::Identity();

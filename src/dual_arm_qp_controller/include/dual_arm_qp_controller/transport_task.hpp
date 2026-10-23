@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <Eigen/Dense>
 
@@ -41,6 +42,12 @@ enum class TransportState : int {
 
 const char* transportStateName(TransportState s) noexcept;
 
+/// S2 frozen baseline `q_grasp12` (transport_baseline.yaml:66).  It is the
+/// canonical pre-transport configuration: the anchored start pose of a
+/// transport is T_hat_{O,L}(q_grasp), so asking for a start while the arms are
+/// somewhere else would silently change what "the object is here" means.
+dual_arm::Q12 defaultHomeQ();
+
 struct TransportTaskConfig {
     /// Frozen S2 baseline grasp transforms G_L / G_R (never measured, never
     /// re-derived).  The controller fills these from its parameters.
@@ -57,7 +64,45 @@ struct TransportTaskConfig {
     int resume_fail_max = 2;
     double resume_pos_tol_m = 5.0e-3;                  ///< 5 mm
     double resume_rot_tol_rad = 2.0 * 0.017453292519943295;  ///< 2 deg
+
+    /// Pre-transport standing configuration and how far the arms may be from it
+    /// when a transport is requested (max |q - home| over the 12 joints).
+    /// 0 or negative tolerance disables the check (not recommended).
+    dual_arm::Q12 home_q = defaultHomeQ();
+    double start_pose_tolerance_rad = 0.05;
 };
+
+/// §4.7.1 protection coverage, as a machine-checkable statement rather than a
+/// claim.  "implemented" means the controller itself detects and latches the
+/// condition; "degraded" means a partial/indirect detector; "missing" means the
+/// controller does NOT detect it at all (and must say so in ~/status).
+enum class ProtectionCoverage : int {
+    Implemented = 0,
+    Degraded = 1,   ///< partial or indirect detection only
+    Missing = 2
+};
+
+struct ProtectionItem {
+    const char* id;          ///< "e1_joint_bounds" ... "e8_executor_heartbeat"
+    ProtectionCoverage coverage;
+    const char* note;        ///< why, in one sentence
+};
+
+struct ProtectionReport {
+    bool complete = false;
+    /// e.g. "PARTIAL(e1,e3,e4,e5,e6,e7) degraded(e2) missing(e8)"
+    std::string summary;
+    std::vector<ProtectionItem> items;
+};
+
+/// Fills in the coverage of one controller instance.  Pure, allocation is a
+/// configure-time concern only.
+ProtectionReport buildProtectionReport(bool e7_arm_gap_enabled, bool e8_heartbeat_enabled);
+
+/// Pure E8 decision (§4.7.1): true => the executor heartbeat is stale, so both
+/// arms must hold.  Kept out of the control loop so the rule can be unit tested
+/// without a ros2_control fixture; the loop only applies the verdict.
+bool executorHeartbeatStale(bool seen, double last_heartbeat_s, double now_s, double timeout_s);
 
 /// Everything one cycle needs to publish / log.  No allocation.
 struct TransportSample {
@@ -142,6 +187,10 @@ public:
     /// Accumulated pose offset applied by resume (identity when never shifted).
     const Eigen::Vector3d& resumeShift() const { return resume_shift_; }
 
+    /// max |q - home| (rad) measured at the last accepted start().
+    double startPoseDeviation() const { return start_pose_deviation_; }
+    bool startedFromHome() const { return started_from_home_; }
+
     const dual_arm_object_task::AnchoredObjectTaskBuilder& builder() const { return builder_; }
     const TransportTaskConfig& config() const { return cfg_; }
 
@@ -160,6 +209,9 @@ private:
 
     /// Pure translation offset added to T_d (resume re-planning).  v_ff untouched.
     Eigen::Vector3d resume_shift_ = Eigen::Vector3d::Zero();
+
+    double start_pose_deviation_ = 0.0;
+    bool started_from_home_ = false;
 };
 
 }  // namespace dual_arm_qp_controller
