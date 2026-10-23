@@ -55,12 +55,21 @@ dual_arm_qp_controller:
       - right_j6
     dt: 0.008
     kp_rel: 20.0
+    # C4.3 S4 W1: the three object-task keys below are now ACTUALLY READ by the
+    # controller (before W1 they were declared in this file but never looked up,
+    # so the object task was implicitly disabled).  w_obj > 0 with
+    # w_slack_obj < 100 is rejected at configure time.
     kp_obj: 20.0
     w_rel: 1.0
     w_obj: 1.0
     w_slack: 1000.0
     w_slack_obj: 1000.0
-    w_center: 0.01
+    # W1: 1e-2 -> 1e-4.  w_center trades step size against tracking accuracy at
+    # first order; measured on the S3 transport profile (mock loop, 63 cycles):
+    # 1e-2 => max|e_rel| 1.67e-3 (fails a 1 mm promise), 1e-3 => 2.06e-4,
+    # 1e-4 => 1.67e-5, 0 => 1.11e-5, while max|dq| moves only 0.1%.  The S3
+    # baseline used 1e-4, so S4 uses it too.
+    w_center: 0.0001
     w_reg: 0.000001
     v_max: 1.0                 # conservative for Gazebo position servo
     tracking_error_limit: 0.0

@@ -1,0 +1,6 @@
+# C4.3 S4 W1: abort the running transport (freeze both arms, latch ABORT).
+# Recovery from ABORT requires a new ~/start_transport -- never automatic.
+string reason
+---
+bool   accepted
+string message
