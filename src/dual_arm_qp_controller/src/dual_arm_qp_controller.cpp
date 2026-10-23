@@ -40,6 +40,8 @@ namespace {
 constexpr int kNumJoints = 12;
 constexpr double kTwoPi = 6.283185307179586;
 constexpr double kLimitTol = 1e-9;
+/// Plan §4.7.1 E4: consecutive deadline overruns before the D7 hold latches.
+constexpr int kDeadlineFaultStreakMax = 5;
 
 /// Row-major 4x4 -> Iso3, rejecting anything that is not a rigid transform.
 bool parseIso3(const std::vector<double>& v, dual_arm::Iso3* out) {
@@ -131,6 +133,11 @@ CallbackReturn DualArmQpController::on_init() {
     declareIfNeeded<double>("obj_rot_error_refuse_rad", 3.0915926535897933);
     declareIfNeeded<int>("solve_fail_streak_max", 10);
     declareIfNeeded<double>("transport_status_rate_hz", 10.0);
+    // §7 S4-T2 / S4-T17: realtime instrumentation.  Off by default so a
+    // production controller pays nothing and W1 behaviour is unchanged.
+    declareIfNeeded<bool>("timing_enable", false);
+    declareIfNeeded<int>("timing_capacity", 8000);
+    declareIfNeeded<std::string>("timing_csv_path", "");
 
     const auto joints = get_node()->get_parameter("joints").as_string_array();
     if (joints.size() != kNumJoints) {
@@ -298,6 +305,12 @@ CallbackReturn DualArmQpController::on_configure(
 
     status_period_ticks_ = std::max(
         1, static_cast<int>(std::lround(1.0 / (dt_ * std::max(1e-3, status_rate_hz_)))));
+
+    // §7 S4-T2/T17: one allocation here, never in the control loop.
+    timing_enable_ = get_node()->get_parameter("timing_enable").as_bool();
+    timing_capacity_ = static_cast<int>(get_node()->get_parameter("timing_capacity").as_int());
+    timing_csv_path_ = get_node()->get_parameter("timing_csv_path").as_string();
+    timing_.configure(timing_enable_ ? std::max(1, timing_capacity_) : 0, 1.0e6 * dt_);
     createInterfaces();
 
     RCLCPP_INFO(get_node()->get_logger(),
@@ -337,6 +350,10 @@ void DualArmQpController::createInterfaces() {
     heartbeat_sub_ = get_node()->create_subscription<std_msgs::msg::Empty>(
         "~/heartbeat", rclcpp::QoS(10),
         [this](std_msgs::msg::Empty::ConstSharedPtr msg) { onHeartbeat(msg); });
+    timing_srv_ = get_node()->create_service<std_srvs::srv::Trigger>(
+        "~/timing_dump",
+        [this](std::shared_ptr<std_srvs::srv::Trigger::Request>,
+               std::shared_ptr<std_srvs::srv::Trigger::Response> res) { onTimingDump(res); });
     reset_srv_ = get_node()->create_service<std_srvs::srv::Trigger>(
         "~/reset_transport",
         [this](const std::shared_ptr<std_srvs::srv::Trigger::Request>,
@@ -353,6 +370,7 @@ CallbackReturn DualArmQpController::on_activate(
     target_ = kinematics_->leftTright(q_state_);
     activate_time_ = get_node()->now();
     solve_fail_streak_ = 0;
+    deadline_fault_streak_ = 0;
     hold_active_ = false;
     health_.reset();
     period_monitor_.reset();
@@ -488,6 +506,10 @@ void DualArmQpController::onStartTransport(
         return;
     }
     start_req_->writeFromNonRT(request);
+    // §7 S4-T17: rebase the resource baselines now, so the reported growth is
+    // the drift of the run and not the ROS graph allocation of the first
+    // second.  Executor thread: no RT syscall.
+    timing_.rebaseResources();
     res->accepted = true;
     res->message = "queued (applied on the next control cycle)";
 }
@@ -524,6 +546,32 @@ void DualArmQpController::onReset(std::shared_ptr<std_srvs::srv::Trigger::Respon
     pending_cmd_.store(2, std::memory_order_relaxed);
     res->success = true;
     res->message = "reset queued";
+}
+
+void DualArmQpController::onTimingDump(
+    std::shared_ptr<std_srvs::srv::Trigger::Response> res) {
+    // §7 S4-T2 / S4-T17.  Non-RT: this runs on the executor thread, sorts
+    // copies of the samples and writes the CSV.  The control loop keeps
+    // running and keeps appending; a sample is only ever seen whole because
+    // the counter is published with a release store.
+    if (!timing_.enabled()) {
+        res->success = false;
+        res->message =
+            "timing_enable is false; set it in the params file and restart the controller";
+        return;
+    }
+    const TimingRecorder::Summary summary = timing_.summarize();
+    std::string err;
+    const bool csv_ok = timing_csv_path_.empty() || timing_.dumpCsv(timing_csv_path_, &err);
+    res->success = csv_ok;
+    res->message = TimingRecorder::format(summary);
+    if (timing_csv_path_.empty()) {
+        res->message += " | timing_csv_path empty: stats only";
+    } else if (csv_ok) {
+        res->message += " | csv=" + timing_csv_path_;
+    } else {
+        res->message += " | csv write failed: " + err;
+    }
 }
 
 void DualArmQpController::applyPendingStart() {
@@ -571,6 +619,7 @@ bool DualArmQpController::jointStateInBounds(double* min_margin) const {
 return_type DualArmQpController::update(const rclcpp::Time& time,
                                         const rclcpp::Duration& period) {
     if (!activated_) return return_type::OK;
+    TimingScope timing_scope(timing_);
     if (!readState()) {
         RCLCPP_ERROR_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 1000,
                               "QP controller: non-finite joint state");
@@ -604,7 +653,23 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     // back to `period` when that is not possible.  A deadline overrun is a
     // global (both-arm) D7 hold, so scheduler stalls become part of health.
     const double period_arg_ms = period.seconds() * 1e3;
-    const bool deadline_fault = period_monitor_.updateFromTime(time.seconds(), period.seconds());
+    const bool deadline_fault_raw =
+        period_monitor_.updateFromTime(time.seconds(), period.seconds());
+    // Plan §4.7.1 E4: a deadline overrun only holds when it repeats for five
+    // consecutive cycles.  The single-sample rule was measured to be wrong: the
+    // monitor differentiates the rclcpp clock, which is the SYSTEM clock here,
+    // so one NTP step of a few ms trips it while the control loop never missed
+    // a deadline (S4-T17: steady_clock max interval 10.27 ms, monitor fault
+    // threshold 16.0 ms).  Consecutive-counting is what the approved plan says
+    // and it also rejects a one-off clock discontinuity.
+    deadline_fault_streak_ = deadline_fault_raw ? deadline_fault_streak_ + 1 : 0;
+    const bool deadline_fault = deadline_fault_streak_ >= kDeadlineFaultStreakMax;
+    if (deadline_fault_raw) {
+        RCLCPP_WARN_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 500,
+                             "deadline overrun %d/%d (measured period %.3f ms, threshold %.3f ms)",
+                             deadline_fault_streak_, kDeadlineFaultStreakMax,
+                             period_monitor_.lastMs(), period_monitor_.faultMs());
+    }
 
     // C2.7c: INDEPENDENT hard safety layer.  This does not rely on the QP or on
     // the CBF row being feasible -- it stops both arms as soon as the measured
@@ -715,6 +780,7 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     }
 
     const dual_arm_qp::DualArmQpResult result = qp_->solve(q_state_, target);
+    timing_scope.setSolveUs(result.solve_time_ms * 1.0e3);
     last_committed_ = result.converged;
     last_dq_ = result.dq;
     if (!result.converged) {

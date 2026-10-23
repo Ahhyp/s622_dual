@@ -46,6 +46,7 @@
 #include "dual_arm_qp_controller/srv/abort_transport.hpp"
 #include "dual_arm_qp_controller/srv/start_transport.hpp"
 #include "dual_arm_qp_controller/stream_health_monitor.hpp"
+#include "dual_arm_qp_controller/timing_recorder.hpp"
 #include "dual_arm_qp_controller/transport_task.hpp"
 #include "dual_arm_qp_core/dual_arm_qp.hpp"
 
@@ -92,10 +93,33 @@ private:
     /// §4.7.1 E1: cheapest possible independent check, before any math.
     bool jointStateInBounds(double* min_margin) const;
     void publishStatus();
+    /// §7 S4-T2 / S4-T17: dump the timing ring buffer (non-RT; service thread).
+    void onTimingDump(std::shared_ptr<std_srvs::srv::Trigger::Response> res);
+
+    /// RAII: records exactly one sample per update(), on every exit path.
+    struct TimingScope {
+        explicit TimingScope(TimingRecorder& r) : rec(r) { rec.begin(nowNs()); }
+        ~TimingScope() { rec.end(solve_us); }
+        void setSolveUs(double us) { solve_us = us; }
+        static uint64_t nowNs() {
+            return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                             std::chrono::steady_clock::now().time_since_epoch())
+                                             .count());
+        }
+        TimingRecorder& rec;
+        double solve_us = 0.0;
+    };
 
     std::vector<std::string> joint_names_;
     std::vector<std::string> command_iface_names_;
     std::vector<std::string> state_iface_names_;
+
+    // ---- §7 S4-T2 / S4-T17 diagnostics (off by default) ----
+    TimingRecorder timing_;
+    bool timing_enable_ = false;
+    int timing_capacity_ = 0;
+    std::string timing_csv_path_;
+    rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr timing_srv_;
 
     std::unique_ptr<dual_arm::DualArmKinematics> kinematics_;
     std::unique_ptr<dual_arm_collision::DualArmCollisionModel> collision_;
@@ -112,6 +136,8 @@ private:
     bool activated_ = false;
     rclcpp::Time activate_time_;
     int solve_fail_streak_ = 0;
+  /// Plan §4.7.1 E4: consecutive period-overrun count; see update().
+  int deadline_fault_streak_ = 0;
     bool hold_active_ = false;
     StreamHealthMonitor health_;
     PeriodMonitor period_monitor_;

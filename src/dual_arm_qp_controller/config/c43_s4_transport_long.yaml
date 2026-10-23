@@ -1,0 +1,53 @@
+# C4.3 S4.1 W2 -- long-run trajectory for §7 S4-T17 (realtime drift / leak).
+#
+# 17 x (lift +5 cm, lower -5 cm) + 0.04 s settle:
+#   17 * 3.00 s + 0.04 s = 51.04 s = 6380 cycles at dt 0.008  (plan §7 S4-T17)
+#
+# Why not 10 x the ff_1 five-phase block: that block nets -1 cm in z per
+# repetition, so ten of them would sink the object 10 cm -- a different
+# experiment.  This one is drift-free by construction, which is what a long-run
+# resource/realism test needs.
+#
+# start: from_baseline -> same S2 frozen start as c43_s4_transport.yaml.
+dt: 0.008
+start: from_baseline
+time_scaling: smoothstep
+phases:
+  - {name: lift_00,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_00,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_01,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_01,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_02,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_02,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_03,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_03,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_04,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_04,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_05,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_05,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_06,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_06,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_07,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_07,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_08,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_08,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_09,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_09,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_10,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_10,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_11,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_11,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_12,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_12,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_13,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_13,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_14,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_14,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_15,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_15,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: lift_16,      duration: 1.50, dx: 0.000, dy: 0.0, dz: +0.050}
+  - {name: lower_16,     duration: 1.50, dx: 0.000, dy: 0.0, dz: -0.050}
+  - {name: settle_final, duration: 0.04, dx: 0.000, dy: 0.0, dz: 0.000}
+
+# No yaw excitation in S4.1 (matches S3 ff_1).
+yaw_sweep_deg: [0.0]
