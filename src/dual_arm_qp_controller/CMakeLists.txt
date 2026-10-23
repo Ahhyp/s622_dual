@@ -44,6 +44,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 add_library(dual_arm_qp_controller_lib SHARED
   src/dual_arm_qp_controller.cpp
   src/transport_task.cpp
+  src/timing_recorder.cpp
 )
 target_include_directories(dual_arm_qp_controller_lib
   PUBLIC
@@ -120,6 +121,44 @@ if(BUILD_TESTING)
   target_compile_definitions(test_mock_closure PRIVATE
     S4_FIXTURE_CSV="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/s3_ff_1_dq.csv"
     S4_TRANSPORT_YAML="${CMAKE_CURRENT_SOURCE_DIR}/config/c43_s4_transport.yaml")
+
+  # C4.3 S4 W2 addendum -- the two realtime tests the plan assigns to W2 but
+  # that W2 shipped without:
+  #   §7 S4-T2  realtime budget over the 638-cycle transport
+  #             (P99 <= 6.4 ms, max interval <= 1.5*dt, 0 overruns)  [待标定]
+  #   §7 S4-T17 long run, 17 x (lift/lower) + settle = 51.04 s = 6380 cycles:
+  #             same bounds plus RSS growth <= 1 MB and no fd growth.
+  # Both fork `ros2 launch`, and the long case runs for ~60 s, hence TIMEOUT.
+  ament_add_gtest(test_realtime_budget test/test_realtime_budget.cpp TIMEOUT 900)
+  target_link_libraries(test_realtime_budget
+    dual_arm_qp_controller_lib
+    dual_arm_object_task::dual_arm_object_task
+    dual_arm_qp_core::dual_arm_qp_core)
+  # Task B: characterise the ULP metric and localise the W2 deviation to the
+  # trajectory-clock rule rather than to OSQP non-determinism.
+  ament_add_gtest(test_ulp_semantics test/test_ulp_semantics.cpp)
+  target_link_libraries(test_ulp_semantics
+    dual_arm_qp_controller_lib
+    dual_arm_object_task::dual_arm_object_task
+    dual_arm_qp_core::dual_arm_qp_core)
+  target_compile_definitions(test_ulp_semantics PRIVATE
+    S4_FIXTURE_CSV="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/s3_ff_1_dq.csv"
+    S4_TRANSPORT_YAML="${CMAKE_CURRENT_SOURCE_DIR}/config/c43_s4_transport.yaml")
+
+  # Task C: the frozen grasp transforms have one definition and it matches the
+  # S2 yaml exactly (the W2 bug was a second, Identity default definition).
+  ament_add_gtest(test_frozen_baseline_compat test/test_frozen_baseline_compat.cpp)
+  target_link_libraries(test_frozen_baseline_compat
+    dual_arm_qp_controller_lib
+    dual_arm_object_task::dual_arm_object_task)
+  target_compile_definitions(test_frozen_baseline_compat PRIVATE
+    S4_BASELINE_YAML="${CMAKE_CURRENT_SOURCE_DIR}/../dual_arm_transport/config/transport_baseline.yaml")
+
+  target_compile_definitions(test_realtime_budget PRIVATE
+    C43_REALTIME_PARAMS="${CMAKE_CURRENT_SOURCE_DIR}/config/c43_s4_realtime_params.yaml"
+    C43_TRANSPORT_YAML="${CMAKE_CURRENT_SOURCE_DIR}/config/c43_s4_transport.yaml"
+    C43_TRANSPORT_LONG_YAML="${CMAKE_CURRENT_SOURCE_DIR}/config/c43_s4_transport_long.yaml"
+    C43_TIMING_CSV="/tmp/c43s4_timing.csv")
 endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
