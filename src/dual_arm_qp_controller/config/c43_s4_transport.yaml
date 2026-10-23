@@ -1,0 +1,24 @@
+# C4.3 S4.1 W2 -- the transport trajectory driven through the real controller.
+#
+# This is DATA, and it is deliberately the SAME experiment as S3 `ff_1`
+# (src/dual_arm_transport_mock/config/s3_transport_trajectory.yaml): same five
+# phases, same dt, same smoothstep.  W2's acceptance criterion is a per-cycle
+# `dq` comparison against that S3 run, so changing a number here changes the
+# experiment and invalidates the comparison.
+#
+# start: from_baseline  -> T_WO_star and q_grasp12 come from the S2 frozen
+#                          transport_baseline.yaml (never re-derived).
+dt: 0.008                        # = DualArmQpParams::dt -> 125 Hz
+start: from_baseline
+time_scaling: smoothstep         # ds/dt = 0 at every phase boundary
+
+# +5 cm up, -6 cm in x, -5 cm down (net -1 cm in z) => 638 cycles.
+phases:
+  - {name: settle,    duration: 0.30, dx:  0.000, dy: 0.0, dz:  0.000}
+  - {name: lift,      duration: 1.50, dx:  0.000, dy: 0.0, dz: +0.050}
+  - {name: translate, duration: 1.50, dx: -0.060, dy: 0.0, dz:  0.000}
+  - {name: lower,     duration: 1.50, dx:  0.000, dy: 0.0, dz: -0.050}
+  - {name: settle2,   duration: 0.30, dx:  0.000, dy: 0.0, dz:  0.000}
+
+# No yaw excitation in S4.1 (matches S3 ff_1).
+yaw_sweep_deg: [0.0]

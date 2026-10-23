@@ -1,0 +1,27 @@
+# Frozen baseline for C4.3 S4.1 W2 (S4-T2): the S3 `ff_1` cycle sequence.
+#
+# This file is an EXTRACT of the S3 mock-loop run, frozen so the W2 parity
+# test does not depend on `runs/` (which is gitignored by design).
+# Nothing here is recomputed or smoothed: every number is copied verbatim.
+#
+# source run dir : runs/c43_s3/w8/ff_1/
+# source file    : cycles.csv
+# source sha256  : 751a0c16506e0c1952f799e8c0da1b8f83599a6bdbf7ad5eafae1b9a4ff7ef12
+# source git_head: 6e5cb26209a3bf55749fefbc109f1e5762824d0a
+# scenario       : ff_1  (feed-forward ON, object task ON)
+# S3 config      : dt 0.008, kp_rel 10, w_rel 1, w_slack 1000, w_center 1e-4,
+#                  w_reg 1e-6, kp_obj 20, w_obj 1, w_slack_obj 1000, v_max 2.5
+# trajectory     : settle .30 / lift 1.50 +.050 / translate 1.50 -.060 /
+#                  lower 1.50 -.050 / settle2 .30  =>  638 cycles
+# rows           : 638
+#
+# extract command:
+#   python3 - <<'EOF'
+#   ... (see tools/extract_s3_dq_fixture.py in this package)
+#   EOF
+#
+# fixture sha256 : 6a0b876260a24808c61c067989460fa860e7f022dc3b060d10111ed50711d07c
+#
+# WHAT THIS FIXTURE DOES NOT PROVE: it is not evidence about Gazebo, contact
+# physics, or real grippers.  It only pins the kinematic cycle sequence that
+# S4.1 must reproduce bit-for-bit off-line.

@@ -1,6 +1,7 @@
 // src/dual_arm_qp_controller.cpp
 
 #include "dual_arm_qp_controller/dual_arm_qp_controller.hpp"
+#include "dual_arm_qp_controller/frozen_baseline.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -125,12 +126,8 @@ CallbackReturn DualArmQpController::on_init() {
     declareIfNeeded<std::vector<double>>("dq_center", {});
     // Frozen S2 baseline grasps (object_T_left_tcp / object_T_right_tcp),
     // row-major 4x4.  Never re-derived from measurements (S4 plan §4.4).
-    declareIfNeeded<std::vector<double>>(
-        "object_T_left_tcp", {0.0, 1.0, 0.0, 0.0497, 1.0, 0.0, 0.0, 0.0,
-                              0.0, 0.0, -1.0, 0.025, 0.0, 0.0, 0.0, 1.0});
-    declareIfNeeded<std::vector<double>>(
-        "object_T_right_tcp", {0.0, 1.0, 0.0, -0.0497, 1.0, 0.0, 0.0, 0.0,
-                               0.0, 0.0, -1.0, 0.025, 0.0, 0.0, 0.0, 1.0});
+    declareIfNeeded<std::vector<double>>("object_T_left_tcp", frozenObjectTLeftTcpVector());
+    declareIfNeeded<std::vector<double>>("object_T_right_tcp", frozenObjectTRightTcpVector());
     declareIfNeeded<double>("obj_rot_error_refuse_rad", 3.0915926535897933);
     declareIfNeeded<int>("solve_fail_streak_max", 10);
     declareIfNeeded<double>("transport_status_rate_hz", 10.0);
