@@ -284,7 +284,11 @@ protected:
             if (::freopen(launch_log_.c_str(), "a", stdout) == nullptr) ::_exit(126);
             // One argv token: "params_file:=<path>".  Splitting it into
             // "params_file:=" + path makes ros2 reject it as malformed.
-            const std::string params = std::string("params_file:=") + C43_REALTIME_PARAMS;
+            // C4.3 S4 W2-R3: allow the hook-isolation A/B to point the bench at a
+            // different params file without rebuilding (test-only escape hatch).
+            const char* params_env = std::getenv("C43_RT_PARAMS");
+            const std::string params =
+                std::string("params_file:=") + (params_env != nullptr ? params_env : C43_REALTIME_PARAMS);
             ::execlp("ros2", "ros2", "launch", "dual_arm_qp_controller",
                      "c43_s4_mock.launch.py", params.c_str(), static_cast<char*>(nullptr));
             ::_exit(127);

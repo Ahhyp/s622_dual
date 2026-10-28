@@ -1,0 +1,33 @@
+{
+ "label": "c_ee",
+ "params_file": "/tmp/th13/c_ee/params.yaml",
+ "hb_seconds": 2.0,
+ "started_wall": "2026-10-26T23:01:31+0800",
+ "start_accepted": true,
+ "start_message": "queued (applied on the next control cycle)",
+ "hb_stopped": true,
+ "state_census": {
+  "HOLD": 173,
+  "IDLE": 21,
+  "RUNNING": 435
+ },
+ "final_state": "HOLD",
+ "final_failure_code": "executor_lost",
+ "final_t_traj": 2.0960000000000014,
+ "final_q_cmd": [
+  2.8021677265403424,
+  -1.5814423715445858,
+  0.923204535494316,
+  -0.9125623605052502,
+  -1.5707950241061122,
+  -0.33942546295863174,
+  0.35397625911811975,
+  -1.5153446136727176,
+  -0.9657688002092674,
+  -2.231281594575168,
+  1.5707988462124909,
+  -2.7876172738750022
+ ],
+ "dump_success": true,
+ "dump_message": "samples=388 cap=8000 dropped=0 period_us=8000.000 cycle_us{mean=168.147,min=79.830,p50=165.960,p95=246.357,p99=288.427,p999=495.261,max=563.040} solve_us{mean=4.488,p99=120.830,p999=265.613,max=333.810} interval_max_us=8113.860 overruns=190 overrun_ratio=0.491 rss_kb{36844.000->36916.000,growth=72.000} fd{15->15,growth=0} phase_mask=63 branch{idle=13,transport=262,early_exit=113} p1_us{rec=388,mean=1.621,p50=1.170,p99=15.243,max=23.220} p2_us{rec=388,mean=3.663,p50=2.340,p99=34.787,max=157.230} p3_us{rec=388,mean=33.699,p50=2.520,p99=142.189,max=167.490} p4_us{rec=275,mean=171.827,p50=166.050,p99=263.849,max=524.970} p5_us{rec=388,mean=0.861,p50=0.720,p99=2.371,max=12.150} p6_us{rec=388,mean=6.077,p50=0.540,p99=76.335,max=151.380} | publish_trylock_miss=0 | csv=/tmp/th13/c_ee/timing.csv"
+}

@@ -1,5 +1,6 @@
 // src/dual_arm_qp_controller.cpp
 
+#include "dual_arm_qp_controller/hold_ack_policy.hpp"
 #include "dual_arm_qp_controller/dual_arm_qp_controller.hpp"
 #include "dual_arm_qp_controller/frozen_baseline.hpp"
 
@@ -13,6 +14,11 @@
 #include "pluginlib/class_list_macros.hpp"
 
 namespace {
+
+/// C7-A Rev.2: pack the ack into ONE atomic (seq high 32, result low 8).
+using dual_arm_qp_controller::kAckApplied;
+using dual_arm_qp_controller::kAckRefused;
+using dual_arm_qp_controller::packHoldAck;
 
 /// S4 W1 review (A): map the interlock's free-text reason onto a stable code.
 /// The old code emitted "stale_state" for EVERY non-deadline health failure,
@@ -81,6 +87,19 @@ InterfaceConfiguration DualArmQpController::state_interface_configuration() cons
 
 CallbackReturn DualArmQpController::on_init() {
     declareIfNeeded<std::vector<std::string>>("joints", {});
+#ifdef C43_ENABLE_TEST_HOOKS
+    // TEST-ONLY (C43_ENABLE_TEST_HOOKS=ON builds only).  When the option is OFF
+    // this parameter does not exist at all, so injection cannot be enabled at
+    // run time either -- see docs/.../C4.3_S4_W2_测试钩子隔离报告.md.
+    declareIfNeeded<int>("test_force_deadline_fault_cycles", 0);
+    // TEST-ONLY (T-H17): forces N cycles through the same error exit a
+    // real readState() failure takes (return ERROR, before the hold drain
+    // and before publishStatus).
+    declareIfNeeded<int>("test_fail_readstate_cycles", 0);
+    // TEST-ONLY: control-cycle delay before the first injected failure
+    // (0 = fail on the first armed cycle).  Counted from on_activate.
+    declareIfNeeded<int>("test_fail_readstate_after_cycles", 0);
+#endif
     declareIfNeeded<double>("dt", 0.008);
     declareIfNeeded<double>("kp_rel", 10.0);
     declareIfNeeded<double>("w_rel", 1.0);
@@ -107,8 +126,14 @@ CallbackReturn DualArmQpController::on_init() {
     declareIfNeeded<double>("kp_obj", 20.0);
     declareIfNeeded<double>("w_obj", 1.0);
     // S4 W1 review (A/B): honest protection + standing-configuration check.
+    // W7 fix: defaultHomeQ() returns an Eigen vector BY VALUE, so calling it twice
+    // inside the range constructor produced two distinct temporaries: `first`
+    // pointed into the first, `last` into the second, and the resulting distance
+    // was whatever the stack layout happened to give (measured live: 140 elements,
+    // 12 valid + 128 of stack garbage).  Keep ONE copy and take the range from it.
+    const dual_arm::Q12 home_q_default = defaultHomeQ();
     declareIfNeeded<std::vector<double>>("home_q", std::vector<double>(
-        defaultHomeQ().data(), defaultHomeQ().data() + 12));
+        home_q_default.data(), home_q_default.data() + home_q_default.size()));
     declareIfNeeded<double>("start_pose_tolerance_rad", 0.05);
     declareIfNeeded<bool>("require_executor_heartbeat", false);
     declareIfNeeded<double>("executor_heartbeat_timeout_s", 0.1);
@@ -138,6 +163,9 @@ CallbackReturn DualArmQpController::on_init() {
     declareIfNeeded<bool>("timing_enable", false);
     declareIfNeeded<int>("timing_capacity", 8000);
     declareIfNeeded<std::string>("timing_csv_path", "");
+    // C4.3 S4 W3-R1a / T-H13: phase mask for the six update() phases.  0 keeps
+    // only P0/P7 (the W1 measurement), 0x3F (=63) records P1..P6.
+    declareIfNeeded<int>("timing_phases", 0);
 
     const auto joints = get_node()->get_parameter("joints").as_string_array();
     if (joints.size() != kNumJoints) {
@@ -163,6 +191,14 @@ CallbackReturn DualArmQpController::on_configure(
     w_rel_ = get_node()->get_parameter("w_rel").as_double();
     w_slack_ = get_node()->get_parameter("w_slack").as_double();
     w_center_ = get_node()->get_parameter("w_center").as_double();
+#ifdef C43_ENABLE_TEST_HOOKS
+    test_force_deadline_fault_cycles_ =
+        static_cast<int>(get_node()->get_parameter("test_force_deadline_fault_cycles").as_int());
+    test_fail_readstate_cycles_ =
+        static_cast<int>(get_node()->get_parameter("test_fail_readstate_cycles").as_int());
+    test_fail_readstate_after_cycles_ =
+        static_cast<int>(get_node()->get_parameter("test_fail_readstate_after_cycles").as_int());
+#endif
     w_reg_ = get_node()->get_parameter("w_reg").as_double();
     v_max_default_ = get_node()->get_parameter("v_max").as_double();
     test_sweep_amp_m_ = get_node()->get_parameter("test_sweep_amp_m").as_double();
@@ -310,7 +346,12 @@ CallbackReturn DualArmQpController::on_configure(
     timing_enable_ = get_node()->get_parameter("timing_enable").as_bool();
     timing_capacity_ = static_cast<int>(get_node()->get_parameter("timing_capacity").as_int());
     timing_csv_path_ = get_node()->get_parameter("timing_csv_path").as_string();
-    timing_.configure(timing_enable_ ? std::max(1, timing_capacity_) : 0, 1.0e6 * dt_);
+    // C4.3 S4 W3-R1a: phases are recorded only when timing is enabled AND the
+    // mask asks for them; the mask survives a timing_enable=false configure so
+    // the three A/B/C profiles differ in exactly one parameter each.
+    timing_phases_ = static_cast<int>(get_node()->get_parameter("timing_phases").as_int());
+    timing_.configure(timing_enable_ ? std::max(1, timing_capacity_) : 0, 1.0e6 * dt_,
+                      timing_enable_ ? timing_phases_ : 0);
     createInterfaces();
 
     RCLCPP_INFO(get_node()->get_logger(),
@@ -339,6 +380,12 @@ void DualArmQpController::createInterfaces() {
         [this](const std::shared_ptr<dual_arm_qp_controller::srv::AbortTransport::Request> req,
                std::shared_ptr<dual_arm_qp_controller::srv::AbortTransport::Response> res) {
             onAbortTransport(req, res);
+        });
+    hold_srv_ = get_node()->create_service<dual_arm_qp_controller::srv::HoldTransport>(
+        "~/hold_transport",
+        [this](const std::shared_ptr<dual_arm_qp_controller::srv::HoldTransport::Request> req,
+               std::shared_ptr<dual_arm_qp_controller::srv::HoldTransport::Response> res) {
+            onHoldTransport(req, res);
         });
     resume_srv_ = get_node()->create_service<std_srvs::srv::Trigger>(
         "~/resume_transport",
@@ -434,6 +481,12 @@ void DualArmQpController::onStartTransport(
             return;
         }
     }
+#ifdef C43_ENABLE_TEST_HOOKS
+    // TEST-ONLY: arm the deterministic E4 injection for this run.
+    test_fault_budget_.store(test_force_deadline_fault_cycles_, std::memory_order_relaxed);
+    readstate_fail_budget_.store(test_fail_readstate_cycles_, std::memory_order_relaxed);
+    readstate_after_budget_.store(test_fail_readstate_after_cycles_, std::memory_order_relaxed);
+#endif
     const size_t n = req->phase_duration.size();
     if (n == 0) {
         res->accepted = false;
@@ -524,6 +577,34 @@ void DualArmQpController::onAbortTransport(
     res->message = "abort queued";
 }
 
+void DualArmQpController::onHoldTransport(
+    const std::shared_ptr<dual_arm_qp_controller::srv::HoldTransport::Request> req,
+    std::shared_ptr<dual_arm_qp_controller::srv::HoldTransport::Response> res) {
+    // C7-A Rev.2 §4.6: validation and queueing happen on this (non-RT) thread;
+    // the control thread only ever sees a seq and must not block or allocate.
+    if (req == nullptr || res == nullptr) return;
+    res->accepted = false;
+    if (req->seq == 0u) {
+        res->message = "invalid seq: 0 is reserved for \"no request\"";
+        return;
+    }
+    // Single slot.  A second request while one is queued is REFUSED, never
+    // overwritten -- otherwise the first seq would be lost without an ack and
+    // the executor would have to choose between waiting forever and aborting.
+    std::uint32_t expected = 0;
+    if (!hold_req_seq_.compare_exchange_strong(expected, req->seq,
+                                               std::memory_order_acq_rel,
+                                               std::memory_order_acquire)) {
+        res->message = "busy: hold request seq=" + std::to_string(expected) +
+                       " is still queued (one request per control cycle)";
+        return;
+    }
+    RCLCPP_WARN(get_node()->get_logger(), "hold requested: seq=%u reason='%s'",
+                static_cast<unsigned>(req->seq), req->reason.c_str());
+    res->accepted = true;
+    res->message = "hold queued";
+}
+
 void DualArmQpController::onResume(
     std::shared_ptr<std_srvs::srv::Trigger::Response> res) {
     // C (S4 W1 review): ~/resume only acts on a HOLD.  FAULT needs ~/reset and
@@ -565,6 +646,9 @@ void DualArmQpController::onTimingDump(
     const bool csv_ok = timing_csv_path_.empty() || timing_.dumpCsv(timing_csv_path_, &err);
     res->success = csv_ok;
     res->message = TimingRecorder::format(summary);
+    // C4.3 S4 W3-R1a: a P6 that produced a duration but published nothing.
+    res->message += " | publish_trylock_miss=" +
+                    std::to_string(publish_trylock_miss_.load(std::memory_order_relaxed));
     if (timing_csv_path_.empty()) {
         res->message += " | timing_csv_path empty: stats only";
     } else if (csv_ok) {
@@ -572,6 +656,14 @@ void DualArmQpController::onTimingDump(
     } else {
         res->message += " | csv write failed: " + err;
     }
+}
+
+void DualArmQpController::markTimingPhase(int phase) {
+    // C4.3 S4 W3-R1a / T-H13.  The guard is first on purpose: with the phase
+    // masked off no clock is read, so `timing_phases=0` leaves the control
+    // output bit-identical and the only cost is one predictable branch.
+    if (!timing_.phaseEnabled(phase)) return;
+    timing_.mark(phase, TimingScope::nowNs());
 }
 
 void DualArmQpController::applyPendingStart() {
@@ -620,11 +712,49 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
                                         const rclcpp::Duration& period) {
     if (!activated_) return return_type::OK;
     TimingScope timing_scope(timing_);
+    // C4.3 S4 W3-R1a / T-H13.  Default label for a cycle that never reaches a
+    // branch (early_exit/0); every exit path below overwrites it with its own
+    // (branch, exit_code) pair.  Two stores, no clock read.
+    timing_.setOutcome(2, 0);
     if (!readState()) {
+        // D3-a: a request queued for this tick must not be lost because the
+        // state read failed.  The slot is drained and REFUSED explicitly, and
+        // the ack is published before ERROR propagates, so the executor learns
+        // "refused: nothing was frozen" instead of timing out and inventing an
+        // ABORT.  transport_->hold() is deliberately NOT attempted: the joints
+        // we would freeze are exactly the ones we cannot read.
+        const std::uint32_t lost_seq = hold_req_seq_.exchange(0, std::memory_order_acq_rel);
+        const auto fail_ack = ackForReadStateFailure(lost_seq);
+        if (fail_ack.publish) {
+            hold_last_result_.store(fail_ack.result, std::memory_order_release);
+            hold_last_seq_.store(fail_ack.seq, std::memory_order_release);
+            hold_ack_.store(packHoldAck(fail_ack.seq, fail_ack.result), std::memory_order_release);
+            publishStatus();
+        }
         RCLCPP_ERROR_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 1000,
                               "QP controller: non-finite joint state");
+        timing_.setOutcome(2, 1);  // 1 = readState() rejected the state
         return return_type::ERROR;
     }
+    markTimingPhase(0);  // P1: readState()
+#ifdef C43_ENABLE_TEST_HOOKS
+    // TEST-ONLY (T-H17).  Injected *after* readState() returned true: this
+    // exercises the error return path and the ordering guarantee that it runs
+    // before the hold drain and before publishStatus(), so a queued request can
+    // be neither consumed nor acked in this cycle.  It does not reproduce the
+    // side effects inside readState() itself; see the R1a-2 record for that
+    // coverage boundary.
+    if (readstate_fail_budget_.load(std::memory_order_relaxed) > 0) {
+        const int after = readstate_after_budget_.load(std::memory_order_relaxed);
+        if (after > 0) {
+            readstate_after_budget_.store(after - 1, std::memory_order_relaxed);
+        } else {
+            readstate_fail_budget_.fetch_sub(1, std::memory_order_relaxed);
+            timing_.setOutcome(2, 2);  // 2 = injected readState()-failure hook
+            return return_type::ERROR;
+        }
+    }
+#endif
 
     // ---- apply queued transport commands (allocation-free except a latch) ----
     const int cmd = pending_cmd_.exchange(0, std::memory_order_relaxed);
@@ -645,6 +775,51 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     applyPendingStart();
 
     const bool transport_active = transport_ != nullptr && transport_->active();
+
+    // ---- C7-A Rev.2: executor HOLD request -----------------------------------
+    // Placed AFTER the command dispatch and AFTER transport_active is known, but
+    // BEFORE the safety layers.  That ordering is load-bearing:
+    //   * before the safety layers  -> every later path publishes the ack in the
+    //     SAME tick (all post-:661 exits call publishStatus());
+    //   * after  applyPendingStart  -> a start() latched this tick is already
+    //     visible, so "hold the transport I just started" works;
+    //   * unconditional (outside `if (transport_active)`) -> the slot always
+    //     drains, so an Idle-state request is acked instead of wedging the slot
+    //     into permanent "busy".
+    // No early return: the ack is written here and published further down.
+    const std::uint32_t hold_seq = hold_req_seq_.exchange(0, std::memory_order_acq_rel);
+    if (hold_seq != 0) {
+        if (hold_seq == hold_last_seq_.load(std::memory_order_acquire)) {
+            // D3-a: retransmission of an ALREADY CONSUMED seq.  Two rules, both
+            // load-bearing:
+            //   * never call transport_->hold() again -- re-freezing a resumed
+            //     trajectory from a stale request is the replay hole;
+            //   * never echo the ORIGINAL verdict -- an ack must describe the
+            //     CURRENT state.  A replay after a resume used to answer
+            //     "applied" while the plant was moving: a false success ack that
+            //     the executor is entitled to read as "frozen".  Re-evaluate:
+            //     applied only if the trajectory is stopped right now.
+            // An "applied" ack claims the trajectory is FROZEN, so the replay
+            // verdict must test the latch itself.  `!running()` is too weak:
+            // COMPLETE satisfies it (transport_task.hpp:196-198) while step()
+            // keeps solving and committing, i.e. q_cmd still advances -- an
+            // "applied" ack there is a false success on a moving robot.
+            const bool still_held =
+                transport_active && transport_->state() == TransportState::Hold;
+            const std::uint8_t replay_result = replayAckResult(still_held);
+            hold_last_result_.store(replay_result, std::memory_order_release);
+            hold_ack_.store(packHoldAck(hold_seq, replay_result),
+                            std::memory_order_release);
+        } else {
+            const bool hold_ok = transport_active && transport_->running();
+            if (hold_ok) transport_->hold("hold_by_executor", HoldOrigin::Executor);
+            const std::uint8_t result = hold_ok ? kAckApplied : kAckRefused;
+            hold_last_result_.store(result, std::memory_order_release);
+            hold_last_seq_.store(hold_seq, std::memory_order_release);
+            hold_ack_.store(packHoldAck(hold_seq, result), std::memory_order_release);
+        }
+    }
+    markTimingPhase(1);  // P2: command dispatch + applyPendingStart() + hold drain
     const double elapsed = (time - activate_time_).seconds();
 
     // C2.R2: measure the REAL control period.  NOTE: some backends hand the
@@ -653,8 +828,16 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     // back to `period` when that is not possible.  A deadline overrun is a
     // global (both-arm) D7 hold, so scheduler stalls become part of health.
     const double period_arg_ms = period.seconds() * 1e3;
-    const bool deadline_fault_raw =
+    bool deadline_fault_raw =
         period_monitor_.updateFromTime(time.seconds(), period.seconds());
+#ifdef C43_ENABLE_TEST_HOOKS
+    // TEST-ONLY: deterministic E4 injection (default 0 => no effect).  Compiled
+    // out entirely in production builds (C43_ENABLE_TEST_HOOKS undefined).
+    if (test_fault_budget_.load(std::memory_order_relaxed) > 0) {
+        test_fault_budget_.fetch_sub(1, std::memory_order_relaxed);
+        deadline_fault_raw = true;
+    }
+#endif
     // Plan §4.7.1 E4: a deadline overrun only holds when it repeats for five
     // consecutive cycles.  The single-sample rule was measured to be wrong: the
     // monitor differentiates the rclcpp clock, which is the SYSTEM clock here,
@@ -677,13 +860,17 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     if (collision_ != nullptr) {
         const auto info = collision_->distance(q_state_);
         if (info.distance < collision_d_stop_) {
+            markTimingPhase(2);  // P3: safety decision (distance + threshold compare)
             hold_active_ = true;
             if (transport_active) transport_->hold("collision");
             writeCommand(q_cmd_);
+            markTimingPhase(4);  // P5: writeCommand() on the stop path
             RCLCPP_ERROR_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 500,
                                   "SAFETY: arm-arm distance %.4f m < %.4f m -> HOLD",
                                   info.distance, collision_d_stop_);
             publishStatus();
+            markTimingPhase(5);      // P6
+            timing_.setOutcome(2, 11);  // 11 = collision stop
             return return_type::OK;
         }
     }
@@ -692,6 +879,7 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     const StreamHealth health = health_.evaluate(elapsed, q_state_, q_cmd_,
                                                  solve_fail_streak_, deadline_fault);
     if (!health.healthy) {
+        markTimingPhase(2);  // P3: safety decision (D7 interlock)
         if (!hold_active_) {
             RCLCPP_WARN(get_node()->get_logger(),
                         "D7 HOLD enter @ t=%.3fs: %s (arm=%d)", elapsed,
@@ -700,7 +888,10 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
         hold_active_ = true;
         if (transport_active) transport_->hold(healthHoldCode(health));
         writeCommand(q_cmd_);  // freeze BOTH arms
+        markTimingPhase(4);    // P5
         publishStatus();
+        markTimingPhase(5);        // P6
+        timing_.setOutcome(2, 12);  // 12 = D7 health interlock
         return return_type::OK;
     }
     if (hold_active_) {
@@ -718,17 +909,25 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
         const bool stale = executorHeartbeatStale(seen, hb_s, time.seconds(),
                                                   executor_heartbeat_timeout_s_);
         if (stale) {
+            markTimingPhase(2);  // P3: safety decision (E8 heartbeat)
             hold_active_ = true;
             if (transport_active) transport_->hold("executor_lost");
             writeCommand(q_cmd_);
+            markTimingPhase(4);  // P5
             RCLCPP_ERROR_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 500,
                                   "E8: executor heartbeat %s (age %.3fs > %.3fs) -> HOLD",
                                   seen ? "stale" : "never received", seen ? time.seconds() - hb_s : -1.0,
                                   executor_heartbeat_timeout_s_);
             publishStatus();
+            markTimingPhase(5);        // P6
+            timing_.setOutcome(2, 13);  // 13 = E8 executor heartbeat
             return return_type::OK;
         }
     }
+    // P3 closes here on the normal path: the deadline monitor / D7 / E8 blocks
+    // are the whole safety layer.  E1 below is deliberately left in the gap
+    // between P3 and P4 (design §2), i.e. it is charged to P4.
+    markTimingPhase(2);
 
     // ---- C4.3 S4 W1: cooperative-transport mode -----------------------------
     if (transport_active) {
@@ -737,13 +936,17 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
             // §4.7.1 E1: cheapest independent check, before any math.
             transport_->hold("joint_state_out_of_bounds");
             writeCommand(q_cmd_);
+            markTimingPhase(4);  // P5
             RCLCPP_ERROR_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 500,
                                   "transport HOLD: joint state out of bounds (margin %.3e rad)",
                                   min_margin);
             publishStatus();
+            markTimingPhase(5);        // P6
+            timing_.setOutcome(2, 14);  // 14 = E1 joint state out of bounds
             return return_type::OK;
         }
         const CycleOutcome out = transport_->step(q_state_, *qp_);
+        markTimingPhase(3);  // P4: TransportTask::step()
         last_committed_ = out.committed;
         last_failure_code_ = out.failure_code;
         last_dq_ = out.dq;
@@ -753,6 +956,7 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
         }
         // Never send an increment that did not commit: HOLD/ABORT/FAULT freeze.
         writeCommand(q_cmd_);
+        markTimingPhase(4);  // P5: clampToLimits() + writeCommand()
         if (out.failure_code[0] != '\0') {
             RCLCPP_WARN_THROTTLE(get_node()->get_logger(), *get_node()->get_clock(), 500,
                                  "transport %s: %s (t_traj=%.3f)",
@@ -768,6 +972,8 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
                         out.e_obj_pos_m, out.solve_time_ms);
         }
         publishStatus();
+        markTimingPhase(5);        // P6: publishStatus()
+        timing_.setOutcome(1, 0);  // branch 1 = cooperative transport
         return return_type::OK;
     }
 
@@ -780,13 +986,17 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     }
 
     const dual_arm_qp::DualArmQpResult result = qp_->solve(q_state_, target);
+    markTimingPhase(3);  // P4: qp_->solve() on the IDLE branch
     timing_scope.setSolveUs(result.solve_time_ms * 1.0e3);
     last_committed_ = result.converged;
     last_dq_ = result.dq;
     if (!result.converged) {
         ++solve_fail_streak_;
         writeCommand(q_cmd_);  // never send an unconverged increment
+        markTimingPhase(4);    // P5
         publishStatus();
+        markTimingPhase(5);        // P6
+        timing_.setOutcome(2, 22);  // 22 = IDLE solver did not converge
         return return_type::OK;
     }
     solve_fail_streak_ = 0;
@@ -794,6 +1004,7 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     q_cmd_ += result.dq;
     clampToLimits(&q_cmd_);
     writeCommand(q_cmd_);
+    markTimingPhase(4);  // P5: clampToLimits() + writeCommand()
 
     // C2.R2 statistics (low rate: every 10 s at 125 Hz)
     if (++stats_counter_ % 1250 == 0) {
@@ -806,14 +1017,26 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
                     period_monitor_.count(), result.solve_time_ms);
     }
     publishStatus();
+    markTimingPhase(5);       // P6: publishStatus()
+    timing_.setOutcome(0, 0);  // branch 0 = IDLE relative-pose hold
     return return_type::OK;
 }
 
 void DualArmQpController::publishStatus() {
     if (status_pub_ == nullptr) return;
-    if (++status_tick_ < status_period_ticks_) return;
+    // C7-A Rev.2.1 (P-1): a NEW hold ack must not wait for the 10 Hz decimation.
+    // Without this the ack latency inherits "104 ms x (1 + trylock misses)".
+    const std::uint64_t ack_now = hold_ack_.load(std::memory_order_acquire);
+    const bool ack_changed = (ack_now != status_published_ack_);
+    if (!ack_changed && ++status_tick_ < status_period_ticks_) return;
     status_tick_ = 0;
-    if (!status_pub_->trylock()) return;
+    if (!status_pub_->trylock()) {
+        // C4.3 S4 W3-R1a: P6 ran but published nothing.  Counted only while the
+        // recorder is enabled, so a production controller is unchanged.
+        if (timing_.enabled()) publish_trylock_miss_.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+    if (ack_changed) status_published_ack_ = ack_now;
 
     auto& m = status_pub_->msg_;
     const bool transport_active = transport_ != nullptr && transport_->active();
@@ -889,6 +1112,30 @@ void DualArmQpController::publishStatus() {
     m.start_pose_deviation_rad = start_dev;
     m.start_pose_ok = !(start_pose_tolerance_rad_ > 0.0) ||
                       start_dev <= start_pose_tolerance_rad_;
+
+    // ---- C7-A Rev.2: hold-ack echo -------------------------------------------
+    // Read ONCE from the packed atomic; seq and result can never mismatch.
+    m.hold_request_seq = static_cast<std::uint32_t>(ack_now >> 32);
+    m.hold_request_result = static_cast<std::uint8_t>(ack_now & 0xFFu);
+    m.hold_origin = transport_ != nullptr ? holdOriginName(transport_->holdOrigin()) : "";
+
+    // ---- W3-R2 (approved D5-1): task-phase observation ----------------------
+    // Pure read of the frozen spec + the trajectory clock: no allocation, no
+    // extra clock read.  phase_index == -1 while no trajectory is latched.
+    if (transport_ != nullptr && transport_->active()) {
+        const int idx = transport_->phaseIndexAt(transport_->tTraj());
+        m.phase_index = idx;
+        m.phase_count = transport_->phaseCount();
+        m.phase_name = transport_->phaseName(idx);
+        m.phase_duration_s = transport_->phaseDuration(idx);
+        m.phase_elapsed_s = transport_->tTraj() - transport_->phaseStartTime(idx);
+    } else {
+        m.phase_index = -1;
+        m.phase_count = 0;
+        m.phase_name.clear();
+        m.phase_elapsed_s = 0.0;
+        m.phase_duration_s = 0.0;
+    }
 
     status_pub_->unlockAndPublish();
 }

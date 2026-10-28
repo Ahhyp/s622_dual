@@ -25,6 +25,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -44,6 +45,7 @@
 #include "dual_arm_qp_controller/msg/transport_status.hpp"
 #include "dual_arm_qp_controller/period_monitor.hpp"
 #include "dual_arm_qp_controller/srv/abort_transport.hpp"
+#include "dual_arm_qp_controller/srv/hold_transport.hpp"
 #include "dual_arm_qp_controller/srv/start_transport.hpp"
 #include "dual_arm_qp_controller/stream_health_monitor.hpp"
 #include "dual_arm_qp_controller/timing_recorder.hpp"
@@ -83,6 +85,8 @@ private:
     void createInterfaces();
     void onStartTransport(const std::shared_ptr<dual_arm_qp_controller::srv::StartTransport::Request> req,
                           std::shared_ptr<dual_arm_qp_controller::srv::StartTransport::Response> res);
+    void onHoldTransport(const std::shared_ptr<dual_arm_qp_controller::srv::HoldTransport::Request> req,
+                         std::shared_ptr<dual_arm_qp_controller::srv::HoldTransport::Response> res);
     void onAbortTransport(const std::shared_ptr<dual_arm_qp_controller::srv::AbortTransport::Request> req,
                           std::shared_ptr<dual_arm_qp_controller::srv::AbortTransport::Response> res);
     void onResume(std::shared_ptr<std_srvs::srv::Trigger::Response> res);
@@ -95,6 +99,10 @@ private:
     void publishStatus();
     /// §7 S4-T2 / S4-T17: dump the timing ring buffer (non-RT; service thread).
     void onTimingDump(std::shared_ptr<std_srvs::srv::Trigger::Response> res);
+    /// C4.3 S4 W3-R1a / T-H13: close phase `phase` (0-based P1..P6) at the
+    /// current steady-clock instant.  Reads no clock unless the phase is enabled
+    /// by `timing_phases`, so `timing_phases=0` costs one predictable branch.
+    void markTimingPhase(int phase);
 
     /// RAII: records exactly one sample per update(), on every exit path.
     struct TimingScope {
@@ -119,6 +127,9 @@ private:
     bool timing_enable_ = false;
     int timing_capacity_ = 0;
     std::string timing_csv_path_;
+    /// C4.3 S4 W3-R1a / T-H13: bit i (0-based) enables phase P(i+1); 0 keeps the
+    /// W1 behaviour (P0/P7 only), 0x3F records all six phases.
+    int timing_phases_ = 0;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr timing_srv_;
 
     std::unique_ptr<dual_arm::DualArmKinematics> kinematics_;
@@ -150,6 +161,7 @@ private:
     std::unique_ptr<StatusPublisher> status_pub_;
     std::unique_ptr<StartBuffer> start_req_;
     rclcpp::Service<dual_arm_qp_controller::srv::StartTransport>::SharedPtr start_srv_;
+    rclcpp::Service<dual_arm_qp_controller::srv::HoldTransport>::SharedPtr hold_srv_;
     rclcpp::Service<dual_arm_qp_controller::srv::AbortTransport>::SharedPtr abort_srv_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr resume_srv_;
     rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_srv_;
@@ -165,8 +177,45 @@ private:
     const char* last_failure_code_ = "";
     /// 0 = none, 1 = resume, 2 = reset, 3 = abort (applied by update()).
     std::atomic<int> pending_cmd_{0};
+    // ---- C7-A Rev.2: executor HOLD request -----------------------------------
+    // Single slot: the service handler CAS-es 0 -> seq and refuses with "busy"
+    // while it is occupied, so a request can never be silently overwritten.
+    std::atomic<std::uint32_t> hold_req_seq_{0};
+    // Packed ack: (seq << 32) | result.  ONE atomic so a reader can never pair a
+    // seq with the result of a different request.
+    std::atomic<std::uint64_t> hold_ack_{0};
+    // C4.3 S4 D3-a patch (C7): replay memory.  The last CONSUMED request is
+    // remembered so a retransmission of the same seq (the idempotency key) is
+    // acked again WITHOUT freezing a second time.  Deliberately NOT cleared by
+    // start / resume / reset: clearing it would let an old seq freeze a fresh
+    // run, which is exactly the replay hole this member closes.
+    std::atomic<std::uint32_t> hold_last_seq_{0};
+    std::atomic<std::uint8_t> hold_last_result_{0};
+#ifdef C43_ENABLE_TEST_HOOKS
+    /// TEST-ONLY injection (see on_configure): forces the next N consecutive
+    /// cycles to report a deadline overrun, so the E4 policy (5 consecutive)
+    /// can be exercised deterministically.  Only present in C43_ENABLE_TEST_HOOKS
+    /// builds; production builds do not carry the parameter or the members.
+    std::atomic<int> test_fault_budget_{0};
+    int test_force_deadline_fault_cycles_ = 0;
+    /// TEST-ONLY (T-H17): forces N cycles through the readState() error exit.
+    std::atomic<int> readstate_fail_budget_{0};
+    std::atomic<int> readstate_after_budget_{0};
+    int test_fail_readstate_after_cycles_ = 0;
+    int test_fail_readstate_cycles_ = 0;
+#endif
     int status_tick_ = 0;
     int status_period_ticks_ = 13;  // 125 Hz / 10 Hz (overwritten by the parameter)
+    // C7-A Rev.2.1 (P-1): force a status publish when a NEW ack appears, so the
+    // ack latency does not inherit the 10 Hz decimation.  Updated only after a
+    // successful trylock, so a dropped publish is retried on the next tick.
+    std::uint64_t status_published_ack_ = 0;
+
+    // C4.3 S4 W3-R1a / T-H13: cycles in which publishStatus() reached the
+    // publisher but lost its trylock (a real P6 that published nothing).
+    // Counted only while timing is enabled, so the production path is untouched.
+    // Written on the RT thread, read by the timing_dump service: relaxed.
+    std::atomic<std::uint64_t> publish_trylock_miss_{0};
 
     // parameters
     double dt_ = 0.008;

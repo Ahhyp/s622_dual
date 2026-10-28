@@ -40,6 +40,12 @@ public:
     virtual ~QpSolver() = default;
     virtual QpSolution solve(const QpProblem& problem) = 0;
     virtual std::string name() const = 0;
+
+    /// Fill a caller-owned destination, reusing dst.x's storage when it is
+    /// already the right size.  The default keeps the allocating path.
+    virtual void solveInto(const QpProblem& problem, QpSolution& dst) {
+        dst = solve(problem);
+    }
 };
 
 using QpSolverPtr = std::shared_ptr<QpSolver>;

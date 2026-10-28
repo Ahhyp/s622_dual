@@ -1,0 +1,23 @@
+C6_AUDIT: ENV_REFUSED
+  - machine reports WSL
+  - chrt -f 80 failed on the measuring machine
+{
+  "schema": "c43s4.native_rt.audit.v1",
+  "verdict_path": "docs/\u53cc\u81c2\u534f\u540c/\u53cc\u81c2\u534f\u540c\u8fd0\u52a8\u63a7\u5236\u4e0e\u4f18\u5316/C6_\u8bc1\u636e\u5f52\u6863_20261027/verdict.json",
+  "facts_path": null,
+  "log_path": null,
+  "decision": "ENV_REFUSED",
+  "checks": {
+    "machine_eligible": {
+      "pass": false,
+      "detail": [
+        "machine reports WSL",
+        "chrt -f 80 failed on the measuring machine"
+      ]
+    }
+  },
+  "reasons": [
+    "machine reports WSL",
+    "chrt -f 80 failed on the measuring machine"
+  ]
+}

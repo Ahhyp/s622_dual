@@ -1,0 +1,83 @@
+# typed allocation ledger
+totals attempts=27606 success=27606 fail=0 bytes=21779850 free_calls=27596 realloc_inplace=1 realloc_moved=0 records=27606
+mallinfo2 arena=270336 ordblks=34 hblkhd=0 uordblks=91120 fordblks=179216
+
+# by entry point
+kind,attempts,success,fail,bytes
+malloc,23093,23093,0,21242548
+calloc,4504,4504,0,536880
+realloc,1,1,0,192
+posix_memalign,0,0,0,0
+aligned_alloc,0,0,0,0
+memalign,0,0,0,0
+valloc,0,0,0,0
+pvalloc,0,0,0,0
+operator new,8,8,0,230
+operator new[],0,0,0,0
+operator new(align),0,0,0,0
+operator new[](align),0,0,0,0
+
+# classification x entry point (count / bytes)
+kind,OSQP,OWN_core,INSTRUMENT,libstdcxx,libc,other_module,UNKNOWN
+malloc,22436/21027740,653/133440,0/0,1/72704,3/8664,0/0,0/0
+calloc,4503/535840,0/0,0/0,0/0,1/1040,0/0,0/0
+realloc,1/192,0/0,0/0,0/0,0/0,0/0,0/0
+posix_memalign,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+aligned_alloc,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+memalign,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+valloc,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+pvalloc,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+operator new,0/0,2/128,0/0,0/0,0/0,6/102,0/0
+operator new[],0/0,0/0,0/0,0/0,0/0,0/0,0/0
+operator new(align),0/0,0/0,0/0,0/0,0/0,0/0,0/0
+operator new[](align),0/0,0/0,0/0,0/0,0/0,0/0,0/0
+
+# per-class totals
+class,count,bytes
+OSQP,26940,21563772
+OWN_core,655,133568
+INSTRUMENT,0,0
+libstdcxx,1,72704
+libc,4,9704
+other_module,6,102
+UNKNOWN,0,0
+
+# by phase (count,bytes)
+init,10,73974
+warmup,159,152028
+steady,27435,21549280
+done,2,4568
+
+# allocation sites (frame0 module+offset, count), top 30
+libosqp.so+0xbb00,2563
+libosqp.so+0xbb4d,2563
+libosqp.so+0xbb5d,2563
+libosqp.so+0xbba8,2563
+libdual_arm_qp_core.so+0x2540f,642
+libosqp.so+0x6c3e,642
+libosqp.so+0x115d2,640
+libosqp.so+0x11659,640
+libosqp.so+0x1167f,640
+libosqp.so+0x1168b,640
+libosqp.so+0x1169a,640
+libosqp.so+0x116a6,640
+libosqp.so+0x116b2,640
+libosqp.so+0x116cb,640
+libosqp.so+0x116da,640
+libosqp.so+0x116e9,640
+libosqp.so+0x116fd,640
+libosqp.so+0x11723,640
+libosqp.so+0x11732,640
+libosqp.so+0x11741,640
+libosqp.so+0xbf70,640
+libosqp.so+0x108ac,640
+libosqp.so+0x108bd,640
+libosqp.so+0x109c1,640
+libosqp.so+0xbd82,640
+libosqp.so+0xca65,640
+libosqp.so+0x118a6,640
+libosqp.so+0x118b7,640
+libosqp.so+0x117eb,639
+libosqp.so+0x13467,639
+
+#raw ... (逐条记录已剥离：27606 条，见 README 的重生成命令)

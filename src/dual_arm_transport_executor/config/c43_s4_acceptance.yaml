@@ -1,0 +1,637 @@
+# =============================================================================
+# C4.3 S4 — 验收阈值台账（W4 批次 A）
+# =============================================================================
+# 本文件是 C4.3 S4 的「阈值台账 / acceptance ledger」。它只在**登记**验收条目、
+# 指标、阈值、来源与证据状态；它不执行验收，也不构成任何 PASS 结论。
+#
+# 生成批次：W4 批次 A（阈值台账）。批次 B 的自动检查脚本
+# （scripts/check_acceptance_yaml.py）与批次 C 的集中验证不在本文件范围内。
+#
+# 三条不可混淆的分离原则（批次 B 必须据此检查）：
+#   1. threshold_status=APPROVED  != 该条目的测试已经通过。
+#   2. evidence_state=PASS（软件层）!= RT 实时性通过 / 真机通过。
+#   3. 本文件结构合法          != S4.1 正式 Gate PASS。
+# =============================================================================
+
+schema: c43s4.acceptance_ledger.v1
+authored_at: "2026-10-28"
+authored_by: "W4 batch A (ledger only)"
+
+purpose: >-
+  Machine-readable registry of every acceptance item defined by the frozen
+  S4 execution plan (section 7 test matrix, S4-T1 .. S4-T22), with the
+  threshold, its approval status, the software state, the evidence state and
+  the gate state kept in separate fields so that no single field can be read
+  as "the test passed".
+
+scope_notes:
+  - "条目集合 = 冻结规划 §7 表内的 S4-T1 .. S4-T22；未新增、未删除任何编号。"
+  - "W5–W9 的判据（Gazebo 场景、附着、全流程、度量报告）在 §7 表内已给出编号，本台账登记为 OUT_OF_SCOPE，不实施。"
+  - "W2-C3 的 D2-B 判据属 §5 表的 W2 行（不是 §7 的 S4 用例），仅作为已批准修订登记在 contract.approved_amendments。"
+  - "本台账不修改任何生产参数、不改冻结阈值、不改 Gate 判据。"
+
+contract:
+  frozen_plan: "docs/双臂协同/双臂协同运动控制与优化/C4.3_S4_执行规划.md"
+  frozen_plan_sections:
+    - "§5 实现步骤与依赖顺序（W4 行：config/c43_s4_acceptance.yaml + 台账检查脚本）"
+    - "§6 每一步的文件修改范围（W4：新建 2）"
+    - "§7 测试矩阵与量化验收标准（S4-T1 .. S4-T22）"
+    - "§7.1 每步对应哪些用例"
+  w4_plan: "docs/双臂协同/双臂协同运动控制与优化/C4.3_S4_W4_软件范围执行规划_20261028.md"
+  w4_plan_role: "批次划分与实施顺序；不替代上位冻结契约"
+  approved_amendments:
+    - id: D2-B
+      decided: "2026-10-27"
+      source: "docs/双臂协同/双臂协同运动控制与优化/C4.3_S4_审批记录.md"
+      changes: "W2-C3 的跨版本 <=1 ULP 判据改为 D2-B 同构建回归判据（由 c3_d2b_gate 执行）；原判据与 7656/7656 FAIL 原样保留为 LEGACY_CROSS_GENERATION_CONTRACT_FAIL_RETAINED。"
+      does_not_change: "§7 的任何数值阈值与 Gate 语义"
+    - id: D1-B
+      decided: "2026-10-27"
+      source: "docs/双臂协同/双臂协同运动控制与优化/C4.3_S4_审批记录.md"
+      changes: "libdual_arm_qp_core 的新构建基线 sha256 ff95750a... 登记为官方基线；旧 md5 329a3bb3... 保留为历史。"
+      does_not_change: "§7 的任何数值阈值与 Gate 语义"
+
+# -----------------------------------------------------------------------------
+# 受控词表：批次 B 的检查器应拒绝对这些字段使用词表以外的值。
+# -----------------------------------------------------------------------------
+status_vocab:
+  threshold_status:
+    - APPROVED                 # 冻结规划或正式批准修订给出的数值
+    - PENDING_CALIBRATION      # 冻结规划显式标 [待标定]，尚无标定依据
+    - UNAPPROVED_SOURCE_UNCONFIRMED  # 来源不明，不得自行猜数
+  software_state:
+    - IMPLEMENTED              # 生产/测试代码已存在且本轮之前已归档
+    - PARTIAL                  # 软件覆盖存在，但冻结判据要求的产物或环境不全
+    - NOT_IMPLEMENTED          # 本阶段尚未实现（属后续步骤）
+    - OUT_OF_SCOPE             # 属 W5–W9 或非软件范围
+  evidence_state:
+    - PASS                     # 仅限 evidence_ref 明确覆盖的范围
+    - PARTIAL                  # 部分证据成立，判据整体未闭合
+    - FAIL                     # 有保留的失败证据（不得因新契约删除）
+    - HOLD                     # 外部环境阻断，等待合规环境
+    - UNVERIFIED               # 无留存可复核证据
+    - NOT_RUN                  # 从未执行
+    - MISSING_EVIDENCE         # 曾经执行但原始产物已丢失
+  gate_state:
+    - CLOSED
+    - OPEN
+    - HOLD
+    - BLOCKED_EXTERNAL_ENV
+    - UNAPPROVED
+
+separation_rules:
+  - id: R1
+    rule: "threshold_status 与 evidence_state 必须分别填写；APPROVED 阈值 + NOT_RUN 证据是合法组合。"
+  - id: R2
+    rule: "threshold 为 [待标定] 时，threshold_status 必须是 PENDING_CALIBRATION。"
+  - id: R3
+    rule: "evidence_state=PASS 时必须给出可定位的 evidence_ref；ref 指向的文件不存在时应改为 MISSING_EVIDENCE/UNVERIFIED。"
+  - id: R4
+    rule: "需要原生 Linux RT 或真实硬件的条目不得出现 PASS；其 gate_state 只能是 HOLD / BLOCKED_EXTERNAL_ENV。"
+  - id: R5
+    rule: "历史 FAIL（W2-C3 原判据 7656/7656）不得被删除或改写为 PASS。"
+  - id: R6
+    rule: "本文件任何字段的成功都不能被解释为 S4.1 正式验收 PASS。"
+
+# 批次 B：检查器必须确认下列编号全部出现在 entries[].test_id 中（不重不漏）。
+required_test_ids:
+  - S4-T1
+  - S4-T2
+  - S4-T3
+  - S4-T4
+  - S4-T5
+  - S4-T6
+  - S4-T7
+  - S4-T8
+  - S4-T9
+  - S4-T10
+  - S4-T11
+  - S4-T12
+  - S4-T13
+  - S4-T14
+  - S4-T15
+  - S4-T16
+  - S4-T17
+  - S4-T18
+  - S4-T19
+  - S4-T20
+  - S4-T21
+  - S4-T22
+
+# 每条的 §7 层归属：S4.1 = 台架/软件闭环，S4.2 = Gazebo 全流程，S4.3 = 碰撞与故障。
+# -----------------------------------------------------------------------------
+entries:
+  - test_id: S4-T1
+    title: "既有功能回归"
+    layer: S4.1
+    planned_step: W0
+    source: "§7 S4-T1"
+    software_state: IMPLEMENTED
+    gate_state: OPEN
+    metrics:
+      - metric: "package_test_counts"
+        unit: "test cases"
+        criterion: "各包用例数 >= 冻结下限，且失败数 = 0；W0 之后用例数不得减少"
+        threshold:
+          dual_arm_transport_mock: 49
+          dual_arm_transport: 40
+          dual_arm_qp_core: 23
+          dual_arm_qp_controller: 14
+          dual_arm_kinematics: 52
+          dual_arm_collision: 5
+          failures: 0
+        threshold_status: APPROVED
+        source: "§7 S4-T1"
+        evidence_state: PASS
+        evidence_ref: "build/dual_arm_transport_mock/test_results/, build/dual_arm_transport/test_results/, build/dual_arm_qp_core/test_results/, build/dual_arm_qp_controller/test_results/, build/dual_arm_kinematics/test_results/, build/dual_arm_collision/test_results/（2026-10-27 运行，每个目录下 *.gtest.xml）"
+        evidence_observed: "mock 49、transport 40、qp_core 29、qp_controller 55、kinematics 52、collision 5；失败 0"
+        scope: "WSL2 本机软件回归；不是 RT/真机证据；本轮未重跑（复用 2026-10-27 全量运行）"
+
+  - test_id: S4-T2
+    title: "实时性预算（update 不超周期）"
+    layer: S4.1
+    planned_step: W2
+    source: "§7 S4-T2"
+    software_state: IMPLEMENTED
+    gate_state: BLOCKED_EXTERNAL_ENV
+    metrics:
+      - metric: "update_cost_p99"
+        unit: "us"
+        criterion: "update() 耗时 P99 <= 阈值"
+        threshold: "[待标定]"
+        suggested_value: 6400
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T2（建议 P99 <= 6.4 ms，原文标 [待标定]；建议值不等于批准阈值）"
+        evidence_state: HOLD
+        evidence_ref: "docs/双臂协同/双臂协同运动控制与优化/C6_证据归档_20261027/verdict.json"
+        evidence_observed: "WSL2 上 ENV_REFUSED；历史 mock 台架曾测得 P99 383 us，但不构成原生 RT 证据"
+        scope: "需原生 Linux + RT 内核；不得用 WSL2/Docker 数值替代"
+      - metric: "overrun_cycles"
+        unit: "cycles"
+        criterion: "(time - last) > dt 的周期数 = 0"
+        threshold: 0
+        threshold_status: APPROVED
+        source: "§7 S4-T2"
+        evidence_state: HOLD
+        evidence_ref: "docs/双臂协同/双臂协同运动控制与优化/C6_证据归档_20261027/verdict.json"
+        scope: "同上（外部环境阻断）"
+      - metric: "malloc_in_update"
+        unit: "events"
+        criterion: "heaptrack/valgrind massif 抽查一次，update() 路径无 malloc"
+        threshold: 0
+        threshold_status: APPROVED
+        source: "§7 S4-T2"
+        evidence_state: MISSING_EVIDENCE
+        evidence_ref: "无留存（历史 /tmp 产物已丢失）；C1 分配探针结论见 C4.3_S4_W2-W3_C1_集成记录.md"
+        scope: "C1 探针证明 solve() 路径 638->1 次分配，但 update() 全路径 massif 抽查未留存"
+
+  - test_id: S4-T3
+    title: "行装配与 S3 逐位一致（确定性数学路径）"
+    layer: S4.1
+    planned_step: W1
+    source: "§7 S4-T3"
+    software_state: IMPLEMENTED
+    gate_state: OPEN
+    metrics:
+      - metric: "row_assembly_bitwise_delta"
+        unit: "rad / row entries"
+        criterion: "max|drow.J| = max|drow.e| = max|ddq| = 0（纯计算路径）"
+        threshold: 0.0
+        threshold_status: APPROVED
+        source: "§7 S4-T3"
+        evidence_state: PASS
+        evidence_ref: "build/dual_arm_qp_controller/test_results/dual_arm_qp_controller/test_object_row_wiring.gtest.xml；C4.3_S4_W2_验收记录.md"
+        evidence_observed: "max|drow.J| = max|drow.e| = max|ddq| = 0"
+        scope: "仅 S4.1 台架纯计算路径；Gazebo 闭环不适用（见 S4-T13）"
+
+  - test_id: S4-T4
+    title: "符号与前馈（控制器版）"
+    layer: S4.1
+    planned_step: W1
+    source: "§7 S4-T4"
+    software_state: PARTIAL
+    gate_state: OPEN
+    metrics:
+      - metric: "error_descent_ratio"
+        unit: "ratio"
+        criterion: "末态 ||e_O|| <= 5% 峰值；前置条件 active_limit_count==0 且 t_traj 未冻结"
+        threshold: 0.05
+        threshold_status: APPROVED
+        source: "§7 S4-T4"
+        evidence_state: PARTIAL
+        evidence_ref: "build/dual_arm_qp_controller/test_results/（test_object_row_wiring.gtest.xml，用例 T4_FeedForwardEntersTheRowWithTheFrozenSign）；src/dual_arm_qp_controller/test/test_object_row_wiring.cpp:198"
+        evidence_observed: "固定目标下前馈符号翻转（dot<0）、2 倍严格翻倍、反对称（<1e-6）成立；638 周期单调下降部分未执行、cycles.csv 未留存"
+        scope: "bench-level 软件证据；不含 638 周期段的 ||e_O|| 单调性判定"
+
+  - test_id: S4-T5
+    title: "pi-0.05 拒绝边界"
+    layer: S4.1
+    planned_step: W1
+    source: "§7 S4-T5"
+    software_state: IMPLEMENTED
+    gate_state: OPEN
+    metrics:
+      - metric: "reject_boundary_rad"
+        unit: "rad"
+        criterion: "delta = pi-0.04 拒绝、pi-0.06 放行；边界严格在此值"
+        threshold: 3.0915926535897933
+        threshold_status: APPROVED
+        source: "§7 S4-T5"
+        evidence_state: PASS
+        evidence_ref: "build/dual_arm_qp_controller/test_results/（test_object_row_wiring.gtest.xml，用例 T5_NearPiIsRefusedBeforeTheSolver）；src/dual_arm_qp_controller/test/test_object_row_wiring.cpp:249"
+        evidence_observed: "delta 0.040000/0.049999 拒绝（code object_error_near_pi）、0.050001/0.060000 放行；拒绝时 dq.max=0、committed=false、iterations=0"
+        scope: "bench-level（固定 q、单元测试），非 Gazebo/真机"
+
+  - test_id: S4-T6
+    title: "有无前馈对照（Gazebo）"
+    layer: S4.2
+    planned_step: W7
+    source: "§7 S4-T6"
+    software_state: OUT_OF_SCOPE
+    gate_state: OPEN
+    metrics:
+      - metric: "feedforward_error_ratio"
+        unit: "ratio"
+        criterion: "峰值 ||e_O||(no-ff) / ||e_O||(ff) <= 上限"
+        threshold: "[待标定]"
+        suggested_value: 0.1
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T6（建议上限 0.1，原文标 [待标定]；建议值不等于批准阈值）"
+        evidence_state: NOT_RUN
+        evidence_ref: "未执行（属 W7/W8）"
+        scope: "需 Gazebo 闭环；台账只登记"
+
+  - test_id: S4-T7
+    title: "轨迹与相对位姿误差（Gazebo）"
+    layer: S4.2
+    planned_step: W7
+    source: "§7 S4-T7"
+    software_state: OUT_OF_SCOPE
+    gate_state: OPEN
+    metrics:
+      - metric: "terminal_object_error_pos"
+        unit: "mm"
+        criterion: "终态 ||e_O|| 位置分量 <= 阈值"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T7（5 mm 为建议值，原文标 [待标定]）"
+        evidence_state: NOT_RUN
+        evidence_ref: "未执行（属 W7）"
+        scope: "Gazebo；另需终态角度 <= 2 deg [待标定]"
+      - metric: "peak_relative_pose_error"
+        unit: "mm / deg"
+        criterion: "峰值 ||e_rel|| <= 3 mm / 1 deg"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T7"
+        evidence_state: NOT_RUN
+        evidence_ref: "未执行（属 W7）"
+        scope: "Gazebo"
+
+  - test_id: S4-T8
+    title: "故障注入（7 类）"
+    layer: S4.3
+    planned_step: W9
+    source: "§7 S4-T8"
+    software_state: PARTIAL
+    gate_state: OPEN
+    metrics:
+      - metric: "injection_failure_code_and_state"
+        unit: "event"
+        criterion: "7 类注入各自命中 failure_code 与状态；无静默继续（冻结后 q_cmd 逐位不变）"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T8（码/状态按 §4.8 失败码表；该表 12 个码仍 registered=false）"
+        evidence_state: PARTIAL
+        evidence_ref: "build/dual_arm_transport_executor/test_results/（test_fault_injection.gtest.xml）；test_fault_chain/test_hold_chain_e2e"
+        evidence_observed: "软件层 7 类注入与锁存语义有单测覆盖；cycles.csv 级证据未留存"
+        scope: "软件层覆盖率成立；冻结判据要求的 cycles.csv+summary.json 未产出"
+
+  - test_id: S4-T9
+    title: "限位饱和与归因"
+    layer: S4.1
+    planned_step: W9
+    source: "§7 S4-T9"
+    software_state: PARTIAL
+    gate_state: OPEN
+    metrics:
+      - metric: "limit_margin_rad"
+        unit: "rad"
+        criterion: "贴箱关节数与独立重算一致；min_limit_margin_rad >= 0"
+        threshold: 0.0
+        threshold_status: APPROVED
+        source: "§7 S4-T9"
+        evidence_state: UNVERIFIED
+        evidence_ref: "无留存 clearance.csv"
+        scope: "需 cycles.csv/clearance.csv 产物"
+
+  - test_id: S4-T10
+    title: "物体-环境碰撞反例"
+    layer: S4.3
+    planned_step: W9
+    source: "§7 S4-T10"
+    software_state: PARTIAL
+    gate_state: OPEN
+    metrics:
+      - metric: "collision_trigger_cycle"
+        unit: "cycle"
+        criterion: "期望位姿下移 0.30 m/1.0 s 时首次触发周期 <= 阈值；触发时余量 < min_clearance_m"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T10"
+        evidence_state: PARTIAL
+        evidence_ref: "build/dual_arm_transport_executor/test_results/（test_dry_run_loop.gtest.xml）（真 guard 触发用例）"
+        evidence_observed: "软件层 guard 直接触发有覆盖（collision_object/collision_arm_arm/collision_sweep）；周期级阈值未标定"
+        scope: "物体-桌面场景需 Gazebo 几何；软件层用排除球代理，已明标不是 FCL 场景"
+
+  - test_id: S4-T11
+    title: "解析判据 vs FCL 采样交叉验证"
+    layer: S4.3
+    planned_step: W9
+    source: "§7 S4-T11"
+    software_state: OUT_OF_SCOPE
+    gate_state: OPEN
+    metrics:
+      - metric: "cross_check_mismatches"
+        unit: "samples"
+        criterion: "同一路径 200 采样，解析判据与 FCL 判定不一致数 = 0"
+        threshold: 0
+        threshold_status: APPROVED
+        source: "§7 S4-T11"
+        evidence_state: NOT_RUN
+        evidence_ref: "未执行（属 W9）"
+        scope: "需 FCL 场景与 200 采样产物 cross_check.csv"
+
+  - test_id: S4-T12
+    title: "单/双附着对照"
+    layer: S4.2
+    planned_step: W8
+    source: "§7 S4-T12"
+    software_state: OUT_OF_SCOPE
+    gate_state: OPEN
+    metrics:
+      - metric: "penetration_single_attach"
+        unit: "mm"
+        criterion: "单附着穿透 <= 0.5 mm；双附着预期劣化"
+        threshold: 0.5
+        threshold_status: APPROVED
+        source: "§7 S4-T12"
+        evidence_state: NOT_RUN
+        evidence_ref: "未执行（属 W8）"
+        scope: "需 Gazebo 物理与附着插件"
+
+  - test_id: S4-T13
+    title: "完整 Gazebo 流程"
+    layer: S4.2
+    planned_step: W7
+    source: "§7 S4-T13"
+    software_state: PARTIAL
+    gate_state: OPEN
+    metrics:
+      - metric: "dry_run_artifact_completeness"
+        unit: "files"
+        criterion: "六件产物齐；两次运行 q_cmd 逐位相同（遮蔽 iterations/solve_time_ms）；L3 列未评估"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T13"
+        evidence_state: MISSING_EVIDENCE
+        evidence_ref: "历史 /tmp/c43_s4_w3r6_dry_run 已丢失；代码入口 scripts/run_dry_run.sh + test/test_dry_run_loop.cpp"
+        evidence_observed: "R6 dry-run（SOFTWARE_ONLY）曾 8 例通过，但产物未入库"
+        scope: "Gazebo 全流程未执行；dry-run 不等于 Gazebo"
+
+  - test_id: S4-T14
+    title: "HOLD 与恢复"
+    layer: S4.1
+    planned_step: W3
+    source: "§7 S4-T14"
+    software_state: IMPLEMENTED
+    gate_state: OPEN
+    metrics:
+      - metric: "hold_frozen_qcmd_delta"
+        unit: "rad"
+        criterion: "冻结期间 max|dq_cmd| = 0"
+        threshold: 0.0
+        threshold_status: APPROVED
+        source: "§7 S4-T14"
+        evidence_state: PARTIAL
+        evidence_ref: "build/dual_arm_transport_executor/test_results/（test_fault_chain.gtest.xml）（R5_4/R5_6 冻结与重基线）；控制器 test_hold_transport 的 q_cmd 位同断言"
+        evidence_observed: "软件层冻结位同成立；冻结判据要求的 cycles.csv 未产出"
+        scope: "软件层；恢复后首个 |dq| <= v_max*dt 需台架产物，未留存"
+
+  - test_id: S4-T15
+    title: "目标/状态陈旧"
+    layer: S4.1
+    planned_step: W3
+    source: "§7 S4-T15"
+    software_state: IMPLEMENTED
+    gate_state: OPEN
+    metrics:
+      - metric: "stale_state_trigger_cycles"
+        unit: "cycles"
+        criterion: "停发 joint_state 5 个周期后触发 HOLD(stale_state)，触发周期 <= 3 周期 + 1"
+        threshold: 4
+        threshold_status: APPROVED
+        source: "§7 S4-T15"
+        evidence_state: PARTIAL
+        evidence_ref: "build/dual_arm_transport_executor/test_results/（test_state_machine.gtest.xml）（stale_state 用例）；控制器 stale 判据在 C4.3_S4_W3_软件范围关闭记录_20261028.md"
+        evidence_observed: "状态陈旧 -> HOLD 的软件判定有覆盖；周期级计时无留存产物"
+        scope: "软件层；触发延迟未在 RT 环境测量"
+
+  - test_id: S4-T16
+    title: "抓持检查"
+    layer: S4.2
+    planned_step: W6
+    source: "§7 S4-T16"
+    software_state: PARTIAL
+    gate_state: OPEN
+    metrics:
+      - metric: "grasp_check_reject"
+        unit: "event"
+        criterion: "样件抬高 5 mm 被拒；拒绝进入 LIFT；attach 未被调用"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T16"
+        evidence_state: PARTIAL
+        evidence_ref: "build/dual_arm_transport_executor/test_results/（test_attach_adapter.gtest.xml）（software stub 语义）"
+        evidence_observed: "适配器 stub 语义覆盖（Unattached/Requested/AttachedSimulated/Failed）；无真实夹爪与 5 mm 抬高实验"
+        scope: "software-only；不得声称真机验证"
+
+  - test_id: S4-T17
+    title: "长时间实时性（P1）"
+    layer: S4.1
+    planned_step: W2
+    source: "§7 S4-T17"
+    software_state: IMPLEMENTED
+    gate_state: BLOCKED_EXTERNAL_ENV
+    metrics:
+      - metric: "long_run_p99"
+        unit: "us"
+        criterion: "6380 周期 P99 <= 阈值"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T17"
+        evidence_state: HOLD
+        evidence_ref: "docs/双臂协同/双臂协同运动控制与优化/C6_证据归档_20261027/verdict.json"
+        scope: "需原生 Linux RT；WSL2 上曾出现 62.7 ms 最大间隔（环境轴）"
+      - metric: "long_run_max_interval"
+        unit: "us"
+        criterion: "最大间隔 <= 1.5*dt"
+        threshold: "1.5*dt"
+        threshold_status: APPROVED
+        source: "§7 S4-T17（与 S4-T2 同源；冻结节拍 dt = 8 ms 时即 12 ms）"
+        evidence_state: HOLD
+        evidence_ref: "同上"
+        scope: "外部环境阻断"
+
+  - test_id: S4-T18
+    title: "插件实测（attach/detach）"
+    layer: S4.2
+    planned_step: W6
+    source: "§7 S4-T18"
+    software_state: OUT_OF_SCOPE
+    gate_state: OPEN
+    metrics:
+      - metric: "plugin_probe"
+        unit: "event"
+        criterion: "实测主题名与 xacro 一致；attach 后相对位姿 1 s 内变化 <= 上限；detach 后确实分离"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T18"
+        evidence_state: NOT_RUN
+        evidence_ref: "未执行（属 W6；需 Gazebo 插件实测）"
+        scope: "禁止用共享库字符串当证据"
+
+  - test_id: S4-T19
+    title: "轨迹时钟与 HOLD/RESUME（P0-1）"
+    layer: S4.1
+    planned_step: W2
+    source: "§7 S4-T19"
+    software_state: IMPLEMENTED
+    gate_state: OPEN
+    metrics:
+      - metric: "t_traj_increment"
+        unit: "s"
+        criterion: "逐周期 delta t_traj 属于 {0, dt}；HOLD 期间逐位不变；resume 首个目标阶跃 <= v_max*dt；两次失败后 ABORT"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T19"
+        evidence_state: PARTIAL
+        evidence_ref: "build/dual_arm_transport_executor/test_results/（test_fault_chain.gtest.xml，R5_4/R5_6 对 t_traj 冻结的逐位审计）；src/dual_arm_transport_executor/src/state_machine.cpp:440-465"
+        evidence_observed: "执行器侧对控制器上报 t_traj 的冻结审计有软件断言；控制器侧逐周期 delta t_traj ∈ {0,dt} 的 cycles.csv 级证据未留存"
+        scope: "软件层；resume 阶跃与 20 mm 偏移实验未执行"
+
+  - test_id: S4-T20
+    title: "有限几何（桌外下降）"
+    layer: S4.3
+    planned_step: W9
+    source: "§7 S4-T20"
+    software_state: OUT_OF_SCOPE
+    gate_state: OPEN
+    metrics:
+      - metric: "off_table_false_reject"
+        unit: "cycles"
+        criterion: "桌外下降时无 object_table_clearance；回到桌面上方穿透时必报"
+        threshold: "[待标定]"
+        threshold_status: PENDING_CALIBRATION
+        source: "§7 S4-T20"
+        evidence_state: NOT_RUN
+        evidence_ref: "未执行（属 W9）"
+        scope: "需桌面/桌沿几何"
+
+  - test_id: S4-T21
+    title: "执行器死亡 -> 控制器本地 HOLD（P0-5）"
+    layer: S4.1
+    planned_step: W3
+    source: "§7 S4-T21"
+    software_state: IMPLEMENTED
+    gate_state: OPEN
+    metrics:
+      - metric: "local_hold_latency"
+        unit: "ms"
+        criterion: "延迟 <= 100 ms；HOLD 后 max|dq_cmd| = 0；不自动恢复"
+        threshold: 100
+        threshold_status: APPROVED
+        source: "§7 S4-T21"
+        evidence_state: PARTIAL
+        evidence_ref: "build/dual_arm_qp_controller/test_results/（test_mock_closure.gtest.xml）（S4T13 E8 心跳互锁）；C4.3_S4_W3_软件范围关闭记录_20261028.md"
+        evidence_observed: "E8 互锁软件断言成立；100 ms 延迟未在 RT 环境测量"
+        scope: "软件层；延迟需 RT 环境"
+
+  - test_id: S4-T22
+    title: "故障锁存与恢复权限（P0-5）"
+    layer: S4.1
+    planned_step: W3
+    source: "§7 S4-T22"
+    software_state: IMPLEMENTED
+    gate_state: OPEN
+    metrics:
+      - metric: "latch_recovery_permission"
+        unit: "state transition"
+        criterion: "HOLD 需 ~/resume；FAULT 需 ~/reset；ABORT 需新 ~/start_transport；无自动迁移"
+        threshold: "event_assertion"
+        threshold_status: APPROVED
+        source: "§7 S4-T22（事件型判据，无数值阈值）"
+        evidence_state: PARTIAL
+        evidence_ref: "build/dual_arm_transport_executor/test_results/（test_fault_chain.gtest.xml）（R5_1/R5_2 锁存与 reset）；build/dual_arm_qp_controller/test_results/（test_hold_transport.gtest.xml）"
+        evidence_observed: "锁存/恢复权限的软件断言成立；状态迁移序列的 cycles.csv 未产出"
+        scope: "软件层"
+
+# -----------------------------------------------------------------------------
+# 补充登记：不是 §7 的 S4 用例，但与 W4 台账同源的已批准/未批准事项。
+# 批次 B 只做结构检查，不把它们当作 S4 验收条目。
+# -----------------------------------------------------------------------------
+supplementary:
+  approved_w2_criteria:
+    - id: W2-C3/D2-B
+      threshold: "同构建回归 dq 逐位相同；跨算法 max|d_dq| <= 3.766e-08 rad；物理不变量成立"
+      threshold_status: APPROVED
+      source: "D2-B 批准（2026-10-27）；执行入口 src/dual_arm_qp_core/scripts/c3_d2b_gate.py（ctest 项 c3_d2b_gate）"
+      evidence_state: PASS
+      evidence_ref: "build/dual_arm_qp_core/test_results/（c3_d2b_gate 的 ctest 输出）；src/dual_arm_qp_core/test/fixtures/c3_d2b/PROVENANCE.md"
+      scope: "同一构建内冻结基准回归；不是数值正确性证明；不覆盖历史 <=1 ULP 判据"
+  historical_failures:
+    - id: W2-C3/legacy-1ulp
+      threshold: "<= 1 ULP（跨版本）"
+      threshold_status: APPROVED
+      source: "§5 表 W2 行（2026-10-27 起标注 LEGACY_CROSS_GENERATION_CONTRACT_FAIL_RETAINED）"
+      evidence_state: FAIL
+      evidence_ref: "build/dual_arm_qp_controller/test_results/（test_mock_closure.gtest.xml）（打印 CONTRACT criterion FAIL 7656/7656）"
+      scope: "历史记录，保留原样，不得删除或改写"
+  unapproved_proposals:
+    - id: C3-V1
+      what: "以 1e-6 rad / 1e-6 s / 1e-3 m 替代 <=1 ULP"
+      threshold_status: UNAPPROVED_SOURCE_UNCONFIRMED
+      source: "C4.3_S4_W2_ULP判据变更申请.md（候选，未批准）"
+      note: "D2-B 采纳的是同构建回归判据，不是 V1；V1 仍未批准"
+    - id: D4-failure-codes
+      what: "12 个 failure_code 登记"
+      threshold_status: UNAPPROVED_SOURCE_UNCONFIRMED
+      source: "C4.3_S4_W2-W3_最终验收报告.md §9.6"
+      note: "登记表 proposal 已存在，正式契约未批准（registered=false）"
+    - id: P1-4-abort-ownership
+      what: "执行器决定 ABORT / 控制器执行并报告权威状态的权责契约"
+      threshold_status: UNAPPROVED_SOURCE_UNCONFIRMED
+      source: "C4.3_S4_审批记录.md（待批准）"
+      note: "实现已在软件层落地并通过测试，但契约未批准"
+
+external_blocks:
+  - id: C6-native-rt
+    gate_state: BLOCKED_EXTERNAL_ENV
+    requirement: "原生 Linux + PREEMPT_RT + chrt FIFO + governor + 物理机"
+    command: "bash src/dual_arm_qp_controller/scripts/run_native_rt_acceptance.sh --out /tmp/c43s4_native_rt"
+    audit: "python3 src/dual_arm_qp_controller/scripts/audit_native_rt_verdict.py --verdict /tmp/c43s4_native_rt/verdict.json"
+    affects: [S4-T2, S4-T17]
+  - id: hardware
+    gate_state: BLOCKED_EXTERNAL_ENV
+    requirement: "真实机器人 + 真实夹爪 + 标定环境"
+    affects: [S4-T6, S4-T7, S4-T12, S4-T13, S4-T16, S4-T18, S4-T20, S4-T21]
+
+# 台账自身的实现状态（与验收状态分离）
+ledger_state:
+  batch: A (yaml) + B (checker) + C (verified)
+  yaml_created: true
+  checker_script: IMPLEMENTED       # 批次 B: scripts/check_acceptance_yaml.py
+  checker_tests: PASS               # 批次 B: 16 阴性用例 + 2 个 ctest 项
+  verified_at: "2026-10-28"         # 批次 C: 133/133 包内测试、15/15 ctest
+  verified_by: C4.3_S4_W4_软件范围关闭记录_20261028.md
+  acceptance_pass_claimed: false

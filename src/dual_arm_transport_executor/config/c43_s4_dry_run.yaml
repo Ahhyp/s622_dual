@@ -1,0 +1,56 @@
+# C4.3 S4 W3-R6 -- SOFTWARE DRY-RUN profile (documentation / evidence config).
+#
+# SCOPE, STATED PLAINLY
+#   This file describes the evidence run performed by
+#   test/test_dry_run_loop.cpp and scripts/run_dry_run.sh.  The plant is
+#   test/fake_controller.hpp: deterministic injected clock, injected status and
+#   simulated attach only.  Nothing here launches Gazebo, opens a controller,
+#   binds a ROS node, or writes an actuator.  It is not a ROS 2 parameter file
+#   for a live node: the current executor declares neither dry_run nor
+#   mock_plant.
+#
+#   dry_run=true is an evidence marker, not a safety bypass.  The same
+#   TransportStateMachine, PhaseDriver, CollisionGuard, AttachAdapter,
+#   HoldRequester and ArtifactWriter run in this mode.
+
+w3_r6_dry_run:
+  dry_run: true
+  mode: SOFTWARE_ONLY
+  # The fake plant has no independent heartbeat process; requiring one would
+  # test the harness, not the executor.  The real node parameter remains
+  # executor_heartbeat_required (owned by another engineer's file).
+  require_executor_heartbeat: false
+
+  mock_plant:
+    backend: "test/fake_controller.hpp"
+    physical_device: false
+    actuator_writes: false
+    gazebo: false
+    ros_controller: false
+    note: "injected clock + injected TransportStatus + simulated attach only"
+
+  executor_watchdogs:
+    dt: 0.008
+    status_stale_timeout_s: 0.024
+    heartbeat_timeout_s: 0.100
+    approach_timeout_s: 5.0
+    grasp_timeout_s: 3.0
+    release_timeout_s: 3.0
+    phase_timeout_scale: 1.5
+    resume_fail_max: 2
+    solve_fail_streak_limit: 10
+
+  phases:
+    - {name: approach, duration_s: 0.30}
+    - {name: lift, duration_s: 1.50}
+    - {name: transport, duration_s: 1.50}
+    - {name: lower, duration_s: 1.50}
+
+  artifacts:
+    root_env: C43_W3R6_ARTIFACT_DIR
+    default_root: /tmp/c43_s4_w3r6_dry_run
+    summary_keys:
+      - mode
+      - dry_run
+      - phases
+      - final_state

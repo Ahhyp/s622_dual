@@ -33,3 +33,20 @@ bool    executor_heartbeat_required
 # B: standing-configuration check at start_transport time.
 float64 start_pose_deviation_rad
 bool    start_pose_ok
+
+# ---- C7-A Rev.2: hold-request ack -------------------------------------------
+# Echo of the last consumed hold request.  seq==0 -> no ack so far.
+uint32 hold_request_seq
+uint8  hold_request_result   # 0 none / 1 applied / 2 refused
+string hold_origin           # "" / "controller" / "executor"
+
+# ---- W3-R2 (approved D5-1): task-phase observation ---------------------------
+# phase_index == -1 means "no trajectory latched".  The name is the frozen spec
+# name of the phase containing t_traj; phase_elapsed_s is measured INSIDE the
+# phase and phase_duration_s is that phase's frozen duration.  Consumers must
+# treat a phase jump of more than +1 as a desync, never as progress.
+int32  phase_index
+int32  phase_count
+string phase_name
+float64 phase_elapsed_s
+float64 phase_duration_s

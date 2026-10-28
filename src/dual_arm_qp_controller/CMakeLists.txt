@@ -38,14 +38,30 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/StartTransport.srv"
   "srv/AbortTransport.srv"
+  "srv/HoldTransport.srv"
   "msg/TransportStatus.msg"
 )
+
+# C4.3 S4 W2-R3: the deterministic E4 fault injection hook is a TEST-ONLY
+# facility.  Default OFF: the parameter `test_force_deadline_fault_cycles` is
+# then not declared at all, so it can neither be set nor injected at run time.
+# Build with -DC43_ENABLE_TEST_HOOKS=ON only for hook-specific verification.
+option(C43_ENABLE_TEST_HOOKS "Enable test-only fault injection hooks" OFF)
 
 add_library(dual_arm_qp_controller_lib SHARED
   src/dual_arm_qp_controller.cpp
   src/transport_task.cpp
   src/timing_recorder.cpp
 )
+if(C43_ENABLE_TEST_HOOKS)
+  target_compile_definitions(dual_arm_qp_controller_lib PRIVATE C43_ENABLE_TEST_HOOKS)
+  message(STATUS "C4.3: test fault-injection hooks ENABLED (test build only)")
+endif()
+# W3-R1a(2) T-H17: the positive-control tests can only run when the injection
+# path exists.  They carry `#ifndef C43_ENABLE_TEST_HOOKS -> GTEST_SKIP` so an
+# OFF build reports SKIP instead of a misleading PASS; the macro has to reach
+# the test translation unit as well, otherwise ON builds would still skip.
+add_compile_definitions($<$<BOOL:${C43_ENABLE_TEST_HOOKS}>:C43_ENABLE_TEST_HOOKS>)
 target_include_directories(dual_arm_qp_controller_lib
   PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -136,6 +152,10 @@ if(BUILD_TESTING)
     dual_arm_qp_core::dual_arm_qp_core)
   # Task B: characterise the ULP metric and localise the W2 deviation to the
   # trajectory-clock rule rather than to OSQP non-determinism.
+  # P1-4/D3-a: the readState-failure ack rule lives in a header so the SAME
+  # decision is covered in the production (hooks=OFF) build.
+  ament_add_gtest(test_hold_ack_policy test/test_hold_ack_policy.cpp)
+  target_link_libraries(test_hold_ack_policy dual_arm_qp_controller_lib)
   ament_add_gtest(test_ulp_semantics test/test_ulp_semantics.cpp)
   target_link_libraries(test_ulp_semantics
     dual_arm_qp_controller_lib
@@ -159,6 +179,16 @@ if(BUILD_TESTING)
     C43_TRANSPORT_YAML="${CMAKE_CURRENT_SOURCE_DIR}/config/c43_s4_transport.yaml"
     C43_TRANSPORT_LONG_YAML="${CMAKE_CURRENT_SOURCE_DIR}/config/c43_s4_transport_long.yaml"
     C43_TIMING_CSV="/tmp/c43s4_timing.csv")
+
+  # C4.3 S4.1 W3-R1a (C7-A Rev.2): ~/hold_transport end-to-end on the mock bench.
+  ament_add_gtest(test_hold_transport test/test_hold_transport.cpp TIMEOUT 900)
+  target_link_libraries(test_hold_transport
+    dual_arm_qp_controller_lib
+    dual_arm_object_task::dual_arm_object_task
+    dual_arm_qp_core::dual_arm_qp_core)
+  target_compile_definitions(test_hold_transport PRIVATE
+  C43_TH17_PARAMS="${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/th17_fail_immediate.yaml"
+    C43_HOLD_PARAMS="${CMAKE_CURRENT_SOURCE_DIR}/config/c43_s4_mock_params.yaml")
 endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)

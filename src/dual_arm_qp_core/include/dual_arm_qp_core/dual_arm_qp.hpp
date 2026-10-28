@@ -87,6 +87,7 @@ struct DualArmQpParams {
     /// nullspace direction from a higher-level planner).
     Vec12 dq_center = Vec12::Zero();
 
+
     /// Extra linear inequality rows  C z <= d  (columns = [dq; s]).
     /// Rows are appended after the box constraints.
     Eigen::MatrixXd C_ineq;   // (k x 24)

@@ -175,6 +175,7 @@ TEST(MockClosureC43S3, S4T2_PerCycleDqMatchesS3FfOne) {
     int worst_cycle = -1;
     uint64_t worst_ulp_key = 0;
     long near_zero_pairs = 0;
+    long pairs_over_1ulp = 0;   // the frozen contract's own metric (see below)
     double worst_abs = 0.0;
     int worst_abs_cycle = -1;
     int worst_abs_j = -1;
@@ -207,6 +208,7 @@ TEST(MockClosureC43S3, S4T2_PerCycleDqMatchesS3FfOne) {
         if (out.committed != ref[i].committed) ++decision_mismatches;
         for (int j = 0; j < kJoints; ++j) {
             const uint64_t u = ulpDistance(out.dq[j], ref[i].dq[j]);
+            if (u > 1) ++pairs_over_1ulp;
             const double ad = std::abs(out.dq[j] - ref[i].dq[j]);
             if (ad > worst_abs) {
                 worst_abs = ad;
@@ -248,6 +250,15 @@ TEST(MockClosureC43S3, S4T2_PerCycleDqMatchesS3FfOne) {
 
     std::printf("S4-T2: near-zero dq pairs (|dq| < 1e-9) = %ld of %d\n",
                 near_zero_pairs, static_cast<int>(ref.size()) * kJoints);
+    // The frozen contract (C4.3_S4_执行规划.md:533) asks for <= 1 ULP, and it is
+    // NOT met.  Keep that verdict visible on the acceptance line instead of
+    // leaving it buried in a printout: 1e-12 below is a stand-in, not the
+    // contract, and this counter is what makes the difference auditable.
+    std::printf("S4-T2: CONTRACT criterion (<=1 ULP, C4.3_S4_执行规划.md:533): %s "
+                "(%ld/%d pairs exceed 1 ULP; the 1e-12 bound below is a different, "
+                "1.1e6x looser stand-in)\n",
+                (pairs_over_1ulp == 0) ? "PASS" : "FAIL", pairs_over_1ulp,
+                static_cast<int>(ref.size()) * kJoints);
 
     EXPECT_EQ(noncommitted, 0) << "every cycle of the S3 baseline was committed";
     // The commitment decisions must be identical, not merely "mostly": a single
@@ -268,6 +279,15 @@ TEST(MockClosureC43S3, S4T2_PerCycleDqMatchesS3FfOne) {
     // vs the S3 run's 3.54e-8 m.
     EXPECT_LE(worst_abs, 1e-12) << "worst absolute dq difference (cycle "
                                 << worst_abs_cycle << " joint " << worst_abs_j << ")";
+    // Recorded verdict, machine-checked: the frozen <=1 ULP criterion is
+    // violated by every pair.  This is deliberate -- it is the recorded state
+    // of C4.3 S4 W2 (see docs/.../C3_ULP超限归因.md, D2 pending).  If a future
+    // change makes the two harnesses bit-identical this assertion fails on
+    // purpose, forcing the contract record to be updated rather than letting
+    // the acceptance line go green with a stand-in bound.
+    EXPECT_GT(pairs_over_1ulp, 0)
+        << "the frozen <=1 ULP criterion is recorded as FAIL; if this now holds, update the "
+           "contract record (C4.3_S4_执行规划.md:533) instead of deleting this assertion";
     EXPECT_LE(worst_t_traj_gap, 1e-12);
     // Terminal accuracy must stay in the same class as S3 (3.54e-8 m measured).
     EXPECT_LT(last.e_obj_pos_m, 1e-3);

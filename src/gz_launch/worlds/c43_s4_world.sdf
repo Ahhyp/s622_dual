@@ -1,0 +1,103 @@
+<?xml version="1.0" ?>
+<!--
+  C4.3 S4 / W5 专用 Gazebo 世界（W5-B 交付物）
+
+  复用与来源
+    - 物理/插件/光照/地面：`src/gz_launch/worlds/s622_world.sdf` 的既有配置
+      （physics max_step_size=0.005、Physics / UserCommands / SceneBroadcaster / Contact
+       插件、directional sun、内联 ground_plane）。旧 world 未被修改。
+    - 桌面：`model://table`（`src/gz_launch/models/table`，只读引用，未改几何）。
+      该模型顶面在模型坐标系 z=1.0（板厚 0.03 → 1.015 为顶面）；
+      按 `worlds/table_world.sdf` 的既有约定，pose z=-1.015 使桌面上表面与世界 z=0 平齐，
+      因此桌面与支撑（0…0.25 m）、样件（中心 0.275 m）无初始穿模。
+    - 支撑：`model://c43_support`（圆柱 r=0.04 m、高 0.25 m，模型原点=底面中心）。
+    - 样件：`model://c43_sample`（0.12 x 0.05 x 0.05 m、0.35 kg，动态刚体）。
+
+  冻结名义几何
+    支撑底面 z=0 / 顶面 z=0.25；样件中心 world (0, 0, 0.275)，半高 0.025 → 底面 0.25。
+
+  说明
+    - 本 world 不引入机械臂、不引入 attach/detach、不启动任何控制器（W5 范围）。
+    - 未关闭重力、未使用 <static>true</static> 伪装样件、未移除碰撞。
+-->
+<sdf version="1.6">
+  <world name="c43_s4_world">
+    <gravity>0 0 -9.8</gravity>
+
+    <physics name="5ms" type="ignored">
+      <max_step_size>0.005</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="ignition-gazebo-physics-system" name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin filename="ignition-gazebo-user-commands-system" name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin filename="ignition-gazebo-contact-system" name="gz::sim::systems::Contact">
+    </plugin>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 既有桌面：顶面平齐 world z=0（与 table_world.sdf 相同约定） -->
+    <include>
+      <uri>model://table</uri>
+      <name>c43_table</name>
+      <pose>0.4 0 -1.015 0 0 0</pose>
+    </include>
+
+    <!-- C4.3 支撑：底面 z=0，顶面 z=0.25 -->
+    <include>
+      <uri>model://c43_support</uri>
+      <name>c43_support</name>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+
+    <!-- C4.3 标准样件：名义中心 (0, 0, 0.275) -->
+    <include>
+      <uri>model://c43_sample</uri>
+      <name>c43_sample</name>
+      <pose>0 0 0.275 0 0 0</pose>
+    </include>
+  </world>
+</sdf>

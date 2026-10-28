@@ -1,0 +1,53 @@
+[1;31m[Err] [DetachableJoint.cc:51] [0m[1;31mDetachableJoint should be attached to a model entity. [0m[1;31mFailed to initialize.[0m[1;31m[0m
+[1;33m[Wrn] [SimulationRunner.cc:662] [0m[1;33mFound additional publishers on /stats,[0m[1;33m using namespaced stats topic only[0m[1;33m[0m
+[1;32m[Msg] [0m[1;32mIgnition Gazebo Server v[0m[1;32m6.16.0[0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mLoading SDF world file[[0m[1;32m/tmp/w6probe/probe_world_worldscope.sdf[0m[1;32m].[0m
+[1;32m[Msg] [0m[1;32mServing entity system service on [[0m[1;32m/[0m[1;32mentity/system/add[0m[1;32m][0m[1;32m[0m
+[1;36m[Dbg] [Physics.cc:804] [0m[1;36mLoaded [[0m[1;36mignition::physics::dartsim::Plugin[0m[1;36m] from library [[0m[1;36m/usr/lib/x86_64-linux-gnu/ign-physics-5/engine-plugins/libignition-physics-dartsim-plugin.so[0m[1;36m][0m[1;36m[0m
+[1;36m[Dbg] [SystemManager.cc:70] [0m[1;36mLoaded system [[0m[1;36mignition::gazebo::systems::Physics[0m[1;36m] for entity [[0m[1;36m1[0m[1;36m][0m[1;36m[0m
+[1;32m[Msg] [0m[1;32mCreate service on [[0m[1;32m/world/w6probe/create[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mRemove service on [[0m[1;32m/world/w6probe/remove[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mPose service on [[0m[1;32m/world/w6probe/set_pose[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mPose service on [[0m[1;32m/world/w6probe/set_pose_vector[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mLight configuration service on [[0m[1;32m/world/w6probe/light_config[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mPhysics service on [[0m[1;32m/world/w6probe/set_physics[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mSphericalCoordinates service on [[0m[1;32m/world/w6probe/set_spherical_coordinates[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mEnable collision service on [[0m[1;32m/world/w6probe/enable_collision[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mDisable collision service on [[0m[1;32m/world/w6probe/disable_collision[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mMaterial service on [[0m[1;32m/world/w6probe/visual_config[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mMaterial service on [[0m[1;32m/world/w6probe/wheel_slip[0m[1;32m][0m[1;32m[0m
+[1;36m[Dbg] [SystemManager.cc:70] [0m[1;36mLoaded system [[0m[1;36mignition::gazebo::systems::UserCommands[0m[1;36m] for entity [[0m[1;36m1[0m[1;36m][0m[1;36m[0m
+[1;36m[Dbg] [SystemManager.cc:70] [0m[1;36mLoaded system [[0m[1;36mignition::gazebo::systems::SceneBroadcaster[0m[1;36m] for entity [[0m[1;36m1[0m[1;36m][0m[1;36m[0m
+[1;36m[Dbg] [SystemManager.cc:70] [0m[1;36mLoaded system [[0m[1;36mignition::gazebo::systems::DetachableJoint[0m[1;36m] for entity [[0m[1;36m1[0m[1;36m][0m[1;36m[0m
+[1;32m[Msg] [0m[1;32mLoaded level [[0m[1;32m3[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mServing world controls on [[0m[1;32m/world/w6probe[0m[1;32m/control], [[0m[1;32m/world/w6probe[0m[1;32m/control/state] and [[0m[1;32m/world/w6probe[0m[1;32m/playback/control][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mServing GUI information on [[0m[1;32m/world/w6probe[0m[1;32m/[0m[1;32mgui/info[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mWorld [[0m[1;32mw6probe[0m[1;32m] initialized with [[0m[1;32mfast[0m[1;32m] physics profile.[0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mServing world SDF generation service on [[0m[1;32m/world/w6probe[0m[1;32m/[0m[1;32mgenerate_world_sdf[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mServing world names on [[0m[1;32m/gazebo/worlds[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mResource path add service on [[0m[1;32m/gazebo/resource_paths/add[0m[1;32m].[0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mResource path get service on [[0m[1;32m/gazebo/resource_paths/get[0m[1;32m].[0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mResource path resolve service on [[0m[1;32m/gazebo/resource_paths/resolve[0m[1;32m].[0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mResource paths published on [[0m[1;32m/gazebo/resource_paths[0m[1;32m].[0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mServer control service on [[0m[1;32m/server_control[0m[1;32m].[0m[1;32m[0m
+[1;36m[Dbg] [SimulationRunner.cc:664] [0m[1;36mPublishers [Address, Message Type]:[0m
+[1;36m[Dbg] [SimulationRunner.cc:669] [0[1;33m[Wrn] [SimulationRunner.cc:695] [0m[1;33mFound additional publishers on /clock,[0m[1;33m using namespaced clock topic only[0m[1;33m[0m
+m[1;36m  [0m[1;36mtcp://172.28.142.86:36437[0m[1;36m, [0m[1;36mignition.msgs.WorldStatistics[0m[1;36m[0m
+[1;36m[Dbg] [SimulationRunner.cc:697] [0m[1;36mPublishers [Address, Message Type]:[0m
+[1;36m[Dbg] [SimulationRunner.cc:702] [0m[1;36m  [0m[1;36mtcp://172.28.142.86:36437[0m[1;36m, [0m[1;36mignition.msgs.Clock[0m[1;36m[0m
+[1;36m[Dbg] [SimulationRunner.cc:496] [0m[1;36mCreating PostUpdate worker threads: [0m[1;36m2[0m[1;36m[0m
+[1;36m[Dbg] [SimulationRunner.cc:507] [0m[1;36mCreating postupdate worker thread ([0m[1;36m0[0m[1;36m)[0m[1;36m[0m
+[1;36m[Dbg] [SimulationFeatures.cc:71] [0m[1;36mSimulation timestep set to: [0m[1;36m0.004[0m[1;36m[0m
+[1;32m[Msg] [0m[1;32mServing scene information on [[0m[1;32m/world/w6probe[0m[1;32m/[0m[1;32mscene/info[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mServing graph information on [[0m[1;32m/world/w6probe[0m[1;32m/[0m[1;32mscene/graph[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mServing full state on [[0m[1;32m/world/w6probe[0m[1;32m/[0m[1;32mstate[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mServing full state (async) on [[0m[1;32m/world/w6probe[0m[1;32m/[0m[1;32mstate_async[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mPublishing scene information on [[0m[1;32m/world/w6probe/scene/info[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mPublishing entity deletions on [[0m[1;32m/world/w6probe/scene/deletion[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mPublishing state changes on [[0m[1;32m/world/w6probe/state[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mPublishing pose messages on [[0m[1;32m/world/w6probe[0m[1;32m/[0m[1;32mpose/info[0m[1;32m][0m[1;32m[0m
+[1;32m[Msg] [0m[1;32mPublishing dynamic pose messages on [[0m[1;32m/world/w6probe[0m[1;32m/[0m[1;32mdynamic_pose/info[0m[1;32m][0m[1;32m[0m
+[1;36m[Dbg] [SignalHandler.cc:141] [0m[1;36mReceived signal[[0m[1;36m15[0m[1;36m].[0m
+[1;36m[Dbg] [ServerPrivate.cc:110] [0m[1;36mServer received signal[[0m[1;36m15[0m[1;36m][0m
+[1;36m[Dbg] [gz.cc:410] [0m[1;36mShutting down ign-gazebo-server[0m[1;36m[0m
+[1;36m[Dbg] [SimulationRunner.cc:523] [0m[1;36mExiting postupdate worker thread ([0m[1;36m0[0m[1;36m)[0m[1;36m[0m

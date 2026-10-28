@@ -108,6 +108,7 @@ bool TransportTask::start(const dual_arm_object_task::TrajectorySpec& spec,
     // an arbitrary pose.
     start_pose_deviation_ = 0.0;
     started_from_home_ = false;
+    hold_origin_ = HoldOrigin::None;
     if (cfg_.start_pose_tolerance_rad > 0.0) {
         int worst = 0;
         for (int i = 0; i < 12; ++i) {
@@ -256,9 +257,19 @@ CycleOutcome TransportTask::step(const dual_arm::Q12& q, dual_arm_qp::DualArmQp&
     return out;
 }
 
-void TransportTask::hold(const char* code) {
+void TransportTask::hold(const char* code, HoldOrigin origin) {
     state_ = TransportState::Hold;
     failure_code_ = (code != nullptr) ? code : "hold";
+    hold_origin_ = origin;
+}
+
+const char* holdOriginName(HoldOrigin o) noexcept {
+    switch (o) {
+        case HoldOrigin::None: return "";
+        case HoldOrigin::Controller: return "controller";
+        case HoldOrigin::Executor: return "executor";
+    }
+    return "";
 }
 
 void TransportTask::fault(const char* code) {
@@ -313,6 +324,7 @@ bool TransportTask::resume(const dual_arm::Q12& q) {
 }
 
 void TransportTask::reset() {
+    hold_origin_ = HoldOrigin::None;
     traj_.reset();
     t_traj_ = 0.0;
     left_T_right_ = dual_arm::Iso3::Identity();

@@ -1,0 +1,108 @@
+{
+  "schema": "c43s4.w5c.rest_test.v1",
+  "world": "/home/yep/my_S622/src/gz_launch/worlds/c43_s4_world.sdf",
+  "duration_requested_s": 5.0,
+  "gazebo": {
+    "versions": "6.16.0",
+    "versions_rc": 0
+  },
+  "machine": {
+    "kernel": "6.18.54.1-microsoft-standard-WSL2",
+    "wsl": true,
+    "cmdline": "initrd=\\initrd.img WSL_ROOT_INIT=1 panic=-1 nr_cpus=16 hv_utils.timesync_implicit=1 printk.devkmsg=on page_reporting.page_reporting_order=5 hv_storvsc.storvsc_max_hw_queues=4 console=hvc0 debug pty.legacy_count=0 WSL_ENABLE_CRASH_DUMP=1"
+  },
+  "hashes": {
+    "world": "3178284ffef3c57605117a52e148232bd6731f748da538bb5fb139b3ff8aa225",
+    "c43_sample/model.config": "e5465e31e5fd713aab8a7127acc5b4dc6cb18fa067cf2ee29638a76967051e81",
+    "c43_sample/model.sdf": "074016ed91011793d742ff6a4078f224172c2d2cc32cf9653c9a41d3172c2f6e",
+    "c43_support/model.config": "80919a7a69a6243f345742c19ac51cea8d6c403f15fc57506f9f617d4d332e58",
+    "c43_support/model.sdf": "1748502bb06dd2d54656d6752d919e4cce06a1f3c87da2492cb299f10e674c17",
+    "table/model.config": "f7c18fed92cce97c96367ff4c01d31559eb3d1faebdf4ad19f12c1c83031399e",
+    "table/model.sdf": "2f680cf16dc48f09d2119e57a9707d3efa22704753bef463fdc87d970524cd49",
+    "script": "57d83667b6c5ae94c4eba458719722ddf783efa22272fd1c6b000c0177f19bc4"
+  },
+  "commands": [
+    "ign topic -e -t /world/c43_s4_world/pose/info > pose_info_raw.txt",
+    "ign gazebo -s -r -v 3 /home/yep/my_S622/src/gz_launch/worlds/c43_s4_world.sdf"
+  ],
+  "status": "OBSERVED",
+  "models_loaded": [
+    "ground_plane",
+    "c43_table",
+    "c43_support",
+    "c43_sample"
+  ],
+  "stats": {
+    "sim_time_s": 6.585,
+    "real_time_s": 8.459744212,
+    "iterations": 1317,
+    "real_time_factor": 0.9973
+  },
+  "summary": {
+    "n_sample_poses": 256,
+    "sim_window": {
+      "start_s": 0.905,
+      "end_s": 6.08,
+      "span_s": 5.175
+    },
+    "sample_rate_hz": 49.468599033816425,
+    "sample_rate_note": "pose/info 发布频率（非人工采样）",
+    "position": {
+      "first": {
+        "x": 1.332180709668798e-18,
+        "y": 4.485944659046598e-18,
+        "z": 0.2749670728668585
+      },
+      "last": {
+        "x": 5.505530172082594e-18,
+        "y": 1.7516981275795555e-17,
+        "z": 0.27499977343166093
+      },
+      "x_range": [
+        1.332180709668798e-18,
+        5.869286543662831e-18
+      ],
+      "y_range": [
+        4.443555320255879e-18,
+        1.7516981275795555e-17
+      ],
+      "z_range": [
+        0.2749670728668585,
+        0.27499977343166093
+      ],
+      "max_horizontal_drift_m": 1.8361794451858017e-17,
+      "total_horizontal_displacement_m": 1.3683009940889528e-17,
+      "max_abs_z_error_m": 3.292713314151374e-05,
+      "min_abs_z_error_m": 2.265683390900719e-07
+    },
+    "orientation": {
+      "max_angle_from_first_rad": 0.0,
+      "max_angle_from_first_deg": 0.0
+    },
+    "velocity": {
+      "max_speed_estimate_m_s": 6.464107613901588e-05,
+      "mean_speed_estimate_m_s": 6.411875451455621e-06,
+      "note": "由相邻 pose/info 消息的中心位移除以时间戳差估算，不含角速度"
+    },
+    "support_pose_variation": {
+      "n": 256,
+      "max_abs_dz": 0.0,
+      "max_abs_dxy": 0.0
+    },
+    "table_pose": {
+      "x": 0.4,
+      "z": -1.015
+    },
+    "nominal_center_m": [
+      0.0,
+      0.0,
+      0.275
+    ]
+  },
+  "evidence": {
+    "pose_samples_csv": "pose_samples.csv",
+    "raw_pose_info": "pose_info_raw.txt",
+    "server_log": "gazebo_server.log"
+  },
+  "server_returncode": 0
+}

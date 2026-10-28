@@ -1,0 +1,24 @@
+[create-3] [INFO] [1793174478.118476125] [ros_gz_sim]: Requested creation of entity.
+[create-3] [INFO] [1793174478.118549724] [ros_gz_sim]: OK creation of entity.
+[INFO] [create-3]: process has finished cleanly [pid 203412]
+[ign gazebo-1] [INFO] [1793174478.290843650] [gz_ros2_control]: Loading controller_manager
+[ign gazebo-1] [INFO] [1793174485.197104526] [controller_manager]: Loading controller 'left_hand_controller'
+[ign gazebo-1] [INFO] [1793174485.225131628] [controller_manager]: Loading controller 'joint_state_broadcaster'
+[spawner-5] [INFO] [1793174485.242270369] [spawner_left_hand_controller]: Loaded left_hand_controller
+[spawner-4] [INFO] [1793174485.256339920] [spawner_joint_state_broadcaster]: Loaded joint_state_broadcaster
+[spawner-5] [INFO] [1793174485.321391193] [spawner_left_hand_controller]: Configured and activated left_hand_controller
+[spawner-4] [INFO] [1793174485.352519285] [spawner_joint_state_broadcaster]: Configured and activated joint_state_broadcaster
+[ign gazebo-1] [INFO] [1793174485.352797784] [controller_manager]: Loading controller 'right_hand_controller'
+[spawner-5] [INFO] [1793174485.384206574] [spawner_left_hand_controller]: Loaded right_hand_controller
+[spawner-5] [INFO] [1793174485.429352117] [spawner_left_hand_controller]: Configured and activated right_hand_controller
+[INFO] [spawner-4]: process has finished cleanly [pid 203483]
+[INFO] [spawner-5]: process has finished cleanly [pid 203485]
+[ign gazebo-1] [INFO] [1793174488.155185119] [controller_manager]: Loading controller 'dual_arm_qp_controller'
+[spawner-6] [INFO] [1793174488.208154551] [spawner_dual_arm_qp_controller]: Loaded dual_arm_qp_controller
+[ign gazebo-1] [ERROR] [1793174488.210432801] [dual_arm_qp_controller]: home_q must have 12 values (got 140); using the S2 q_grasp default
+[ign gazebo-1] [WARN] [1793174488.210694895] [dual_arm_qp_controller]: protection is NOT complete: PARTIAL(e1_joint_bounds,e3_solve_streak,e4_deadline,e5_row_valid,e6_near_pi) degraded(e2_state_staleness) missing(e7_arm_gap,e8_executor_heartbeat) (see ~/status.protection)
+[ign gazebo-1] [INFO] [1793174488.257890055] [dual_arm_qp_controller]: activated: relative target captured, q0=[0.500 -1.050 1.050 -1.050 -0.800 -0.000 | 0.500 -1.050 1.050 -1.050 -0.800 -0.000]
+[spawner-6] [INFO] [1793174488.274154096] [spawner_dual_arm_qp_controller]: Configured and activated dual_arm_qp_controller
+[INFO] [spawner-6]: process has finished cleanly [pid 203528]
+[ign gazebo-1] [INFO] [1793174508.259756697] [dual_arm_qp_controller]: period ms: arg=8.000 measured(mean=8.000 P95=8.000 P99=8.000 max=8.000, measured_flag=1) | overruns=0/1250 | solver P99=0.099 ms
+[ign gazebo-1] [INFO] [1793174528.550823031] [dual_arm_qp_controller]: period ms: arg=8.000 measured(mean=8.000 P95=8.000 P99=8.000 max=8.000, measured_flag=1) | overruns=0/2500 | solver P99=0.206 ms

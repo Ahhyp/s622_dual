@@ -23,13 +23,17 @@ double percentile(const std::vector<float>& sorted, double p) {
 
 }  // namespace
 
-void TimingRecorder::configure(int capacity, double period_us) {
+void TimingRecorder::configure(int capacity, double period_us, int phase_mask) {
   capacity_ = std::max(0, capacity);
   period_us_ = period_us;
+  phase_mask_ = static_cast<unsigned>(std::max(0, phase_mask)) & ((1U << kPhases) - 1U);
   wall_ns_.assign(static_cast<size_t>(capacity_), 0);
   cycle_us_.assign(static_cast<size_t>(capacity_), 0.0F);
   solve_us_.assign(static_cast<size_t>(capacity_), 0.0F);
   interval_us_.assign(static_cast<size_t>(capacity_), 0.0F);
+  for (int p = 0; p < kPhases; ++p) phase_us_[p].assign(static_cast<size_t>(capacity_), 0.0F);
+  branch_.assign(static_cast<size_t>(capacity_), 2);
+  exit_code_.assign(static_cast<size_t>(capacity_), 0);
   reset();
 }
 
@@ -38,7 +42,11 @@ void TimingRecorder::reset() {
   dropped_ = 0;
   have_prev_ = false;
   t_begin_ns_ = 0;
+  t_mark_ns_ = 0;
   t_prev_begin_ns_ = 0;
+  for (int p = 0; p < kPhases; ++p) phase_acc_[p] = 0.0F;
+  cur_branch_ = 2;
+  cur_exit_code_ = 0;
   if (capacity_ > 0) {
     rss_reset_kb_ = nowRssKb();
     fd_reset_ = nowFdCount();
@@ -66,6 +74,9 @@ void TimingRecorder::end(double solve_us) noexcept {
   have_prev_ = true;
 
   if (n >= capacity_) {
+    // Overflow: keep dropping, but never let a phase accumulator leak into the
+    // next cycle -- end() is the only place that resets it.
+    for (int p = 0; p < kPhases; ++p) phase_acc_[p] = 0.0F;
     ++dropped_;
     return;
   }
@@ -74,6 +85,12 @@ void TimingRecorder::end(double solve_us) noexcept {
       static_cast<double>(t_end_ns > t_begin_ns_ ? t_end_ns - t_begin_ns_ : 0) * 1e-3);
   solve_us_[static_cast<size_t>(n)] = static_cast<float>(solve_us);
   interval_us_[static_cast<size_t>(n)] = static_cast<float>(interval_us);
+  branch_[static_cast<size_t>(n)] = cur_branch_;
+  exit_code_[static_cast<size_t>(n)] = cur_exit_code_;
+  for (int p = 0; p < kPhases; ++p) {
+    phase_us_[p][static_cast<size_t>(n)] = phase_acc_[p];
+    phase_acc_[p] = 0.0F;
+  }
   count_.store(n + 1, std::memory_order_release);
 }
 
@@ -123,6 +140,45 @@ TimingRecorder::Summary TimingRecorder::summarize() const {
     s.overrun_ratio =
         s.samples > 1 ? static_cast<double>(s.overruns) / static_cast<double>(s.samples - 1) : 0.0;
   }
+
+  // C4.3 S4 W3-R1a: exit-branch census.  A sample recorded before the branch is
+  // known keeps the default 2 (early exit), so the three counts always sum to
+  // s.samples.
+  s.phase_mask = static_cast<int>(phase_mask_);
+  for (int i = 0; i < s.samples; ++i) {
+    const int b = branch_[static_cast<size_t>(i)];
+    if (b == 0) {
+      ++s.branch_idle;
+    } else if (b == 1) {
+      ++s.branch_transport;
+    } else {
+      ++s.branch_early_exit;
+    }
+  }
+
+  // Per-phase split.  A phase that never ran (early return above it) keeps its
+  // zero, so `recorded` counts the samples in which the phase produced a
+  // measurable interval; a phase that ran in less than the float/clock
+  // granularity is indistinguishable from an unreached one, which makes
+  // `recorded` a lower bound.  Mean/percentiles are over the recorded samples
+  // only, so an early exit does not drag a phase's p99 towards zero.
+  for (int p = 0; p < kPhases; ++p) {
+    std::vector<float> pv;
+    pv.reserve(static_cast<size_t>(s.samples));
+    for (int i = 0; i < s.samples; ++i) {
+      const float v = phase_us_[p][static_cast<size_t>(i)];
+      if (v > 0.0F) pv.push_back(v);
+    }
+    PhaseSummary& ps = s.phase[p];
+    ps.recorded = static_cast<int>(pv.size());
+    if (pv.empty()) continue;
+    std::sort(pv.begin(), pv.end());
+    const double psum = std::accumulate(pv.begin(), pv.end(), 0.0);
+    ps.mean_us = psum / static_cast<double>(pv.size());
+    ps.p50_us = percentile(pv, 0.50);
+    ps.p99_us = percentile(pv, 0.99);
+    ps.max_us = static_cast<double>(pv.back());
+  }
   return s;
 }
 
@@ -137,13 +193,23 @@ bool TimingRecorder::dumpCsv(const std::string& path, std::string* err) const {
     return false;
   }
   const int n = count_.load(std::memory_order_acquire);
-  std::fprintf(f, "k,wall_ns,cycle_us,solve_us,interval_us\n");
+  // Columns 0..4 are unchanged (kWallNs=1 ... interval=4): the W1/S4-T2 and
+  // S4-T17 readers are index based.  C4.3 S4 W3-R1a appends branch/exit_code
+  // and the six phase columns.
+  std::fprintf(f,
+               "k,wall_ns,cycle_us,solve_us,interval_us,branch,exit_code,"
+               "p1_read_us,p2_dispatch_us,p3_safety_us,p4_task_solve_us,p5_write_us,"
+               "p6_publish_us\n");
   for (int i = 0; i < n; ++i) {
-    std::fprintf(f, "%d,%llu,%.6f,%.6f,%.6f\n", i,
-                 static_cast<unsigned long long>(wall_ns_[static_cast<size_t>(i)]),
-                 static_cast<double>(cycle_us_[static_cast<size_t>(i)]),
-                 static_cast<double>(solve_us_[static_cast<size_t>(i)]),
-                 static_cast<double>(interval_us_[static_cast<size_t>(i)]));
+    const size_t k = static_cast<size_t>(i);
+    std::fprintf(f, "%d,%llu,%.6f,%.6f,%.6f,%d,%d", i,
+                 static_cast<unsigned long long>(wall_ns_[k]),
+                 static_cast<double>(cycle_us_[k]), static_cast<double>(solve_us_[k]),
+                 static_cast<double>(interval_us_[k]), branch_[k], exit_code_[k]);
+    for (int p = 0; p < kPhases; ++p) {
+      std::fprintf(f, ",%.6f", static_cast<double>(phase_us_[p][k]));
+    }
+    std::fputc('\n', f);
   }
   const bool ok = std::fclose(f) == 0;
   if (!ok && err) *err = "fclose failed for " + path;
@@ -168,6 +234,15 @@ std::string TimingRecorder::format(const Summary& s) {
     << " overrun_ratio=" << s.overrun_ratio << " rss_kb{" << s.rss_reset_kb << "->"
     << s.rss_now_kb << ",growth=" << s.rss_growth_kb << "} fd{" << s.fd_reset << "->"
     << s.fd_now << ",growth=" << s.fd_growth << "}";
+  // C4.3 S4 W3-R1a: appended after the W1 fields so the existing one-line
+  // format keeps its prefix.
+  o << " phase_mask=" << s.phase_mask << " branch{idle=" << s.branch_idle
+    << ",transport=" << s.branch_transport << ",early_exit=" << s.branch_early_exit << "}";
+  for (int p = 0; p < kPhases; ++p) {
+    const PhaseSummary& ps = s.phase[p];
+    o << " p" << (p + 1) << "_us{rec=" << ps.recorded << ",mean=" << ps.mean_us
+      << ",p50=" << ps.p50_us << ",p99=" << ps.p99_us << ",max=" << ps.max_us << "}";
+  }
   return o.str();
 }
 

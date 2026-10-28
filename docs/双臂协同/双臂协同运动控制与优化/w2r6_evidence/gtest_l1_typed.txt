@@ -1,0 +1,48 @@
+# typed allocation ledger
+totals attempts=32666 success=32666 fail=0 bytes=24256508 free_calls=32620 realloc_inplace=1 realloc_moved=0 records=32666
+mallinfo2 arena=1413120 ordblks=40 hblkhd=0 uordblks=111568 fordblks=1301552
+
+# by entry point
+kind,attempts,success,fail,bytes
+malloc,23056,23056,0,21206532
+calloc,4502,4502,0,541248
+realloc,1,1,0,192
+posix_memalign,0,0,0,0
+aligned_alloc,0,0,0,0
+memalign,0,0,0,0
+valloc,0,0,0,0
+pvalloc,0,0,0,0
+operator new,5105,5105,0,2500326
+operator new[],2,2,0,8210
+operator new(align),0,0,0,0
+operator new[](align),0,0,0,0
+
+# classification x entry point (count / bytes)
+kind,OSQP,OWN_core,INSTRUMENT,libstdcxx,libc,other_module,UNKNOWN
+malloc,22401/20994988,652/133248,1/472,1/73728,1/4096,0/0,0/0
+calloc,4496/535008,0/0,1/1040,0/0,5/5200,0/0,0/0
+realloc,1/192,0/0,0/0,0/0,0/0,0/0,0/0
+posix_memalign,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+aligned_alloc,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+memalign,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+valloc,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+pvalloc,0/0,0/0,0/0,0/0,0/0,0/0,0/0
+operator new,0/0,2/128,5029/82548,30/13983,30/2847,14/2400820,0/0
+operator new[],0/0,0/0,2/8210,0/0,0/0,0/0,0/0
+operator new(align),0/0,0/0,0/0,0/0,0/0,0/0,0/0
+operator new[](align),0/0,0/0,0/0,0/0,0/0,0/0,0/0
+
+# per-class totals
+class,count,bytes
+OSQP,26898,21530188
+OWN_core,654,133376
+INSTRUMENT,5033,92270
+libstdcxx,31,87711
+libc,36,12143
+other_module,14,2400820
+UNKNOWN,0,0
+
+# top frames (top-of-stack symbol, count)
+-,32666
+
+#raw ... (逐条记录已剥离：32666 条，见 README 的重生成命令)

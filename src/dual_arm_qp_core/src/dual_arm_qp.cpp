@@ -342,7 +342,10 @@ DualArmQpResult DualArmQp::solveImpl(const Q12& q, const Iso3& left_T_right_targ
         last_problem_.x0 = warm_start_;
     }
 
-    const QpSolution solution = solver_->solve(last_problem_);
+    static thread_local QpSolution solution;  /* reused sink: x keeps its buffer */
+    solution.converged = false;
+    solution.iterations = 0;
+    solver_->solveInto(last_problem_, solution);
     result.converged = solution.converged;
     result.iterations = solution.iterations;
     result.solve_time_ms = solution.solve_time_ms;

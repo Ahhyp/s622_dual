@@ -1,0 +1,30 @@
+diff --git a/src/dual_arm_qp_controller/src/dual_arm_qp_controller.cpp b/src/dual_arm_qp_controller/src/dual_arm_qp_controller.cpp
+index d39bcdb..7221421 100644
+--- a/src/dual_arm_qp_controller/src/dual_arm_qp_controller.cpp
++++ b/src/dual_arm_qp_controller/src/dual_arm_qp_controller.cpp
+@@ -102,18 +121,24 @@ CallbackReturn DualArmQpController::on_init() {
+     declareIfNeeded<double>("period_fault_factor", 2.0);
+     declareIfNeeded<double>("collision_d_stop", 0.0);
+     declareIfNeeded<double>("collision_link_radius", 0.06);
+ 
+     // ---- C4.3 S4 W1: object / coordination task -------------------------
+     declareIfNeeded<double>("kp_obj", 20.0);
+     declareIfNeeded<double>("w_obj", 1.0);
+     // S4 W1 review (A/B): honest protection + standing-configuration check.
++    // W7 fix: defaultHomeQ() returns an Eigen vector BY VALUE, so calling it twice
++    // inside the range constructor produced two distinct temporaries: `first`
++    // pointed into the first, `last` into the second, and the resulting distance
++    // was whatever the stack layout happened to give (measured live: 140 elements,
++    // 12 valid + 128 of stack garbage).  Keep ONE copy and take the range from it.
++    const dual_arm::Q12 home_q_default = defaultHomeQ();
+     declareIfNeeded<std::vector<double>>("home_q", std::vector<double>(
+-        defaultHomeQ().data(), defaultHomeQ().data() + 12));
++        home_q_default.data(), home_q_default.data() + home_q_default.size()));
+     declareIfNeeded<double>("start_pose_tolerance_rad", 0.05);
+     declareIfNeeded<bool>("require_executor_heartbeat", false);
+     declareIfNeeded<double>("executor_heartbeat_timeout_s", 0.1);
+     declareIfNeeded<double>("w_slack_obj", 1e3);
+     declareIfNeeded<double>("w_null_margin", 0.0);
+     declareIfNeeded<double>("w_null_manip", 0.0);
+     declareIfNeeded<double>("w_null_clear", 0.0);
+     declareIfNeeded<double>("null_step", 0.005);

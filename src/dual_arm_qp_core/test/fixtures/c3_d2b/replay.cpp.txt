@@ -1,0 +1,148 @@
+// C4.3 S4 / W2-C3 D2-B: standalone 638-cycle replay that writes the 29-column
+// fixture format (k,t,q_prev[12],dq[12],e_obj_pos,e_obj_rot,committed).
+//
+// It reproduces exactly what the S4-T2 acceptance path does:
+//   loadTrajectorySpec(config/c43_s4_transport.yaml) -> TransportTask -> DualArmQp
+//   q += dq each cycle (ideal velocity servo, as the S3 mock plant)
+// and it can use either backend so the cross-algorithm evidence (OSQP vs ADMM)
+// is produced by the same driver.
+//
+// This tool is *evidence tooling*: it does not assert anything and it never
+// writes into the repository unless the caller points --out there.
+//
+// Usage:
+//   replay --out /tmp/x.csv [--solver osqp|admm] [--yaml <path>]
+
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "dual_arm_object_task/trajectory.hpp"
+#include "dual_arm_qp_controller/transport_task.hpp"
+#include "dual_arm_qp_core/admm_solver.hpp"
+#include "dual_arm_qp_core/dual_arm_qp.hpp"
+
+namespace {
+
+constexpr int kJoints = 12;
+using Q12 = Eigen::Matrix<double, kJoints, 1>;
+
+}  // namespace
+
+int main(int argc, char ** argv) {
+  std::string out_path;
+  std::string solver_name = "osqp";
+  std::string yaml = "src/dual_arm_qp_controller/config/c43_s4_transport.yaml";
+  for (int i = 1; i < argc; ++i) {
+    if (std::strcmp(argv[i], "--out") == 0 && i + 1 < argc) {
+      out_path = argv[++i];
+    } else if (std::strcmp(argv[i], "--solver") == 0 && i + 1 < argc) {
+      solver_name = argv[++i];
+    } else if (std::strcmp(argv[i], "--yaml") == 0 && i + 1 < argc) {
+      yaml = argv[++i];
+    } else {
+      std::fprintf(stderr, "usage: %s --out <csv> [--solver osqp|admm] [--yaml <path>]\n",
+                   argv[0]);
+      return 1;
+    }
+  }
+  if (out_path.empty()) {
+    std::fprintf(stderr, "--out is required\n");
+    return 1;
+  }
+
+  const auto spec = dual_arm_object_task::loadTrajectorySpec(yaml);
+  if (spec.phases.size() == 0) {
+    std::fprintf(stderr, "cannot load trajectory spec from %s\n", yaml.c_str());
+    return 1;
+  }
+
+  const dual_arm_object_task::FrozenObjectTrajectory traj(spec);
+
+  dual_arm::DualArmKinematics kin;
+  dual_arm_qp::DualArmQpParams p;
+  dual_arm_qp::defaultS622Limits(&p.q_min, &p.q_max, &p.v_max);
+  p.dt = 0.008;
+  p.kp_rel = 10.0;
+  p.w_rel = 1.0;
+  p.w_slack = 1000.0;
+  p.w_center = 1.0e-4;
+  p.w_reg = 1e-6;
+  p.kp_obj = 20.0;
+  p.w_obj = 1.0;
+  p.w_slack_obj = 1000.0;
+
+  dual_arm_qp_controller::TransportTaskConfig cfg;
+  dual_arm_qp_controller::TransportTask task(kin, cfg);
+
+  std::shared_ptr<dual_arm_qp::QpSolver> solver;
+  if (solver_name == "admm") {
+    dual_arm_qp::AdmmOptions opts;
+    opts.max_iter = 20000;
+    opts.eps_abs = 1e-10;
+    opts.eps_rel = 1e-10;
+    solver = std::make_shared<dual_arm_qp::AdmmSolver>(opts);
+  } else {
+    solver = dual_arm_qp::makeDefaultSolver();
+  }
+  dual_arm_qp::DualArmQp qp(kin, p, solver);
+
+  // The S3 ff_1 run starts from the S2 frozen grasp configuration; the fixture's
+  // first row carries it, so take the start pose from the transport task's own
+  // default (defaultHomeQ) to stay independent of any fixture file.
+  Q12 q = dual_arm_qp_controller::defaultHomeQ();
+  std::string err;
+  if (!task.start(spec, q, &err)) {
+    std::fprintf(stderr, "task.start failed: %s\n", err.c_str());
+    return 1;
+  }
+
+  std::FILE * f = std::fopen(out_path.c_str(), "w");
+  if (f == nullptr) {
+    std::fprintf(stderr, "cannot write %s\n", out_path.c_str());
+    return 1;
+  }
+  std::fprintf(f, "k,t");
+  for (int i = 0; i < kJoints; ++i) std::fprintf(f, ",q_prev%d", i);
+  for (int i = 0; i < kJoints; ++i) std::fprintf(f, ",dq%d", i);
+  std::fprintf(f, ",e_obj_pos_m,e_obj_rot_rad,committed,des_px,des_py,des_pz\n");
+
+  int cycles = 0;
+  int noncommitted = 0;
+  double worst_terminal_pos = 0.0;
+  for (int k = 0; k < 638; ++k) {
+    const auto smp = task.sample(q);
+    const auto out = task.step(q, qp);
+    if (!out.converged || out.failure_code == nullptr || out.failure_code[0] != '\0') {
+      std::fprintf(stderr, "cycle %d failed: converged=%d code=%s\n", k,
+                   static_cast<int>(out.converged),
+                   out.failure_code ? out.failure_code : "(null)");
+      std::fclose(f);
+      return 2;
+    }
+    if (!out.committed) ++noncommitted;
+    std::fprintf(f, "%d,%.17g", k, smp.t_traj);
+    for (int j = 0; j < kJoints; ++j) std::fprintf(f, ",%.17g", q[j]);
+    for (int j = 0; j < kJoints; ++j) std::fprintf(f, ",%.17g", out.dq[j]);
+    const dual_arm::Iso3 Td = traj.at(smp.t_traj, nullptr);
+    std::fprintf(f, ",%.17g,%.17g,%d,%.17g,%.17g,%.17g\n", smp.e_obj_pos_m,
+                 smp.e_obj_rot_rad, out.committed ? 1 : 0, Td.translation().x(), Td.translation().y(),
+                 Td.translation().z());
+    q += out.dq;
+    worst_terminal_pos = smp.e_obj_pos_m;
+    ++cycles;
+  }
+  std::fclose(f);
+
+  const auto last = task.sample(q);
+  std::printf("solver=%s cycles=%d noncommitted=%d terminal_e_obj=%.6e m / %.6e rad\n",
+              solver_name.c_str(), cycles, noncommitted, last.e_obj_pos_m,
+              last.e_obj_rot_rad);
+  std::printf("wrote %s\n", out_path.c_str());
+  (void)worst_terminal_pos;
+  return 0;
+}

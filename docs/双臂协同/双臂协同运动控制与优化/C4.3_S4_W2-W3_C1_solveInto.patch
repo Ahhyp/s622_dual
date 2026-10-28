@@ -1,0 +1,89 @@
+diff --git a/src/dual_arm_qp_core/include/dual_arm_qp_core/qp_types.hpp b/src/dual_arm_qp_core/include/dual_arm_qp_core/qp_types.hpp
+--- a/src/dual_arm_qp_core/include/dual_arm_qp_core/qp_types.hpp
++++ b/src/dual_arm_qp_core/include/dual_arm_qp_core/qp_types.hpp
+@@ -40,6 +40,12 @@
+     virtual ~QpSolver() = default;
+     virtual QpSolution solve(const QpProblem& problem) = 0;
+     virtual std::string name() const = 0;
++
++    /// Fill a caller-owned destination, reusing dst.x's storage when it is
++    /// already the right size.  The default keeps the allocating path.
++    virtual void solveInto(const QpProblem& problem, QpSolution& dst) {
++        dst = solve(problem);
++    }
+ };
+ 
+ using QpSolverPtr = std::shared_ptr<QpSolver>;
+diff --git a/src/dual_arm_qp_core/include/dual_arm_qp_core/osqp_solver.hpp b/src/dual_arm_qp_core/include/dual_arm_qp_core/osqp_solver.hpp
+--- a/src/dual_arm_qp_core/include/dual_arm_qp_core/osqp_solver.hpp
++++ b/src/dual_arm_qp_core/include/dual_arm_qp_core/osqp_solver.hpp
+@@ -35,6 +35,7 @@
+     OsqpSolver& operator=(const OsqpSolver&) = delete;
+ 
+     QpSolution solve(const QpProblem& problem) override;
++    void solveInto(const QpProblem& problem, QpSolution& dst) override;
+     std::string name() const override { return "osqp"; }
+ 
+     void setOptions(const OsqpOptions& options);
+diff --git a/src/dual_arm_qp_core/src/osqp_solver.cpp b/src/dual_arm_qp_core/src/osqp_solver.cpp
+--- a/src/dual_arm_qp_core/src/osqp_solver.cpp
++++ b/src/dual_arm_qp_core/src/osqp_solver.cpp
+@@ -174,7 +174,12 @@
+ 
+ QpSolution OsqpSolver::solve(const QpProblem& problem) {
+     QpSolution solution;
+-    if (!problem.valid()) return solution;
++    solveInto(problem, solution);
++    return solution;
++}
++
++void OsqpSolver::solveInto(const QpProblem& problem, QpSolution& solution) {
++    if (!problem.valid()) return;
+ 
+     const int n = problem.num_vars();
+     const int m = problem.num_constraints();
+@@ -183,9 +188,9 @@
+     if (impl_->work == nullptr || impl_->n != n || impl_->m != m) {
+         // Structure (re)setup: allocate the fixed patterns, fill the REAL
+         // numerical data, then call osqp_setup() once.
+-        if (!impl_->allocStructure(n, m)) return solution;
++        if (!impl_->allocStructure(n, m)) return;
+         impl_->updateValues(problem);
+-        if (!impl_->osqpSetup()) return solution;
++        if (!impl_->osqpSetup()) return;
+     } else {
+         impl_->updateValues(problem);
+     }
+@@ -194,7 +199,7 @@
+         osqp_update_lower_bound(impl_->work, impl_->l) != 0 ||
+         osqp_update_upper_bound(impl_->work, impl_->u) != 0) {
+         impl_->reset();  // force a clean setup next time
+-        return solution;
++        return;
+     }
+ 
+     if (impl_->options.warm_start && problem.x0.size() == n) {
+@@ -219,7 +224,7 @@
+     solution.solve_time_ms =
+         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_start)
+             .count();
+-    return solution;
++    return;
+ }
+ 
+ }  // namespace dual_arm_qp
+diff --git a/src/dual_arm_qp_core/src/dual_arm_qp.cpp b/src/dual_arm_qp_core/src/dual_arm_qp.cpp
+--- a/src/dual_arm_qp_core/src/dual_arm_qp.cpp
++++ b/src/dual_arm_qp_core/src/dual_arm_qp.cpp
+@@ -342,7 +342,10 @@
+         last_problem_.x0 = warm_start_;
+     }
+ 
+-    const QpSolution solution = solver_->solve(last_problem_);
++    static thread_local QpSolution solution;  /* reused sink: x keeps its buffer */
++    solution.converged = false;
++    solution.iterations = 0;
++    solver_->solveInto(last_problem_, solution);
+     result.converged = solution.converged;
+     result.iterations = solution.iterations;
+     result.solve_time_ms = solution.solve_time_ms;
