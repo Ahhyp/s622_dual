@@ -1,0 +1,12 @@
+# C4.3 S4 W7 (B-1): Gazebo-only override of the QP controller's standing configuration.
+#
+# gz_ros2_control initialises the arms from
+# s622_moveit_config/config/initial_positions.yaml (j1..j6 = 0.5, -1.05, 1.05,
+# -1.05, -0.8, 0).  dual_arm_qp_controller refuses start_transport unless the live
+# joints are within 0.05 rad of `home_q`, so for this Gazebo profile "home" is the
+# pose the robot actually spawns in.  This file is passed to the controller spawner
+# with --param-file; S2's default home_q (q_grasp12) is untouched everywhere else.
+dual_arm_qp_controller:
+  ros__parameters:
+    home_q: [0.5, -1.05, 1.05, -1.05, -0.8, 0.0,
+             0.5, -1.05, 1.05, -1.05, -0.8, 0.0]
