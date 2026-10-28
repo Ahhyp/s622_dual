@@ -1,0 +1,4 @@
+static     span=0.000  endpoint_delta=0.000  first=0.000 final=0.000
+moving     span=0.400  endpoint_delta=0.400  first=0.000 final=0.400
+roundtrip  span=0.199  endpoint_delta=0.000  first=0.000 final=0.000
+expected: spans 0.000 / 0.400 / 0.200 while the old probe reported the endpoint deltas 0.000 / 0.400 / 0.000

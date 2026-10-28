@@ -1,0 +1,14 @@
+[37;1m2026-10-28 20:01:08.405 [31;1m[[37;1mRTPS_TRANSPORT_SHM[31;1m Error] [37mFailed to create segment 91de1e2fb654d4d5: Permission denied[34;1m -> Function [36mcompute_per_allocation_extra_size[m
+[37;1m2026-10-28 20:01:08.405 [31;1m[[37;1mRTPS_TRANSPORT_SHM[31;1m Error] [37mFailed to create Shared Memory Manager for domain fastrtps: Permission denied[34;1m -> Function [36mcreate[m
+[37;1m2026-10-28 20:01:08.405 [31;1m[[37;1mRTPS_PARTICIPANT[31;1m Error] [37mUnable to Register SHM Transport. SHM Transport is not supported in the current platform.[34;1m -> Function [36mRTPSParticipantImpl[m
+start_accepted False | start pose deviation 2.488524 rad at joint 4 (right arm) exceeds 0.050000 rad; move both arms to the standing configuration first
+samples js=395 status=30
+JS_SPAN_MAX 0.002629
+QSTATE_SPAN_MAX 0.002629
+QCMD_SPAN_MAX 0.024000
+JS_TRACKS_QSTATE_MAX_ERR 0.001581
+js_spans {"left_j1": 0.0, "left_j2": 0.0, "left_j3": 0.0, "left_j4": 0.0, "left_j5": 0.0, "left_j6": 0.0, "right_j1": 0.0, "right_j2": 0.001214, "right_j3": 0.002629, "right_j4": 0.001415, "right_j5": 0.0, "right_j6": 0.0}
+qstate_spans {"left_j1": 0.0, "left_j2": 0.0, "left_j3": 0.0, "left_j4": 0.0, "left_j5": 0.0, "left_j6": 0.0, "right_j1": 0.0, "right_j2": 0.001214, "right_j3": 0.002629, "right_j4": 0.001415, "right_j5": 0.0, "right_j6": 0.0}
+qcmd_spans {"left_j1": 1e-06, "left_j2": 1e-06, "left_j3": 1e-06, "left_j4": 3e-06, "left_j5": 0.0, "left_j6": 1e-06, "right_j1": 1e-06, "right_j2": 0.011079, "right_j3": 0.024, "right_j4": 0.012919, "right_j5": 0.0, "right_j6": 2e-06}
+qcmd_final_minus_qstate {"left_j1": -0.0, "left_j2": -0.0, "left_j3": 0.0, "left_j4": -0.0, "left_j5": -0.0, "left_j6": -0.0, "right_j1": -0.0, "right_j2": -0.001417, "right_j3": 0.003069, "right_j4": -0.001652, "right_j5": -0.0, "right_j6": -0.0}
+status_final COMPLETE t_traj 2.0

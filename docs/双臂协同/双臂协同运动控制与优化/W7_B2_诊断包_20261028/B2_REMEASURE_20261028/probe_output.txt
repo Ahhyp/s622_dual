@@ -1,0 +1,11 @@
+start_accepted True | queued (applied on the next control cycle)
+samples js=393 status=30
+JS_SPAN_MAX 2.302684
+QSTATE_SPAN_MAX 2.296908
+QCMD_SPAN_MAX 2.328111
+JS_TRACKS_QSTATE_MAX_ERR 0.024000
+js_spans {"left_j1": 1.596763, "left_j2": 1.200657, "left_j3": 1.212046, "left_j4": 1.161487, "left_j5": 0.936466, "left_j6": 1.797671, "right_j1": 1.726327, "right_j2": 2.302684, "right_j3": 1.234248, "right_j4": 1.584336, "right_j5": 1.153395, "right_j6": 1.440253}
+qstate_spans {"left_j1": 1.53977, "left_j2": 1.14798, "left_j3": 1.200731, "left_j4": 1.154975, "left_j5": 0.883962, "left_j6": 1.746308, "right_j1": 1.715129, "right_j2": 2.296908, "right_j3": 1.182969, "right_j4": 1.556514, "right_j5": 1.152074, "right_j6": 1.388974}
+qcmd_spans {"left_j1": 1.511852, "left_j2": 1.099937, "left_j3": 1.23262, "left_j4": 1.181388, "left_j5": 0.83421, "left_j6": 1.70333, "right_j1": 1.748365, "right_j2": 2.328111, "right_j3": 1.144577, "right_j4": 1.645838, "right_j5": 1.156266, "right_j6": 1.329112}
+qcmd_final_minus_qstate {"left_j1": -0.024815, "left_j2": 0.004211, "left_j3": -0.007419, "left_j4": 0.005985, "left_j5": 0.006653, "left_j6": -0.025084, "right_j1": -0.063754, "right_j2": -0.001945, "right_j3": -0.063983, "right_j4": 0.064, "right_j5": -0.010901, "right_j6": -0.063689}
+status_final COMPLETE t_traj 2.0
