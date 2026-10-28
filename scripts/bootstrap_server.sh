@@ -7,7 +7,7 @@
 #   bash scripts/bootstrap_server.sh --with-hooks # + a separate hooks=ON overlay build
 #
 # It refuses to guess: every prerequisite is checked and named.
-set -uo pipefail
+set -o pipefail   # deliberately NOT -u: ROS setup.bash dereferences unset vars
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -35,23 +35,44 @@ done
 ign gazebo --versions 2>/dev/null | head -1 || fail "ign gazebo not found (Fortress 6.x is what W6-0 was measured against)"
 command -v colcon >/dev/null || fail "colcon not found (python3 -m pip install colcon-common-extensions)"
 [ -d /usr/include/eigen3 ] || fail "Eigen3 headers not found (apt install libeigen3-dev)"
-[ -d /usr/include/osqp ] || fail "OSQP headers not found (apt install libosqp-dev or build from source)"
-[ -d /usr/include/yaml-cpp ] || fail "yaml-cpp headers not found (apt install libyaml-cpp-dev)"
+have_header() { local h; for h in "$@"; do [ -f "$h" ] && return 0; done; return 1; }
+have_header /usr/include/osqp/osqp.h /usr/local/include/osqp/osqp.h \
+             /opt/ros/humble/include/osqp/osqp.h \
+  || ros2 pkg prefix osqp_vendor >/dev/null 2>&1 \
+  || fail "OSQP headers not found (apt install libosqp-dev, or ros-humble-osqp-vendor)"
+have_header /usr/include/yaml-cpp/yaml.h /usr/local/include/yaml-cpp/yaml.h \
+             /opt/ros/humble/include/yaml-cpp/yaml.h \
+  || fail "yaml-cpp headers not found (apt install libyaml-cpp-dev)"
 
 say "2. python (the ROS 2 interface generator needs empy; conda yolov8 is what this repo used)"
-PY="${PYTHON_EXECUTABLE:-$(command -v python3)}"
-"$PY" -c "import em" 2>/dev/null || fail "python3 cannot import 'em' (empy). Activate the interpreter that has em, or export PYTHON_EXECUTABLE=/path/to/python3"
+PY=""
+for cand in "${PYTHON_EXECUTABLE:-}" "$(command -v python3 || true)" \
+            "${CONDA_PREFIX:-}/bin/python3" \
+            "$HOME/miniconda3/envs/yolov8/bin/python3" "$HOME/anaconda3/envs/yolov8/bin/python3"; do
+  [ -n "$cand" ] && [ -x "$cand" ] || continue
+  if "$cand" -c "import em" >/dev/null 2>&1; then PY="$cand"; break; fi
+done
+[ -n "$PY" ] || fail "no python3 that can import 'em' (empy). Install empy, or export PYTHON_EXECUTABLE=/path/to/python3 (the repo used conda env 'yolov8')"
 echo "using python: $PY"
+# build_mem_safe.sh resolves the interpreter with `command -v python3`; make that
+# resolve to the one we just validated.
+if [ "$PY" != "$(command -v python3 || true)" ]; then
+  export PATH="$(dirname "$PY"):$PATH"
+fi
 
 say "3. build (memory-safe: 2 parallel jobs; a single Eigen translation unit peaks at ~1.2 GB)"
-JOBS="${JOBS:-4}" bash scripts/build_mem_safe.sh || fail "build failed"
+# A whole-tree build fails on src/dual_arm_calibration (no package.xml in this
+# tree, pre-existing and unrelated).  Build the C4.3 chain and its dependencies.
+UPTO="dual_arm_transport_executor dual_arm_qp_controller gz_launch" \
+  JOBS="${JOBS:-4}" bash scripts/build_mem_safe.sh \
+  || fail "build failed (a whole-tree build also fails on the incomplete src/dual_arm_calibration)"
 
 say "4. invariants"
 STRINGS=$(strings install/lib/libdual_arm_qp_controller.so | grep -c test_fail_readstate || true)
 echo "test_fail_readstate symbols in the production library: $STRINGS (must be 0)"
 [ "$STRINGS" = "0" ] || fail "the production library carries test-injection symbols"
 echo -n "libdual_arm_qp_core.so sha256: "; sha256sum install/lib/libdual_arm_qp_core.so | cut -d' ' -f1
-echo -n "frozen S3 fixture sha256:       "; sha256sum src/dual_arm_qp_core/test/fixtures/s3_ff_1_dq.csv | cut -d' ' -f1
+echo -n "frozen S3 fixture sha256:       "; sha256sum src/dual_arm_qp_controller/test/fixtures/s3_ff_1_dq.csv | cut -d' ' -f1
 echo -n "D2-B baseline sha256:           "; sha256sum src/dual_arm_qp_core/test/fixtures/c3_d2b/c3_d2b_candidate_baseline.csv | cut -d' ' -f1
 
 say "5. fast suites"

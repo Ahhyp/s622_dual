@@ -26,6 +26,7 @@
 # Environment
 #   JOBS   parallel compile jobs (default 2).  Peak RSS ~= JOBS * 1.2 GiB.
 #   PKGS   space separated packages -> --packages-select
+#   UPTO   space separated packages -> --packages-up-to (use on a fresh clone)
 #   SKIP_CONDA=1   do not touch conda (assumes python3 already has empy)
 set -eo pipefail
 
@@ -54,7 +55,11 @@ export MAKEFLAGS="-j${JOBS}"
 export CMAKE_BUILD_PARALLEL_LEVEL="${JOBS}"
 
 PKG_ARGS=()
-if [ -n "${PKGS:-}" ]; then
+if [ -n "${UPTO:-}" ]; then
+  # Build these packages *and everything they depend on* (unlike PKGS, which
+  # selects exactly what is named).  Use this on a fresh clone.
+  PKG_ARGS=(--packages-up-to ${UPTO})
+elif [ -n "${PKGS:-}" ]; then
   # shellcheck disable=SC2206  # word splitting is intended here
   PKG_ARGS=(--packages-select ${PKGS})
 fi
