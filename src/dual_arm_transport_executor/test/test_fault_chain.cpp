@@ -264,3 +264,45 @@ TEST(FaultChain, R5_8_UnansweredStatusNeverRebaselines)
   EXPECT_EQ(r.sm.state(), State::Fault);
   EXPECT_EQ(r.sm.failureCode(), "hold_invariant_violated");
 }
+
+// W7-B finding (2026-10-28): the controller's active_limit_count is a
+// *velocity-cap* counter (|dq| at v_max*dt), which a normal transport start
+// saturates on almost every joint.  The rule is now: protect on sustained
+// position/velocity pressure, not on a single saturated cycle.
+TEST(FaultChain, R5_9_SingleSaturatedCycleIsATransientNotAFault)
+{
+  Rig r;
+  r.primeAndStart(0.5);
+  r.fake.status().active_limit_count = 12;
+  r.tick(3);
+  EXPECT_FALSE(r.sm.latched()) << "three saturated cycles are still a start transient";
+  r.fake.status().active_limit_count = 0;
+  r.tick(5);
+  EXPECT_FALSE(r.sm.latched());
+}
+
+TEST(FaultChain, R5_10_SustainedLimitPressureLatchesHold)
+{
+  Rig r;
+  r.primeAndStart(0.5);
+  r.fake.obeyHold();   // a real controller freezes on HOLD; the audit must not fire
+  r.fake.status().active_limit_count = 12;
+  r.tick(static_cast<int>(r.cfg.limit_saturation_cycles) + 3);
+  EXPECT_TRUE(r.sm.latched());
+  EXPECT_EQ(r.sm.state(), State::Hold);
+  EXPECT_EQ(r.sm.failureCode(), "joint_limit_saturation");
+}
+
+TEST(FaultChain, R5_11_PositionMarginPressureLatchesHoldEvenWithoutVelocitySaturation)
+{
+  Config c;
+  c.limit_margin_rad = 0.05;   // the Gazebo profile's band
+  Rig r(c);
+  r.primeAndStart(0.5);
+  r.fake.obeyHold();
+  r.fake.status().active_limit_count = 0;
+  r.fake.status().min_limit_margin_rad = 0.01;   // well inside the 0.05 rad margin
+  r.tick(static_cast<int>(r.cfg.limit_saturation_cycles) + 3);
+  EXPECT_TRUE(r.sm.latched());
+  EXPECT_EQ(r.sm.failureCode(), "joint_limit_saturation");
+}

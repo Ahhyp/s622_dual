@@ -34,6 +34,8 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   cfg.resume_rot_tol_rad = declare_parameter("resume_rot_tol_rad", cfg.resume_rot_tol_rad);
   cfg.resume_fail_max = declare_parameter("resume_fail_max", cfg.resume_fail_max);
   cfg.solve_fail_streak_limit = declare_parameter("solve_fail_streak_limit", cfg.solve_fail_streak_limit);
+  cfg.limit_saturation_cycles = static_cast<int>(declare_parameter("limit_saturation_cycles", cfg.limit_saturation_cycles));
+  cfg.limit_margin_rad = declare_parameter("limit_margin_rad", cfg.limit_margin_rad);
   sm_ = std::make_unique<TransportStateMachine>(cfg);
 
   artifacts_dir_ = declare_parameter<std::string>("artifacts_dir", "/tmp/c43_w3r1");
@@ -178,6 +180,7 @@ void TransportExecutorNode::onStatus(dual_arm_qp_controller::msg::TransportStatu
   }
   s.solve_fail_streak = m->solve_fail_streak;
   s.active_limit_count = m->active_limit_count;
+  s.min_limit_margin_rad = m->min_limit_margin_rad;
   s.e_obj_pos_m = m->e_obj_pos_m;
   s.e_obj_rot_rad = m->e_obj_rot_rad;
   s.sigma_min_stack = m->sigma_min_stack;

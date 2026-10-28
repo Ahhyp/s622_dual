@@ -275,6 +275,7 @@ void TransportStateMachine::advance(double now_s, const std::string & detail)
 
 bool TransportStateMachine::start(double now_s, const StartRequest & req, std::string * why)
 {
+  limit_streak_ = 0;
   if (state_ == State::Fault) {
     if (why) {*why = "fault_requires_reset";}
     record(now_s, "reject", toString(state_), toString(state_), "fault_requires_reset",
@@ -397,7 +398,7 @@ bool TransportStateMachine::resume(double now_s, std::string * why)
     reason = "object_pos_error";
   } else if (st.e_obj_rot_rad > cfg_.resume_rot_tol_rad) {
     reason = "object_rot_error";
-  } else if (st.active_limit_count > 0) {
+  } else if (st.min_limit_margin_rad < cfg_.limit_margin_rad) {
     reason = "active_limit";
   } else if (st.solve_fail_streak >= cfg_.solve_fail_streak_limit) {
     reason = "solve_streak";
@@ -433,6 +434,7 @@ bool TransportStateMachine::resume(double now_s, std::string * why)
 
 bool TransportStateMachine::reset(double now_s, std::string * why)
 {
+  limit_streak_ = 0;
   if (state_ == State::Abort) {
     if (why) {*why = "abort_requires_start";}
     record(now_s, "reject", toString(state_), toString(state_), "abort_requires_start",
@@ -590,6 +592,14 @@ void TransportStateMachine::checkTimeout(double now_s)
   }
 }
 
+bool TransportStateMachine::limitPressure(const ControllerStatus & st) const
+{
+  // Either the solver keeps pushing joints at the velocity cap, or the arm is
+  // inside the margin of a position limit.  Both are "the arm is running out
+  // of room"; neither is a fault on its own.
+  return st.active_limit_count > 0 || st.min_limit_margin_rad < cfg_.limit_margin_rad;
+}
+
 bool TransportStateMachine::tickWeld(double now_s)
 {
   if (weld_ == nullptr) {return false;}
@@ -744,10 +754,23 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
                     "solve_fail_streak " + std::to_string(st_in->solve_fail_streak));
     return;
   }
-  if (st_in->active_limit_count > 0) {
-    enterProtection(Protection::Hold, "joint_limit_saturation", now_s,
-                    "active_limit_count " + std::to_string(st_in->active_limit_count));
-    return;
+  // W7-B finding: active_limit_count counts joints whose |dq| is at the
+  // velocity cap (v_max*dt), which a normal transport start saturates on
+  // almost every joint.  Position-limit pressure is min_limit_margin_rad.
+  // Protect on *sustained* pressure only; one saturated cycle is a transient.
+  if (limitPressure(*st_in)) {
+    ++limit_streak_;
+    if (limit_streak_ > cfg_.limit_saturation_cycles) {
+      enterProtection(Protection::Hold, "joint_limit_saturation", now_s,
+                      "sustained limit pressure: " + std::to_string(limit_streak_) +
+                      " consecutive samples, velocity-capped joints " +
+                      std::to_string(st_in->active_limit_count) +
+                      ", nearest position limit " +
+                      std::to_string(st_in->min_limit_margin_rad) + " rad");
+      return;
+    }
+  } else {
+    limit_streak_ = 0;
   }
   if (st_in->executor_heartbeat_required && heartbeatStale(now_s)) {
     enterProtection(Protection::Hold, "executor_lost", now_s,

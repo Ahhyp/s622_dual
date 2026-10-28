@@ -81,6 +81,11 @@ struct ControllerStatus
   std::array<double, 12> dq{};
   int solve_fail_streak = 0;
   int active_limit_count = 0;
+  // Distance from the nearest joint *position* limit, in rad (signed: negative
+  // means past the limit).  This is what "the arm is running out of travel"
+  // actually looks like; active_limit_count is a velocity-cap saturation
+  // counter and must not be read as a position-limit violation.
+  double min_limit_margin_rad = 0.0;
   double e_obj_pos_m = 0.0;
   double e_obj_rot_rad = 0.0;
   double sigma_min_stack = 0.0;
@@ -128,6 +133,15 @@ struct Config
   double v_max = 2.5;
   int resume_fail_max = 2;
   int solve_fail_streak_limit = 10;
+  // Joint-limit pressure protection: HOLD only after this many *consecutive*
+  // status samples show the arm either at a velocity cap or inside
+  // limit_margin_rad of a position limit.  One saturated cycle is a normal
+  // transient of a transport start, not a fault (W7-B finding, 2026-10-28).
+  int limit_saturation_cycles = 25;
+  // How close to a position limit counts as "running out of room".  Default
+  // 0.0 = only an actual violation (margin < 0); a positive band is a profile
+  // choice (the Gazebo profile sets 0.05 rad).
+  double limit_margin_rad = 0.0;
 };
 
 struct StartRequest
@@ -224,6 +238,8 @@ private:
   // C4.3 S4 W7: drives the attach client for GRASP / RELEASE.  Returns true when
   // it has taken over this tick (state is still latched or still waiting).
   bool tickWeld(double now_s);
+  bool limitPressure(const ControllerStatus & st) const;
+  int limit_streak_ = 0;
   void record(double now_s, const std::string & kind, const std::string & from,
               const std::string & to, const std::string & code, const std::string & detail);
   void advance(double now_s, const std::string & detail);
