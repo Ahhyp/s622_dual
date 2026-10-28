@@ -1,0 +1,61 @@
+[Msg] Ignition Gazebo Server v6.16.0
+[Msg] Loading SDF world file[/tmp/w6probe/probe_world.sdf].
+[Msg] Serving entity system service on [/entity/system/add]
+[Dbg] [Physics.cc:804] Loaded [ignition::physics::dartsim::Plugin] from library [/usr/lib/x86_64-linux-gnu/ign-physics-5/engine-plugins/libignition-physics-dartsim-plugin.so]
+[Dbg] [SystemManager.cc:70] Loaded system [ignition::gazebo::systems::Physics] for entity [1]
+[Msg] Create service on [/world/w6probe/create]
+[Msg] Remove service on [/world/w6probe/remove]
+[Msg] Pose service on [/world/w6probe/set_pose]
+[Msg] Pose service on [/world/w6probe/set_pose_vector]
+[Msg] Light configuration service on [/world/w6probe/light_config]
+[Msg] Physics service on [/world/w6probe/set_physics]
+[Msg] SphericalCoordinates service on [/world/w6probe/set_spherical_coordinates]
+[Msg] Enable collision service on [/world/w6probe/enable_collision]
+[Msg] Disable collision service on [/world/w6probe/disable_collision]
+[Msg] Material service on [/world/w6probe/visual_config]
+[Msg] Material service on [/world/w6probe/wheel_slip]
+[Dbg] [SystemManager.cc:70] Loaded system [ignition::gazebo::systems::UserCommands] for entity [1]
+[Dbg] [SystemManager.cc:70] Loaded system [ignition::gazebo::systems::SceneBroadcaster] for entity [1]
+[Dbg] [DetachableJoint.cc:137] Detach topic is: /probe/detach
+[Dbg] [DetachableJoint.cc:143] DetachableJoint subscribing to messages on [/probe/detach]
+[Dbg] [DetachableJoint.cc:160] Attach topic is: /probe/attach
+[Dbg] [DetachableJoint.cc:195] Output topic is: /probe/state
+[Dbg] [SystemManager.cc:70] Loaded system [ignition::gazebo::systems::DetachableJoint] for entity [8]
+[Msg] Loaded level [3]
+[Msg] Serving world controls on [/world/w6probe/control], [/world/w6probe/control/state] and [/world/w6probe/playback/control]
+[Msg] Serving GUI information on [/world/w6probe/gui/info]
+[Msg] World [w6probe] initialized with [fast] physics profile.
+[Msg] Serving world SDF generation service on [/world/w6probe/generate_world_sdf]
+[Msg] Serving world names on [/gazebo/worlds]
+[Msg] Resource path add service on [/gazebo/resource_paths/add].
+[Msg] Resource path get service on [/gazebo/resource_paths/get].
+[Msg] Resource path resolve service on [/gazebo/resource_paths/resolve].
+[Msg] Resource paths published on [/gazebo/resource_paths].
+[Msg] Server control service on [/server_control].
+[Msg] Found no publishers on /stats, adding root stats topic
+[Msg] Found no publishers on /clock, adding root clock topic
+[Dbg] [SimulationRunner.cc:496] Creating PostUpdate worker threads: 2
+[Dbg] [SimulationRunner.cc:507] Creating postupdate worker thread (0)
+[Dbg] [DetachableJoint.cc:259] Attaching entity: 16
+[Dbg] [Physics.cc:1594] Creating detachable joint [16]
+[Dbg] [SimulationFeatures.cc:71] Simulation timestep set to: 0.004
+[Msg] Serving scene information on [/world/w6probe/scene/info]
+[Msg] Serving graph information on [/world/w6probe/scene/graph]
+[Msg] Serving full state on [/world/w6probe/state]
+[Msg] Serving full state (async) on [/world/w6probe/state_async]
+[Msg] Publishing scene information on [/world/w6probe/scene/info]
+[Msg] Publishing entity deletions on [/world/w6probe/scene/deletion]
+[Msg] Publishing state changes on [/world/w6probe/state]
+[Msg] Publishing pose messages on [/world/w6probe/pose/info]
+[Msg] Publishing dynamic pose messages on [/world/w6probe/dynamic_pose/info]
+[Dbg] [DetachableJoint.cc:281] Removing entity: 16
+[Dbg] [Physics.cc:1748] Detaching joint [16]
+[Dbg] [DetachableJoint.cc:310] Already detached
+[Dbg] [DetachableJoint.cc:310] Already detached
+[Dbg] [DetachableJoint.cc:259] Attaching entity: 17
+[Dbg] [Physics.cc:1594] Creating detachable joint [17]
+[Dbg] [DetachableJoint.cc:167] Already attached
+[Dbg] [SignalHandler.cc:141] Received signal[15].
+[Dbg] [ServerPrivate.cc:110] Server received signal[15]
+[Dbg] [gz.cc:410] Shutting down ign-gazebo-server
+[Dbg] [SimulationRunner.cc:523] Exiting postupdate worker thread (0)

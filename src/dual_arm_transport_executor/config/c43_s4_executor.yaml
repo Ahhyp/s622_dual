@@ -1,0 +1,48 @@
+# C4.3 S4.1 W3-R1 — executor configuration.
+#
+# Every number below is either (a) taken from an approved contract, or (b) a
+# [待标定] placeholder that the plan explicitly marks as "no measured basis yet".
+# (b) values are marked BELOW and must not be quoted as validated thresholds.
+c43_s4_transport_executor:
+  ros__parameters:
+    dt: 0.008                       # 125 Hz, matches the controller
+    # W3-R2 B2: the controller publishes status at ~10 Hz when the ack is unchanged
+    # (status_period_ticks = 13 x 8 ms), measured median 0.1039 s / max 0.1048 s on
+    # the mock bench.  0.024 s (three control periods) marked every live status stale,
+    # so precheck rejected every real start.  0.3 s = ~3 x the measured publish period.
+    status_stale_timeout_s: 0.3
+    heartbeat_timeout_s: 0.100      # plan E8, frozen
+    approach_timeout_s: 5.0         # [待标定] plan §4.3.1
+    grasp_timeout_s: 3.0            # [待标定] plan §4.3.1
+    release_timeout_s: 3.0          # [待标定] plan §4.3.1
+    phase_timeout_scale: 1.5        # plan §4.3.1 "轨迹时长 x1.5"
+    resume_pos_tol_m: 0.005         # plan §4.2.2 (5 mm)
+    resume_rot_tol_rad: 0.03490658503988659   # plan §4.2.2 (2 deg)
+    resume_fail_max: 2              # plan §4.2.2
+    solve_fail_streak_limit: 10     # plan E3
+    trajectory_duration_s: 5.1      # the frozen S3 five-phase trajectory
+    heartbeat_period_s: 0.02        # 50 Hz, << 100 ms timeout
+    artifacts_dir: /tmp/c43_w3r1
+    run_id: executor_run
+
+    # ---- W6: Gazebo weld (DetachableJoint) -------------------------------
+    # Measured in Fortress 6.16 (C4.3_S4_W6-0_DetachableJoint实测报告_20261028.md):
+    #  * the plugin CANNOT start unwelded -- `initial_attach` does not exist, and the
+    #    startup weld appears 2.165-2.201 s after the server comes up;
+    #  * in 2 of 4 runs that startup weld teleported the sample 0.475 m back to its
+    #    SDF spawn pose, so a startup weld is never evidence of a grasp;
+    #  * attach/detach are subscriber-side topics (they do NOT appear in
+    #    `ign topic -l`); the plugin logs exactly the three names below.
+    # The executor therefore releases the startup weld and confirms the release
+    # before it may move (attach_client.cpp).
+    attach_topic: /c43/attach
+    detach_topic: /c43/detach
+    weld_state_topic: /c43/weld_state
+    weld_state_stale_s: 0.25        # [待标定] 2.5 x the controller's 10 Hz status period
+    weld_transition_timeout_s: 0.5  # [待标定] one plugin tick + bridge latency
+    weld_max_attach_attempts: 3     # [待标定] same bound as the hold/abort requester
+    weld_startup_release_timeout_s: 5.0   # W6-0 measured the weld at <= 2.2 s
+    # Frozen criterion, C4.3_S4_执行规划.md 14.3 C3: attach must not translate the
+    # sample by more than 2 mm within 100 ms.  This is NOT a new threshold.
+    weld_max_snap_m: 0.002
+

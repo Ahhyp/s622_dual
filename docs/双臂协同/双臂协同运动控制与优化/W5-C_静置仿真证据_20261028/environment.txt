@@ -1,0 +1,42 @@
+# W5-C / W5-B 运行环境与哈希（2026-10-28）
+
+## Gazebo
+```
+6.16.0
+```
+
+- kernel: `6.18.54.1-microsoft-standard-WSL2`
+- WSL: `True`
+- nproc: 16
+- GUI 会话：WSLg（`DISPLAY=:0`），`headless:=false`
+
+## 命令与退出码
+```
+ign topic -e -t /world/c43_s4_world/pose/info > pose_info_raw.txt
+ign gazebo -s -r -v 3 /home/yep/my_S622/src/gz_launch/worlds/c43_s4_world.sdf
+ros2 launch gz_launch c43_s4_transport.launch.py headless:=false   # W5-B GUI 验证
+```
+- W5-C 测试脚本退出码: 0（`OBSERVED`，仅表示观测区间 ≥ 5.0 s 仿真时间，不代表阈值 PASS）
+- Gazebo server 退出码（W5-C 那次）: 0
+
+## 哈希（sha256，取自 summary.json 的运行前快照）
+```
+3178284ffef3c57605117a52e148232bd6731f748da538bb5fb139b3ff8aa225  world
+e5465e31e5fd713aab8a7127acc5b4dc6cb18fa067cf2ee29638a76967051e81  c43_sample/model.config
+074016ed91011793d742ff6a4078f224172c2d2cc32cf9653c9a41d3172c2f6e  c43_sample/model.sdf
+80919a7a69a6243f345742c19ac51cea8d6c403f15fc57506f9f617d4d332e58  c43_support/model.config
+1748502bb06dd2d54656d6752d919e4cce06a1f3c87da2492cb299f10e674c17  c43_support/model.sdf
+f7c18fed92cce97c96367ff4c01d31559eb3d1faebdf4ad19f12c1c83031399e  table/model.config
+2f680cf16dc48f09d2119e57a9707d3efa22704753bef463fdc87d970524cd49  table/model.sdf
+57d83667b6c5ae94c4eba458719722ddf783efa22272fd1c6b000c0177f19bc4  script
+```
+
+## 归档文件（本文件自身除外）
+```
+39b1db84f713996e92cccb739ee18763424d28e5b043f928eea4422cf6b09b52  README.md  (4428 B)
+956ce55bd84ef73f049d281cd1ca78e3ae1111b5a28338d1fdd492f10885e655  gazebo_server.log  (5066 B)
+2f41f446fe93a15cbfcd41616b2cd9eb679fa0054f3e28efa9be302f0cf6f698  gui_view_20261028.png  (88047 B)
+5df284a208236707debdd7c3e56d348b76dd15a4fcf77ecbffd4df95c51e79e9  pose_info_raw.txt  (522515 B)
+344283bfa3c817ecd50017f15dcaca9a956a50998b057921ccc19e3ecabf5443  pose_samples.csv  (24349 B)
+3084d5c68af8214f9998388d778f062d87216b84a6c1089293f84961fbdab8cc  summary.json  (3506 B)
+```

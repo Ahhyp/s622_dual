@@ -1,0 +1,63 @@
+{
+  "schema": "c43s4.w7a.wiring_smoke.v1",
+  "captured_utc": "2026-10-28T08:01:30Z",
+  "purpose": "W7-A 接线 smoke：确认 Gazebo + gz_ros2_control + dual_arm_qp_controller 能在同一进程树里起来并跑到 125 Hz，作为 W7-B 全流程的前置证据。",
+  "command": "HOME=/tmp/w7a/home ROS_DOMAIN_ID=71 ROS_LOCALHOST_ONLY=1 ros2 launch dual_arm_qp_controller s622_dual_arm_qp.launch.py gui:=false",
+  "environment": {
+    "kernel": "5.15.153.1-microsoft-standard-WSL2",
+    "wsl": true,
+    "native_rt": false,
+    "gazebo": "ign gazebo 6.16.0",
+    "ros": "humble",
+    "domain_id": 71,
+    "rtps_shm": "unavailable (Failed to create segment ...: Permission denied) -> UDP fallback"
+  },
+  "observed": {
+    "world": "install/share/gz_launch/worlds/dual_arm_world.sdf",
+    "controllers_loaded_and_activated": [
+      "joint_state_broadcaster",
+      "left_arm_controller",
+      "right_arm_controller",
+      "left_hand_controller",
+      "right_hand_controller",
+      "dual_arm_qp_controller"
+    ],
+    "qp_controller_activated": true,
+    "qp_controller_q0": [0.5, -1.05, 1.05, -1.05, -0.8, 0.0, 0.5, -1.05, 1.05, -1.05, -0.8, 0.0],
+    "control_period": {"arg_ms": 8.0, "measured_mean_ms": 8.0, "p95_ms": 8.0, "p99_ms": 8.0, "max_ms": 8.0},
+    "overruns": "0/2500 at the last reported sample",
+    "solver_p99_ms": 0.206,
+    "run_duration_s_approx": 43
+  },
+  "findings": [
+    {
+      "id": "W7-A-F1",
+      "severity": "P1",
+      "statement": "在 Gazebo 控制器路径下 home_q 收到 140 个值（期望 12），控制器报 ERROR 并回落到 S2 q_grasp12。",
+      "log": "[ERROR] [dual_arm_qp_controller]: home_q must have 12 values (got 140); using the S2 q_grasp default",
+      "impact": "起点门限仍生效（回落到冻结 q_grasp12），但 Gazebo 档的 home_q 从未按配置生效；这是配置/参数解析缺陷，不是行为正确性证据。",
+      "status": "OPEN — 未修复（超出 W7 软件接线范围；须单独定位参数来源后修）"
+    },
+    {
+      "id": "W7-A-F2",
+      "severity": "P2",
+      "statement": "该路径不 bridge attach/detach/weld_state，也不使用 W6 的 c43_s4_dual_arm_gazebo.urdf.xacro，因此本 smoke 只证明控制器链路，不证明 W7 全流程。",
+      "impact": "W7-B/C 仍需专用的 C4.3 组合 launch（plugin xacro + 三主题桥 + executor）。",
+      "status": "OPEN"
+    },
+    {
+      "id": "W7-A-F3",
+      "severity": "P2",
+      "statement": "该路径使用 dual_arm_qp_gazebo_controllers.yaml（无 executor 心跳），protection 报告的 missing(e7_arm_gap,e8_executor_heartbeat) 与既有 W2 记录一致。",
+      "impact": "W7 全流程必须启动 executor 并发心跳，否则 E8 会按设计冻结。",
+      "status": "KNOWN"
+    }
+  ],
+  "artifacts": {
+    "smoke_log_filtered.txt_sha256": "1c2affc6cbd57ab19cb538a6cf22b2e32bb2083f6d6e6cdb906450f9867b9f71",
+    "raw_launch_log_sha256": "d25100afd96dddcaf23c52241382dc05e23a3681f5373179605de3f38f4d348b",
+    "raw_launch_log_location": "/tmp/w7a/launch.log (NOT archived in repo; filtered excerpt is)",
+    "raw_launch_log_lines": 233
+  },
+  "verdict": "W7_A_PARTIAL — 控制器/控制器管理/夹爪控制器在 Gazebo 中全部激活且 8 ms 周期 0 overrun；但 W6 焊接插件与 executor 未接入该路径，全流程未执行。"
+}

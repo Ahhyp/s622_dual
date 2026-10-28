@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dual_arm_transport_executor</name>
+  <version>0.1.0</version>
+  <description>C4.3 S4.1 W3-R1: transport task executor - state machine, protection latching, fault injection, artifacts. Software only: no Gazebo, no real hardware.</description>
+  <maintainer email="probe@example.com">s622</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- Core library and its tests are pure C++: no ROS, no MoveIt, no Gazebo. -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Used only by the optional ROS adapter node.  dual_arm_qp_controller is the
+       single source of TransportStatus / StartTransport / AbortTransport: this
+       package must NOT define a second copy of those interfaces.
+       The pure C++ core library itself includes no ROS header. -->
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>dual_arm_qp_controller</depend>
+  <!-- R4 (D5-3): collision_guard reuses the S3 capsule model, not a second maths. -->
+  <depend>dual_arm_collision</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

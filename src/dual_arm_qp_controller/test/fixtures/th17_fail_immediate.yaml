@@ -1,0 +1,74 @@
+# C4.3 S4.1 W2 mock-bench profile.
+#
+# Derived from config/dual_arm_qp_controllers.yaml with exactly two changes:
+#   w_center 1e-2 -> 1e-4  (match the S3 ff_1 baseline used by S4-T2)
+#   require_executor_heartbeat: true + timeout 0.1 s  (S4-T13 / E8 on the bench)
+# Everything else (kp_rel 10, w_rel 1, w_slack 1e3, v_max 2.5, collision_d_stop 0)
+# already matches S3, so the per-cycle dq comparison is meaningful.
+# QP profile (decision D2): position command interfaces + the QP controller.
+# This is deliberately SEPARATE from the velocity JTC profiles
+# (dual_arm_controllers.yaml / real_controllers.yaml); never load both for the
+# same arm joints.
+controller_manager:
+  ros__parameters:
+    update_rate: 125  # Hz == QP dt 0.008 s
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    dual_arm_qp_controller:
+      type: dual_arm_qp_controller/DualArmQpController
+
+dual_arm_qp_controller:
+  ros__parameters:
+    test_fail_readstate_cycles: 1000
+    test_fail_readstate_after_cycles: 150
+    # 12 joint names, order = [left_j1..left_j6, right_j1..right_j6]
+    joints:
+      - left_j1
+      - left_j2
+      - left_j3
+      - left_j4
+      - left_j5
+      - left_j6
+      - right_j1
+      - right_j2
+      - right_j3
+      - right_j4
+      - right_j5
+      - right_j6
+    dt: 0.008
+    kp_rel: 10.0
+    w_rel: 1.0
+    w_slack: 1000.0
+    # C4.3 S4.1 W2: 1e-2 -> 1e-4 so this profile matches the S3 `ff_1` baseline
+    # (w_center trades step size against tracking accuracy at first order; see
+    # the measurement table in config/dual_arm_qp_gazebo_controllers.yaml).
+    w_center: 0.0001
+    w_reg: 0.000001
+    v_max: 2.5
+    # D7 stream health
+    tracking_error_limit: 0.0     # 0 disables this check
+    solve_failure_limit: 5
+    stall_inject_arm: -1          # -1 off, 0 left, 1 right
+    stall_inject_start_s: -1.0
+    stall_inject_duration_s: 0.0
+    # ---- C2.7c independent safety layer (0 = disabled) ----
+    # hard arm-arm distance stop; FCL capsules built from DH link frames
+    collision_d_stop: 0.0
+    # C4.3 S4.1 W2: the E8 executor-heartbeat interlock is REQUIRED on this
+    # bench, so the W2 test can prove that stopping the heartbeat latches HOLD.
+    # On a bench with no executor the heartbeat comes from the test driver.
+    require_executor_heartbeat: true
+    executor_heartbeat_timeout_s: 0.1
+    collision_link_radius: 0.06
+    # test-only relative-pose stimulus (0 = off)
+    test_sweep_amp_m: 0.0
+    test_sweep_period_s: 4.0
+    # C4.3 S4.1 W2: the bench plant (config/c43_s4_mock_dual_arm.urdf.xacro)
+    # initialises the arms at the frozen S2 q_grasp12, so the production
+    # defaultHomeQ() gate applies unchanged -- no bench-specific home_q.
+    # state_interface initial_value is the only way to pose mock_components, and
+    # the controller never moves the arms while IDLE, so this is the honest way
+    # to start a transport from the grasp configuration (executor APPROACH is
+    # W3+).
+    start_pose_tolerance_rad: 0.05

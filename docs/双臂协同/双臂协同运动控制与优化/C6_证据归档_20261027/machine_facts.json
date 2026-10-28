@@ -1,0 +1,19 @@
+{
+  "schema": "c43s4.native_rt.machine_facts.v1",
+  "collected_utc": "2026-10-27T14:30:10Z",
+  "kernel": "Linux version 6.18.54.1-microsoft-standard-WSL2 (root@9b80f41eb17c) (gcc (GCC) 13.2.0, GNU ld (GNU Binutils) 2.41) #1 SMP PREEMPT_DYNAMIC Tue Oct  6 19:13:07 UTC 2026",
+  "kernel_release": "6.18.54.1-microsoft-standard-WSL2",
+  "kernel_build": "#1 SMP PREEMPT_DYNAMIC Tue Oct  6 19:13:07 UTC 2026",
+  "wsl": true,
+  "preempt_rt_flag": false,
+  "preempt_rt_flag_value": "",
+  "cmdline": "initrd=\\initrd.img WSL_ROOT_INIT=1 panic=-1 nr_cpus=16 hv_utils.timesync_implicit=1 printk.devkmsg=on page_reporting.page_reporting_order=5 hv_storvsc.storvsc_max_hw_queues=4 console=hvc0 debug pty.legacy_count=0 WSL_ENABLE_CRASH_DUMP=1",
+  "isolcpus": false,
+  "nproc": 16,
+  "governor_cpu0": "",
+  "cgroup_cpu_max": "max 100000",
+  "chrt_present": true,
+  "chrt_fifo_ok": false,
+  "git_head": "bb36fe24fcfbdbd21d65cefc4a72ecc5ad5b6672",
+  "git_status_count": 1
+}

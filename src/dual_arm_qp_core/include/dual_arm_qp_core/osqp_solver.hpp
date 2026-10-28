@@ -35,6 +35,7 @@ public:
     OsqpSolver& operator=(const OsqpSolver&) = delete;
 
     QpSolution solve(const QpProblem& problem) override;
+    void solveInto(const QpProblem& problem, QpSolution& dst) override;
     std::string name() const override { return "osqp"; }
 
     void setOptions(const OsqpOptions& options);

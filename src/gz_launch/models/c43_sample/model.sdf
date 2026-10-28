@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<!--
+  c43_sample model.sdf —— C4.3 S4 标准样件（W5-A）
+
+  冻结几何（S2 transport_baseline.yaml, schema c43_s2_transport_baseline/v1）：
+    size  = 0.12 x 0.05 x 0.05 m   (object.size_xyz)
+    mass  = 0.35 kg                (object.mass)
+  惯量：S2 未给出，按均匀密度长方体由冻结尺寸+质量导出（详见 model.config 注释）。
+
+  动态刚体：不设 <static>，参与重力与碰撞；碰撞与视觉几何一致（同一长方体）。
+  摩擦/接触刚度非冻结参数，取值仅为「样件能稳定停在支撑顶面」这一常识性需要，
+  其最终是否满足 W5-C 静置判据由后续仿真实测决定，不作为已批准阈值。
+-->
+<sdf version="1.9">
+  <model name="c43_sample">
+    <pose>0 0 0 0 0 0</pose>
+    <self_collide>false</self_collide>
+    <static>false</static>
+
+    <link name="base_link">
+      <pose>0 0 0 0 0 0</pose>
+
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.35</mass>
+        <inertia>
+          <ixx>1.458333e-04</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>4.929167e-04</iyy>
+          <iyz>0</iyz>
+          <izz>4.929167e-04</izz>
+        </inertia>
+      </inertial>
+
+      <collision name="collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.12 0.05 0.05</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>1.0</mu>
+              <mu2>1.0</mu2>
+            </ode>
+          </friction>
+          <contact>
+            <ode>
+              <kp>1.0e6</kp>
+              <kd>1.0</kd>
+              <max_vel>0.01</max_vel>
+              <min_depth>0.0001</min_depth>
+            </ode>
+          </contact>
+        </surface>
+      </collision>
+
+      <visual name="visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.12 0.05 0.05</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.85 0.45 0.10 1</ambient>
+          <diffuse>0.90 0.50 0.12 1</diffuse>
+          <specular>0.10 0.10 0.10 1</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

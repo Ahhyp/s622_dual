@@ -16,6 +16,7 @@
 #ifndef DUAL_ARM_QP_CONTROLLER__TRANSPORT_TASK_HPP_
 #define DUAL_ARM_QP_CONTROLLER__TRANSPORT_TASK_HPP_
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -40,6 +41,18 @@ enum class TransportState : int {
     Fault = 4,   ///< latched hardware/math fault; needs ~/reset
     Complete = 5 ///< t_traj reached duration; object task holds the final pose
 };
+
+/// C7-A Rev.2 (B-3-1): who asked for the current HOLD.  This lives in the task
+/// rather than in the controller because the pre-solver refusals raised inside
+/// step() (near-pi / invalid row) are HOLDs too, and the controller has no call
+/// site there -- tagging per call site could only ever cover 4 of the 5 sources.
+enum class HoldOrigin : std::uint8_t {
+    None = 0,       ///< never held
+    Controller = 1, ///< own safety layer, or a pre-solver refusal in step()
+    Executor = 2    ///< explicit ~/hold_transport request
+};
+
+const char* holdOriginName(HoldOrigin o) noexcept;
 
 const char* transportStateName(TransportState s) noexcept;
 
@@ -166,7 +179,9 @@ public:
     /// §4.2.1: advance the trajectory clock iff this cycle was committed.
     void advance(bool committed);
 
-    void hold(const char* code);
+    /// origin defaults to Controller so every pre-existing call site keeps
+    /// its exact meaning; only ~/hold_transport passes Executor.
+    void hold(const char* code, HoldOrigin origin = HoldOrigin::Controller);
     void fault(const char* code);
     void abort(const char* code);
 
@@ -182,9 +197,50 @@ public:
     bool active() const { return traj_ != nullptr; }
     bool running() const { return state_ == TransportState::Running; }
     const char* failureCode() const { return failure_code_; }
+    HoldOrigin holdOrigin() const { return hold_origin_; }
     const dual_arm::Iso3& leftTrightTarget() const { return left_T_right_; }
     double tTraj() const { return t_traj_; }
     double duration() const { return traj_ ? traj_->duration() : 0.0; }
+
+    // ---- W3-R2 (approved D5-1): task-phase observation ----------------------
+    // The phase table is the FROZEN spec the controller was started with; these
+    // accessors only expose it, they never reinterpret it.  phaseIndexAt() uses
+    // the same half-open convention as the executor (last phase closed), so both
+    // sides of the wire agree on boundary ownership.
+    int phaseCount() const {
+        return traj_ ? static_cast<int>(traj_->spec().phases.size()) : 0;
+    }
+    const char* phaseName(int i) const {
+        if (traj_ == nullptr) return "";
+        const auto& phases = traj_->spec().phases;
+        if (i < 0 || static_cast<size_t>(i) >= phases.size()) return "";
+        return phases[static_cast<size_t>(i)].name.c_str();
+    }
+    double phaseDuration(int i) const {
+        if (traj_ == nullptr) return 0.0;
+        const auto& phases = traj_->spec().phases;
+        if (i < 0 || static_cast<size_t>(i) >= phases.size()) return 0.0;
+        return phases[static_cast<size_t>(i)].duration;
+    }
+    /// Index of the phase containing t (clamped into [0, duration]); -1 if no
+    /// trajectory is latched.
+    int phaseIndexAt(double t) const {
+        if (traj_ == nullptr) return -1;
+        const auto& b = traj_->boundaryTimes();
+        if (b.size() < 2) return 0;
+        const int n = static_cast<int>(b.size()) - 1;
+        if (!(t > b.front())) return 0;
+        for (int i = 0; i < n; ++i) {
+            if (t < b[static_cast<size_t>(i) + 1]) return i;
+        }
+        return n - 1;  // last phase is closed at the end of the trajectory
+    }
+    double phaseStartTime(int i) const {
+        if (traj_ == nullptr) return 0.0;
+        const auto& b = traj_->boundaryTimes();
+        if (i < 0 || static_cast<size_t>(i + 1) >= b.size()) return 0.0;
+        return b[static_cast<size_t>(i)];
+    }
     int solveFailStreak() const { return solve_fail_streak_; }
     int resumeFailCount() const { return resume_fail_count_; }
     /// Accumulated pose offset applied by resume (identity when never shifted).
@@ -207,6 +263,7 @@ private:
 
     TransportState state_ = TransportState::Idle;
     const char* failure_code_ = "";
+    HoldOrigin hold_origin_ = HoldOrigin::None;
     int solve_fail_streak_ = 0;
     int resume_fail_count_ = 0;
 

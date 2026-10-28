@@ -1,0 +1,1 @@
+malloc=23100 calloc=4504 realloc=1 free=29531 posix_memalign=0 total_alloc=27605

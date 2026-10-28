@@ -1,0 +1,8 @@
+# C4.3 S4 C7-A Rev.2: ask the controller to hold the running transport.
+# seq is executor-assigned, strictly increasing, never 0 (0 = no request).
+# The controller acks via TransportStatus.hold_request_seq / _result.
+string reason
+uint32 seq
+---
+bool   accepted
+string message

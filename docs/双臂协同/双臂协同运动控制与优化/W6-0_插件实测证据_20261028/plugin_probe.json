@@ -1,0 +1,229 @@
+{
+  "schema": "c43s4.w6_0.detachable_joint_probe.v1",
+  "recorded_at_utc": "2026-10-28",
+  "environment": {
+    "ign_gazebo_version": "6.16.0",
+    "plugin_file": "/usr/lib/x86_64-linux-gnu/ign-gazebo-6/plugins/libignition-gazebo6-detachable-joint-system.so.6.16.0",
+    "plugin_bytes": 377712,
+    "plugin_sha256": "0803f3af2608cc7aace725d309a4a8ebc31998c4f8c21dc19c2ed20a902ade8d",
+    "initial_attach_string_occurrences_in_plugin": 0,
+    "kernel": "6.18.54.1-microsoft-standard-WSL2",
+    "note": "initial_attach occurrences counted by byte search (grep -c) over the plugin and all libignition-gazebo6 libraries: 0"
+  },
+  "constructs": {
+    "world_scope": {
+      "works": false,
+      "log": "[Err] [DetachableJoint.cc:51] DetachableJoint should be attached to a model entity. Failed to initialize.",
+      "artifact": "worldscope.log"
+    },
+    "model_scope": {
+      "works": true,
+      "log": [
+        "[Dbg] [DetachableJoint.cc:137] Detach topic is: /probe/detach",
+        "[Dbg] [DetachableJoint.cc:160] Attach topic is: /probe/attach",
+        "[Dbg] [DetachableJoint.cc:195] Output topic is: /probe/state"
+      ]
+    }
+  },
+  "sdf_parameters_accepted": {
+    "parent_link": "parent_link",
+    "child_model": "probe_child",
+    "child_link": "child_link",
+    "attach_topic": "/probe/attach",
+    "detach_topic": "/probe/detach",
+    "output_topic": "/probe/state",
+    "initial_attach": "NOT_SUPPORTED (unsupported/ignored in 6.16)"
+  },
+  "topic_discoverability": {
+    "attach_topic_in_ign_topic_list": false,
+    "detach_topic_in_ign_topic_list": false,
+    "output_topic_in_ign_topic_list": true,
+    "output_message_type": "ignition.msgs.StringMsg",
+    "output_payloads": [
+      "attached",
+      "detached"
+    ],
+    "note": "attach/detach are subscriber-only; presence must be proven by plugin debug logs plus successful delivery, not by `ign topic -l`."
+  },
+  "startup_attachment": {
+    "occurs": true,
+    "configurable": false,
+    "delay_after_server_ready_s": [
+      2.165,
+      2.178,
+      2.196,
+      2.201
+    ],
+    "runs": 4,
+    "no_op_runs": 2,
+    "teleport_runs": 2,
+    "teleport_distance_m": 0.475001,
+    "verdict": "RACY — cannot be relied upon, and cannot be disabled; in 2/4 runs it teleported the child 0.475 m back to its SDF spawn pose."
+  },
+  "runtime_attachment": {
+    "topic_triggered_attach_preserves_current_pose": true,
+    "attach_delta_z_m": 0.0,
+    "detach_settle_delta_z_m": 0.008,
+    "comment": "attaching a child at rest on the ground left z unchanged at 0.024999 m (no snap); detaching let it settle 8 mm onto the ground."
+  },
+  "idempotency": {
+    "repeated_detach": "Already detached (DetachableJoint.cc:310), rc=0, no error",
+    "repeated_attach": "Already attached (DetachableJoint.cc:167), rc=0, no error",
+    "measured_sequence": [
+      "startup: Attaching entity 16 / Creating detachable joint [16]",
+      "detach #1: Removing entity 16 / Detaching joint [16]",
+      "detach #2: Already detached",
+      "detach #3: Already detached",
+      "attach #1: Attaching entity 17 / Creating detachable joint [17]",
+      "attach #2: Already attached"
+    ],
+    "artifact": "idempotency_server.log"
+  },
+  "traces": [
+    {
+      "run": "1",
+      "samples": 8,
+      "z_min": 0.017043,
+      "z_max": 0.024999,
+      "z_first": 0.024999,
+      "z_last": 0.018498,
+      "first_startup_attach_s": 2.201,
+      "startup_attach_effect": "no_op_child_stayed_on_ground",
+      "state_msg_counts": {
+        "attached": 4,
+        "detached": 6
+      },
+      "operator_actions": [
+        {
+          "detach": {
+            "rc": 0,
+            "at_s": 4.407
+          }
+        },
+        {
+          "attach": {
+            "rc": 0,
+            "at_s": 6.068
+          }
+        },
+        {
+          "detach2": {
+            "rc": 0,
+            "at_s": 8.422
+          }
+        }
+      ]
+    },
+    {
+      "run": "2",
+      "samples": 8,
+      "z_min": 0.017043,
+      "z_max": 0.024999,
+      "z_first": 0.024999,
+      "z_last": 0.024999,
+      "first_startup_attach_s": 2.178,
+      "startup_attach_effect": "no_op_child_stayed_on_ground",
+      "state_msg_counts": {
+        "attached": 4,
+        "detached": 4
+      },
+      "operator_actions": [
+        {
+          "detach": {
+            "rc": 0,
+            "at_s": 4.453
+          }
+        },
+        {
+          "attach": {
+            "rc": 0,
+            "at_s": 6.095
+          }
+        },
+        {
+          "detach2": {
+            "rc": 0,
+            "at_s": 8.467
+          }
+        }
+      ]
+    },
+    {
+      "run": "3",
+      "samples": 8,
+      "z_min": 0.018842,
+      "z_max": 0.5,
+      "z_first": 0.024999,
+      "z_last": 0.024999,
+      "first_startup_attach_s": 2.196,
+      "startup_attach_effect": "teleported_back_to_spawn",
+      "state_msg_counts": {
+        "attached": 4,
+        "detached": 4
+      },
+      "operator_actions": [
+        {
+          "detach": {
+            "rc": 0,
+            "at_s": 4.503
+          }
+        },
+        {
+          "attach": {
+            "rc": 0,
+            "at_s": 6.314
+          }
+        },
+        {
+          "detach2": {
+            "rc": 0,
+            "at_s": 7.972
+          }
+        }
+      ]
+    },
+    {
+      "run": "4",
+      "samples": 9,
+      "z_min": 0.016971,
+      "z_max": 0.5,
+      "z_first": 0.024999,
+      "z_last": 0.024999,
+      "first_startup_attach_s": 2.165,
+      "startup_attach_effect": "teleported_back_to_spawn",
+      "state_msg_counts": {
+        "attached": 4,
+        "detached": 4
+      },
+      "operator_actions": [
+        {
+          "detach": {
+            "rc": 0,
+            "at_s": 4.277
+          }
+        },
+        {
+          "attach": {
+            "rc": 0,
+            "at_s": 6.465
+          }
+        },
+        {
+          "detach2": {
+            "rc": 0,
+            "at_s": 8.163
+          }
+        }
+      ]
+    }
+  ],
+  "implications_for_w6": [
+    "Startup attachment cannot be disabled in Fortress 6.16 => the sample would be welded to the left gripper from t=0, which is NOT a GRASP.",
+    "Startup attachment is racy and can teleport the child by 0.475 m, violating the frozen 2 mm attach criterion (C4.3_S4_执行规划.md 14.3 C3) if ever relied on.",
+    "Topic-triggered attach/detach is deterministic and does not snap => GRASP must be the first attach, with the startup weld removed (detach at startup) or replaced by a custom system plugin. Both need approval before W6 product code."
+  ],
+  "reproduction": {
+    "start_server": "HOME=/tmp/w6probe/home ign gazebo -s -r -v 4 probe_world.sdf",
+    "trace": "HOME=/tmp/w6probe/home python3 trace.py probe_world.sdf traceN"
+  }
+}

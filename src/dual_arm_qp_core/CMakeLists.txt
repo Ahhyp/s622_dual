@@ -87,6 +87,65 @@ if(BUILD_TESTING)
     ament_add_gtest(test_qp_benchmark test/test_qp_benchmark.cpp TIMEOUT 300)
     target_link_libraries(test_qp_benchmark ${PROJECT_NAME})
   endif()
+
+  # -------------------------------------------------------------------------
+  # C4.3 S4 W2 -- ULP attribution experiment.  READ THE FILE HEADER FIRST: it
+  # is NOT the acceptance test and it deliberately enforces no tolerance.
+  #
+  # The anchored object task is a TEST-ONLY dependency on purpose: writing the
+  # object row assembly out again here would be a second copy of the
+  # object-frame math, which check_single_object_task_definition.cmake
+  # (C4.3 S4 W0-1) explicitly forbids.  The data paths point at the FROZEN
+  # artifacts (S3 fixture, S4 trajectory, S2 baseline) so this package keeps no
+  # build-time dependency on the controller -- same trick as S4_BASELINE_YAML
+  # in dual_arm_qp_controller/CMakeLists.txt.
+  # -------------------------------------------------------------------------
+  find_package(dual_arm_object_task QUIET)
+  if(dual_arm_object_task_FOUND)
+    find_package(yaml-cpp REQUIRED)
+    ament_add_gtest(test_ulp_attribution test/test_ulp_attribution.cpp TIMEOUT 300)
+    target_link_libraries(test_ulp_attribution ${PROJECT_NAME}
+      dual_arm_object_task::dual_arm_object_task yaml-cpp)
+    target_compile_definitions(test_ulp_attribution PRIVATE
+      S4_FIXTURE_CSV="${CMAKE_CURRENT_SOURCE_DIR}/../dual_arm_qp_controller/test/fixtures/s3_ff_1_dq.csv"
+      S4_TRANSPORT_YAML="${CMAKE_CURRENT_SOURCE_DIR}/../dual_arm_qp_controller/config/c43_s4_transport.yaml"
+      S4_BASELINE_YAML="${CMAKE_CURRENT_SOURCE_DIR}/../dual_arm_transport/config/transport_baseline.yaml"
+      S3_ARTIFACT_CSV="${CMAKE_CURRENT_SOURCE_DIR}/../../runs/c43_s3/w8/ff_1/cycles.csv")
+  else()
+    message(STATUS "dual_arm_qp_core: dual_arm_object_task not found -> "
+                   "test_ulp_attribution (S4 W2 attribution) is NOT built")
+  endif()
+endif()
+
+# ---------------------------------------------------------------------------
+# C4.3 S4 W2-C3 -- D2-B machine gate (approved 2026-10-27, contract v1).
+#
+# This runs the frozen baseline comparison exactly as an auditor would: over the
+# frozen fixtures, with the provenance/library binding, fail-closed.  It is a
+# ctest item rather than a gtest because the gate is deliberately implemented as
+# a standalone script (so it can be run on a machine without the build tree).
+# ---------------------------------------------------------------------------
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+  set(_c3fix "${CMAKE_CURRENT_SOURCE_DIR}/test/fixtures/c3_d2b")
+  # The frozen baseline was produced against the INSTALLED library, so the gate
+  # grades that copy.  (The build-tree .so has a different rpath and therefore a
+  # different sha256; grading it would be a false provenance mismatch.)
+  set(_c3lib "${CMAKE_INSTALL_PREFIX}/lib/libdual_arm_qp_core.so")
+  if(NOT EXISTS "${_c3lib}")
+    set(_c3lib "$<TARGET_FILE:${PROJECT_NAME}>")
+  endif()
+  message(STATUS "dual_arm_qp_core: c3_d2b_gate grades ${_c3lib}")
+  add_test(NAME c3_d2b_gate
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/c3_d2b_gate.py
+      --baseline ${_c3fix}/c3_d2b_candidate_baseline.csv
+      --rerun    ${_c3fix}/c3_d2b_candidate_baseline.rerun.csv
+      --admm     ${_c3fix}/c3_d2b_admm.csv
+      --provenance ${_c3fix}/PROVENANCE.md
+      --lib ${_c3lib})
+  set_tests_properties(c3_d2b_gate PROPERTIES TIMEOUT 180)
+else()
+  message(STATUS "dual_arm_qp_core: python3 not found -> c3_d2b_gate NOT registered")
 endif()
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)

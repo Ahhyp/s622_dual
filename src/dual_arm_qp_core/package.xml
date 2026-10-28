@@ -21,6 +21,10 @@
   <depend>dual_arm_kinematics</depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
+  <!-- C4.3 S4 W2 attribution test only: the anchored object task (one canonical
+       implementation, never re-derived locally) and its yaml-cpp dependency. -->
+  <test_depend>dual_arm_object_task</test_depend>
+  <test_depend>yaml-cpp</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

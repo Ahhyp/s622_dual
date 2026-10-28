@@ -174,7 +174,12 @@ void OsqpSolver::reset() { impl_->reset(); }
 
 QpSolution OsqpSolver::solve(const QpProblem& problem) {
     QpSolution solution;
-    if (!problem.valid()) return solution;
+    solveInto(problem, solution);
+    return solution;
+}
+
+void OsqpSolver::solveInto(const QpProblem& problem, QpSolution& solution) {
+    if (!problem.valid()) return;
 
     const int n = problem.num_vars();
     const int m = problem.num_constraints();
@@ -183,9 +188,9 @@ QpSolution OsqpSolver::solve(const QpProblem& problem) {
     if (impl_->work == nullptr || impl_->n != n || impl_->m != m) {
         // Structure (re)setup: allocate the fixed patterns, fill the REAL
         // numerical data, then call osqp_setup() once.
-        if (!impl_->allocStructure(n, m)) return solution;
+        if (!impl_->allocStructure(n, m)) return;
         impl_->updateValues(problem);
-        if (!impl_->osqpSetup()) return solution;
+        if (!impl_->osqpSetup()) return;
     } else {
         impl_->updateValues(problem);
     }
@@ -194,7 +199,7 @@ QpSolution OsqpSolver::solve(const QpProblem& problem) {
         osqp_update_lower_bound(impl_->work, impl_->l) != 0 ||
         osqp_update_upper_bound(impl_->work, impl_->u) != 0) {
         impl_->reset();  // force a clean setup next time
-        return solution;
+        return;
     }
 
     if (impl_->options.warm_start && problem.x0.size() == n) {
@@ -219,7 +224,7 @@ QpSolution OsqpSolver::solve(const QpProblem& problem) {
     solution.solve_time_ms =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_start)
             .count();
-    return solution;
+    return;
 }
 
 }  // namespace dual_arm_qp

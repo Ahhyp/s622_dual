@@ -1,0 +1,53 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="w6probe">
+    <gravity>0 0 -9.8</gravity>
+    <physics name="fast" type="ignored">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="ignition-gazebo-physics-system" name="ignition::gazebo::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system" name="ignition::gazebo::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system" name="ignition::gazebo::systems::SceneBroadcaster"/>
+    <model name="probe_ground">
+      <static>true</static>
+      <link name="ground_link">
+        <collision name="c"><geometry><plane><normal>0 0 1</normal><size>20 20</size></plane></geometry></collision>
+        <visual name="v"><geometry><plane><normal>0 0 1</normal><size>20 20</size></plane></geometry></visual>
+      </link>
+    </model>
+
+    <model name="probe_parent">
+      <static>true</static>
+      <pose>0 0 1.0 0 0 0</pose>
+      <link name="parent_link">
+        <collision name="c"><geometry><box><size>0.20 0.20 0.05</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.20 0.20 0.05</size></box></geometry></visual>
+      </link>
+
+    </model>
+
+    <model name="probe_child">
+      <pose>0 0 0.5 0 0 0</pose>
+      <link name="child_link">
+        <inertial><mass>0.1</mass>
+          <inertia><ixx>2.1e-05</ixx><iyy>2.1e-05</iyy><izz>2.1e-05</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="c"><geometry><box><size>0.05 0.05 0.05</size></box></geometry>
+          <surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface>
+        </collision>
+        <visual name="v"><geometry><box><size>0.05 0.05 0.05</size></box></geometry></visual>
+      </link>
+    </model>
+<plugin filename="ignition-gazebo-detachable-joint-system"
+              name="ignition::gazebo::systems::DetachableJoint">
+        <parent_link>parent_link</parent_link>
+        <child_model>probe_child</child_model>
+        <child_link>child_link</child_link>
+        <attach_topic>/probe/attach</attach_topic>
+        <detach_topic>/probe/detach</detach_topic>
+        <output_topic>/probe/state</output_topic>
+        <suppress_child_warning>true</suppress_child_warning>
+      </plugin>
+  </world>
+</sdf>
