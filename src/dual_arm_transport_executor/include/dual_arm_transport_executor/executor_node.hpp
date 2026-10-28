@@ -93,6 +93,12 @@ private:
   bool weld_failure_logged_ = false;
   bool have_pre_rel_ = false;
   double pre_rel_[3] = {0.0, 0.0, 0.0};
+  // §14.3 C3 also bounds the rotation jump, so the same snapshot keeps the
+  // parent->child relative orientation (as a quaternion, x y z w).
+  double parent_quat_[4] = {0.0, 0.0, 0.0, 1.0};
+  double child_quat_[4] = {0.0, 0.0, 0.0, 1.0};
+  double pre_rel_q_[4] = {0.0, 0.0, 0.0, 1.0};
+  bool have_pre_rel_q_ = false;
   HoldRequester hold_req_;
   AbortRequester abort_req_;
   std::atomic<int> abort_reply_{0};   // 0 none / 1 accepted / 2 rejected

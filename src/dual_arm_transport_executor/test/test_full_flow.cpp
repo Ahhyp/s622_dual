@@ -92,6 +92,7 @@ struct Rig
       // whatever request it produces; here the "publish" is the plugin_state the
       // next tick feeds back in.
       weld.tick(now);
+      weld.consumeSend(now);   // what the node's driveWeld() does after ticking
       sm.tick(now, fake.ptr());
     }
   }
@@ -129,7 +130,7 @@ void graspWithConfirmedAttach(Rig & r, double snap_m)
   // (startup weld) -- we are detached here, so the attach may proceed.
   r.plugin_state = WeldState::Detached;
   r.tick(1);                       // requestAttach -> RequestAttach -> publish
-  r.weld.setMeasuredSnap(snap_m);   // the node measures this from bridged poses
+  r.weld.setMeasuredSnap(snap_m, 0.0);   // node measures pose AND orientation
   r.plugin_state = WeldState::Attached;
   r.tick(1);   // confirm; if that latches HOLD, do not tick again (the freeze
                // audit would turn a *hold* into a fault purely because the fake

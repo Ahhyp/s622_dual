@@ -432,6 +432,33 @@ void TransportExecutorNode::writeArtifacts()
   RCLCPP_INFO(get_logger(), "artifacts written to %s", dir.c_str());
 }
 
+namespace {
+// q_rel = conj(q_parent) * q_child, normalised, written as x y z w.
+void relativeQuat(const double * qp, const double * qc, double * out)
+{
+  const double px = -qp[0], py = -qp[1], pz = -qp[2], pw = qp[3];
+  const double cx = qc[0], cy = qc[1], cz = qc[2], cw = qc[3];
+  const double w = pw * cw - px * cx - py * cy - pz * cz;
+  const double x = pw * cx + px * cw + py * cz - pz * cy;
+  const double y = pw * cy - px * cz + py * cw + pz * cx;
+  const double z = pw * cz + px * cy - py * cx + pz * cw;
+  const double n = std::sqrt(x * x + y * y + z * z + w * w);
+  if (n > 0.0) {
+    out[0] = x / n; out[1] = y / n; out[2] = z / n; out[3] = w / n;
+  } else {
+    out[0] = 0.0; out[1] = 0.0; out[2] = 0.0; out[3] = 1.0;
+  }
+}
+
+// Angle between two orientations, in radians: 2*acos(|dot|) with unit quaternions.
+double quatAngle(const double * a, const double * b)
+{
+  const double d = std::fabs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]);
+  const double c = d > 1.0 ? 1.0 : d;
+  return 2.0 * std::acos(c);
+}
+}  // namespace
+
 void TransportExecutorNode::driveWeld()
 {
   const double now = nowSeconds();
@@ -444,6 +471,8 @@ void TransportExecutorNode::driveWeld()
     if (have_pre_rel_) {
       for (int i = 0; i < 3; ++i) {pre_rel_[i] = child_pos_[i] - parent_pos_[i];}
     }
+    have_pre_rel_q_ = have_parent_pose_ && have_child_pose_;
+    if (have_pre_rel_q_) {relativeQuat(parent_quat_, child_quat_, pre_rel_q_);}
     weld_attach_pub_->publish(std_msgs::msg::Empty());
     RCLCPP_INFO(get_logger(), "weld: attach requested (attempt %d)", weld_.attempts());
   } else if (a == WeldAction::RequestDetach) {
@@ -477,7 +506,16 @@ void TransportExecutorNode::onWeldState(std_msgs::msg::String::SharedPtr m)
       child_pos_[2] - parent_pos_[2]};
     double d2 = 0.0;
     for (int i = 0; i < 3; ++i) {const double d = rel[i] - pre_rel_[i]; d2 += d * d;}
-    weld_.setMeasuredSnap(std::sqrt(d2));
+    // Rotation jump across the attach (§14.3 C3: <= 0.5 deg).  The criterion is on
+    // the CHANGE of the parent->child orientation, so both relative quaternions are
+    // compared; a translation-only check would accept a weld that spun the sample.
+    double rot_rad = std::nan("");
+    if (have_pre_rel_q_) {
+      double rel_q_now[4];
+      relativeQuat(parent_quat_, child_quat_, rel_q_now);
+      rot_rad = quatAngle(pre_rel_q_, rel_q_now);
+    }
+    weld_.setMeasuredSnap(std::sqrt(d2), rot_rad);
   }
 }
 
@@ -489,11 +527,19 @@ void TransportExecutorNode::onPoses(tf2_msgs::msg::TFMessage::SharedPtr m)
       parent_pos_[0] = t.transform.translation.x;
       parent_pos_[1] = t.transform.translation.y;
       parent_pos_[2] = t.transform.translation.z;
+      parent_quat_[0] = t.transform.rotation.x;
+      parent_quat_[1] = t.transform.rotation.y;
+      parent_quat_[2] = t.transform.rotation.z;
+      parent_quat_[3] = t.transform.rotation.w;
       have_parent_pose_ = true;
     } else if (f == weld_child_frame_) {
       child_pos_[0] = t.transform.translation.x;
       child_pos_[1] = t.transform.translation.y;
       child_pos_[2] = t.transform.translation.z;
+      child_quat_[0] = t.transform.rotation.x;
+      child_quat_[1] = t.transform.rotation.y;
+      child_quat_[2] = t.transform.rotation.z;
+      child_quat_[3] = t.transform.rotation.w;
       have_child_pose_ = true;
     }
   }

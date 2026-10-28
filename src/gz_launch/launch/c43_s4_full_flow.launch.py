@@ -99,9 +99,9 @@ def generate_launch_description():
                       output="screen")],
     )
 
-    def spawner(names):
+    def spawner(names, extra=None):
         return Node(package="controller_manager", executable="spawner",
-                    arguments=names + ["-c", "/controller_manager",
+                    arguments=names + (extra or []) + ["-c", "/controller_manager",
                                        "--controller-manager-timeout", "90"],
                     output="screen")
 
@@ -110,7 +110,17 @@ def generate_launch_description():
         actions=[
             spawner(["joint_state_broadcaster"]),
             spawner(["left_hand_controller", "right_hand_controller"]),
-            TimerAction(period=3.0, actions=[spawner(["dual_arm_qp_controller"])]),
+            TimerAction(period=3.0, actions=[
+                # B-1: gz_ros2_control initialises the arms from
+                # s622_moveit_config/config/initial_positions.yaml (0.5/-1.05/1.05/
+                # -1.05/-0.8/0).  The controller compares the live joints against its
+                # `home_q` and refuses start_transport when they differ, so for this
+                # Gazebo profile the standing configuration *is* that spawn pose.
+                # S2's default home_q is untouched elsewhere.
+                spawner(["dual_arm_qp_controller"], extra=[
+                    "--param-file",
+                    os.path.join(gz_share, "config", "c43_s4_qp_home_override.yaml")]),
+            ]),
         ],
     )
 
@@ -130,6 +140,10 @@ def generate_launch_description():
             "/c43/weld_state@std_msgs/msg/String[ignition.msgs.StringMsg",
         ],
         output="screen",
+        # The executor subscribes to weld_pose_topic (default /c43/weld_pose); without
+        # this remap the bridged pose/info stream stays on the gz topic name and
+        # onPoses() never fires, which turns every attach into attach_snap_unmeasured.
+        remappings=[(f"/world/{world_name}/pose/info", "/c43/weld_pose")],
     )
 
     executor = TimerAction(

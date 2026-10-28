@@ -51,7 +51,12 @@ TEST(AttachClient, StartupGuardIgnoresWeldStateObservedBeforeItStarted)
   c.beginStartupGuard(1.0);
   EXPECT_EQ(c.tick(1.0), WeldAction::RequestDetach)
     << "the plugin may have welded the sample after that stale sample was taken";
+  EXPECT_EQ(c.consumeSend(1.0), WeldAction::RequestDetach) << "published exactly once";
+  EXPECT_EQ(c.consumeSend(1.0), WeldAction::Wait) << "and not again for the same request";
+  // Without a state sample the guard re-arms on a bounded cadence (P1-1: a single
+  // publish is dropped if the plugin has not subscribed yet).
   EXPECT_EQ(c.tick(1.1), WeldAction::Wait);
+  EXPECT_EQ(c.tick(1.3), WeldAction::RequestDetach);
   EXPECT_FALSE(c.startupVerified());
 }
 
@@ -105,7 +110,7 @@ TEST(AttachClient, AttachWithSnapInsideTheFrozenCriterionIsConfirmed)
   AttachClient c = releasedAt();
   c.requestAttach(0.2);
   EXPECT_EQ(c.tick(0.2), WeldAction::RequestAttach);
-  c.setMeasuredSnap(0.001);
+  c.setMeasuredSnap(0.001, 0.0);
   c.observe(WeldState::Attached, 0.3);
   EXPECT_EQ(c.tick(0.3), WeldAction::Confirmed);
   EXPECT_EQ(c.outcome(), "attached");
@@ -118,7 +123,31 @@ TEST(AttachClient, SnapExactlyAtTheCriterionIsAccepted)
   AttachClient c = releasedAt();
   c.requestAttach(0.2);
   c.tick(0.2);
-  c.setMeasuredSnap(0.002);
+  c.setMeasuredSnap(0.002, 0.0);
+  c.observe(WeldState::Attached, 0.3);
+  EXPECT_EQ(c.tick(0.3), WeldAction::Confirmed);
+}
+
+// §14.3 C3 bounds the pose jump in rotation too (0.5 deg).  A translation-only
+// check would accept a weld that spun the sample in place.
+TEST(AttachClient, SnapWithTooMuchRotationIsRejected)
+{
+  AttachClient c = releasedAt();
+  c.requestAttach(0.2);
+  c.tick(0.2);
+  c.setMeasuredSnap(0.0005, 0.02);   // 1.1 deg, over the frozen 0.5 deg
+  c.observe(WeldState::Attached, 0.3);
+  EXPECT_EQ(c.tick(0.3), WeldAction::Failed);
+  EXPECT_EQ(c.outcome(), "attach_snap_exceeded");
+}
+
+// ...and the boundary itself is inclusive.
+TEST(AttachClient, SnapExactlyAtTheRotationCriterionIsAccepted)
+{
+  AttachClient c = releasedAt();
+  c.requestAttach(0.2);
+  c.tick(0.2);
+  c.setMeasuredSnap(0.002, 0.0087266462);
   c.observe(WeldState::Attached, 0.3);
   EXPECT_EQ(c.tick(0.3), WeldAction::Confirmed);
 }
@@ -130,7 +159,7 @@ TEST(AttachClient, AttachThatSnapsBeyondTheCriterionFailsAndRequiresDetach)
   AttachClient c = releasedAt();
   c.requestAttach(0.2);
   c.tick(0.2);
-  c.setMeasuredSnap(0.475);
+  c.setMeasuredSnap(0.475, 0.0);
   c.observe(WeldState::Attached, 0.3);
   EXPECT_EQ(c.tick(0.3), WeldAction::Failed);
   EXPECT_EQ(c.outcome(), "attach_snap_exceeded");
@@ -162,6 +191,7 @@ TEST(AttachClient, AttachThatIsNeverConfirmedFailsAfterBoundedRetries)
   for (int i = 0; i < 20 && !c.failed(); ++i) {
     t += 0.1;
     a = c.tick(t);
+    c.consumeSend(t);   // the node publishes whatever tick armed
   }
   EXPECT_EQ(a, WeldAction::Failed);
   EXPECT_EQ(c.outcome(), "attach_not_confirmed");
@@ -175,7 +205,7 @@ TEST(AttachClient, StaleAttachedSampleDoesNotConfirm)
   AttachClient c = releasedAt();
   c.requestAttach(0.2);
   c.tick(0.2);
-  c.setMeasuredSnap(0.0005);
+  c.setMeasuredSnap(0.0005, 0.0);
   c.observe(WeldState::Attached, 0.25);
   EXPECT_EQ(c.tick(0.9), WeldAction::Wait) << "0.65 s old sample is not evidence";
   EXPECT_FALSE(c.done());

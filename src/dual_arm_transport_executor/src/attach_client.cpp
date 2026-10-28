@@ -64,6 +64,14 @@ bool AttachClient::snapWithinCriterion(double snap_m) const
   return std::isfinite(snap_m) && std::fabs(snap_m) <= cfg_.max_snap_m;
 }
 
+bool AttachClient::snapWithinCriterion(double snap_m, double snap_rad) const
+{
+  // §14.3 C3: pose jump across the attach is bounded in BOTH translation and
+  // rotation.  A translation-only check would accept a weld that spun the sample.
+  return snapWithinCriterion(snap_m) && std::isfinite(snap_rad) &&
+         std::fabs(snap_rad) <= cfg_.max_snap_rad;
+}
+
 void AttachClient::beginStartupGuard(double now_s)
 {
   // Deliberately unconditional: 6.16 welds at startup whether we asked or not, so
@@ -71,6 +79,7 @@ void AttachClient::beginStartupGuard(double now_s)
   mode_ = Mode::Startup;
   attempts_ = 0;
   sent_ = false;
+  armed_ = false;
   startup_verified_ = false;
   detach_required_ = false;
   state_ = WeldState::Unknown;   // a pre-guard sample cannot prove the release
@@ -102,8 +111,9 @@ void AttachClient::requestAttach(double now_s)
     return;
   }
   mode_ = Mode::Attaching;
-  attempts_ = 0;      // counted when the request is actually sent, see tick()
+  attempts_ = 0;      // counted when the request is armed, see tick()
   sent_ = false;
+  armed_ = false;
   deadline_s_ = now_s + cfg_.transition_timeout_s;
   pending_snap_m_ = std::nan("");
   action_ = WeldAction::RequestAttach;
@@ -115,6 +125,7 @@ void AttachClient::requestDetach(double now_s)
 {
   mode_ = Mode::Detaching;
   sent_ = false;
+  armed_ = false;
   deadline_s_ = now_s + cfg_.transition_timeout_s;
   action_ = WeldAction::RequestDetach;
   outcome_ = "detach_pending";
@@ -163,8 +174,15 @@ WeldAction AttachClient::tick(double now_s)
           }
           return action_;
         }
-        if (!sent_) {
-          sent_ = true;
+        // A one-shot publish can be dropped before the plugin subscribes (W6-0
+        // measured a 2.17 s attach delay).  Keep the Request pending on a bounded
+        // cadence while no state sample has arrived; the deadline above still fails
+        // the guard, and consumeSend() bounds the attempt count.
+        if (!armed_ &&
+          (last_send_s_ < 0.0 || (now_s - last_send_s_) >= cfg_.startup_retry_s))
+        {
+          armed_ = true;
+          sent_ = false;   // the previous publish is stale; re-arm the same request
           attempts_ += 1;
           return action_ = WeldAction::RequestDetach;
         }
@@ -180,7 +198,7 @@ WeldAction AttachClient::tick(double now_s)
               "'not measured' is not 'no snap'");
             return action_;
           }
-          if (snapWithinCriterion(pending_snap_m_)) {
+          if (snapWithinCriterion(pending_snap_m_, pending_snap_rad_)) {
             mode_ = Mode::Idle;
             action_ = WeldAction::Confirmed;
             outcome_ = "attached";
@@ -190,12 +208,14 @@ WeldAction AttachClient::tick(double now_s)
           detach_required_ = true;
           fail("attach_snap_exceeded",
             "attached but the measured snap exceeds the frozen 2 mm criterion; "
-            "the executor must detach and re-approach instead of continuing");
+            "the executor must detach and re-approach instead of continuing "
+            "(translation <= 2 mm and rotation <= 0.5 deg, §14.3 C3)");
           return action_;
         }
         if (now_s > deadline_s_) {
           if (attempts_ < cfg_.max_attach_attempts) {
             sent_ = false;
+            armed_ = false;
             deadline_s_ = now_s + cfg_.transition_timeout_s;
             return action_ = WeldAction::Wait;   // next tick re-issues the attach
           }
@@ -204,8 +224,8 @@ WeldAction AttachClient::tick(double now_s)
             std::to_string(attempts_) + " attach(es); an unconfirmed attach is a failure");
           return action_;
         }
-        if (!sent_) {
-          sent_ = true;
+        if (!armed_ && !sent_) {
+          armed_ = true;
           attempts_ += 1;
           return action_ = WeldAction::RequestAttach;
         }
@@ -229,8 +249,9 @@ WeldAction AttachClient::tick(double now_s)
           }
           return action_;
         }
-        if (!sent_) {
-          sent_ = true;
+        if (!armed_ && !sent_) {
+          armed_ = true;
+          attempts_ += 1;
           return action_ = WeldAction::RequestDetach;
         }
         return action_ = WeldAction::Wait;
@@ -241,6 +262,18 @@ WeldAction AttachClient::tick(double now_s)
         if (action_ == WeldAction::Confirmed) { return action_; }
         return action_ = WeldAction::Idle;
   }
+}
+
+WeldAction AttachClient::consumeSend(double now_s)
+{
+  if (sent_ || !armed_) { return WeldAction::Wait; }
+  if (action_ != WeldAction::RequestAttach && action_ != WeldAction::RequestDetach) {
+    return WeldAction::Wait;
+  }
+  armed_ = false;
+  sent_ = true;
+  last_send_s_ = now_s;
+  return action_;
 }
 
 }  // namespace dual_arm_transport_executor

@@ -601,6 +601,8 @@ bool TransportStateMachine::tickWeld(double now_s)
       record(now_s, "weld", "GRASP", "GRASP", "attach_requested",
              "welding the gripper to the sample (startup guard verified)");
     }
+    // tick() only advances timeouts/decisions; the one-shot Request* is published
+    // by the node through consumeSend(), so ticking here cannot swallow it.
     const WeldAction a = weld_->tick(now_s);
     // Only an action produced by OUR attach request counts; the sticky
     // Confirmed left over from the startup release must never be read as one.
@@ -624,6 +626,8 @@ bool TransportStateMachine::tickWeld(double now_s)
       record(now_s, "weld", "RELEASE", "RELEASE", "detach_requested",
              "releasing the sample before opening the gripper (S4 :838 order)");
     }
+    // tick() only advances timeouts/decisions; the one-shot Request* is published
+    // by the node through consumeSend(), so ticking here cannot swallow it.
     const WeldAction a = weld_->tick(now_s);
     if (a == WeldAction::Confirmed) {
       weld_release_done_ = true;

@@ -28,6 +28,7 @@
 #ifndef DUAL_ARM_TRANSPORT_EXECUTOR__ATTACH_CLIENT_HPP_
 #define DUAL_ARM_TRANSPORT_EXECUTOR__ATTACH_CLIENT_HPP_
 
+#include <cmath>
 #include <string>
 
 namespace dual_arm_transport_executor
@@ -67,6 +68,14 @@ struct AttachClientConfig
     /// the sample by more than 2 mm / 0.5 deg within 100 ms.  This client only
     /// checks translation; rotation is the caller's measurement.
     double max_snap_m = 0.002;
+  /// C4.3_S4_执行规划.md §14.3 C3 also bounds the rotation: ||dR|| <= 0.5 deg.
+  double max_snap_rad = 0.0087266462;
+  /// The startup weld release is a ROS publish bridged to Gazebo; a single one can
+  /// be dropped (no subscriber yet, discovery still settling).  Re-send on this
+  /// cadence until a state sample arrives.  The bound is the guard deadline
+  /// (startup_release_timeout_s), not the attach attempt budget: giving up after
+  /// three publishes is what turned a lost message into a failed run.
+  double startup_retry_s = 0.25;
 };
 
 /// What the caller must do on the transport, this cycle.
@@ -109,12 +118,26 @@ public:
   /// tick that observes `attached`, otherwise the client judges a 0 m snap, which
   /// would turn "we did not measure" into "we measured no snap".
   void setMeasuredSnap(double snap_m) { pending_snap_m_ = snap_m; }
+  /// Same, with the rotation change across the attach (§14.3 C3: <= 0.5 deg).
+  void setMeasuredSnap(double snap_m, double snap_rad)
+  {
+    pending_snap_m_ = snap_m;
+    pending_snap_rad_ = snap_rad;
+  }
 
   /// A fresh state sample arrived from the plugin.
   void observe(WeldState s, double now_s);
 
   /// Called every control cycle with the current time; returns the transport action.
+  /// Advancing time and *sending* are separate: tick() decides that a Request* is
+  /// pending, consumeSend() is what the ROS publisher calls exactly once.  Without
+  /// that split, whichever of the state machine / node ticked first swallowed the
+  /// one-shot command and it was never published.
   WeldAction tick(double now_s);
+
+  /// Take the pending Request* (if any) exactly once; marks it sent and counts the
+  /// attempt.  Returns Wait when nothing is pending.
+  WeldAction consumeSend(double now_s);
 
   WeldState state() const { return state_; }
   /// What the client is currently doing (Idle/Wait/Request*/Confirmed/Failed).
@@ -131,6 +154,7 @@ public:
 
   /// Snap check used both when an attach is confirmed and (for evidence) by tests.
   bool snapWithinCriterion(double snap_m) const;
+  bool snapWithinCriterion(double snap_m, double snap_rad) const;
 
 private:
   enum class Mode
@@ -149,8 +173,11 @@ private:
   double state_at_s_ = -1.0;
   double deadline_s_ = -1.0;
   double pending_snap_m_ = 0.0;
+  double pending_snap_rad_ = std::nan("");
+  double last_send_s_ = -1.0;
   int attempts_ = 0;
-  bool sent_ = false;
+  bool sent_ = false;    ///< the armed request has been published (consumeSend)
+  bool armed_ = false;   ///< tick() decided a Request* is due, not yet published
   bool startup_verified_ = false;
   bool detach_required_ = false;   ///< after a snap violation, no retry until detach
   WeldAction action_ = WeldAction::Idle;
