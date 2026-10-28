@@ -36,6 +36,8 @@ int stateOrdinal(State s)
 State stateForPhaseName(const std::string & name)
 {
   if (name == "approach") {return State::Approach;}
+  if (name == "grasp") {return State::Grasp;}
+  if (name == "release") {return State::Release;}
   if (name == "lift") {return State::Lift;}
   if (name == "transport") {return State::Transport;}
   if (name == "lower") {return State::Lower;}
@@ -609,7 +611,15 @@ bool TransportStateMachine::tickWeld(double now_s)
     if (a == WeldAction::Confirmed && weld_attach_requested_) {
       weld_attached_ = true;
       record(now_s, "weld", "GRASP", "GRASP", "attached", weld_->reason());
-      return false;  // let the normal GRASP logic run on the next tick
+      // W7: with a controller phase table driving the run, the attach is the only
+      // "gripper closed" signal this build has (no gripper feedback yet), so a
+      // confirmed attach completes GRASP and the barrier can open.  Without a
+      // phase driver the caller still owns completion through phaseDone(), which
+      // is the W3-R1 behaviour those callers already rely on.
+      if (phase_ != nullptr && phase_->enabled()) {
+        advance(now_s, "attach confirmed (gripper simulated, see W7 open items)");
+      }
+      return false;
     }
     if (a == WeldAction::Failed) {
       enterProtection(Protection::Hold, "attach_failed", now_s,
@@ -633,6 +643,9 @@ bool TransportStateMachine::tickWeld(double now_s)
       weld_release_done_ = true;
       weld_attached_ = false;
       record(now_s, "weld", "RELEASE", "RELEASE", "detached", weld_->reason());
+      if (phase_ != nullptr && phase_->enabled()) {
+        advance(now_s, "detach confirmed (gripper simulated, see W7 open items)");
+      }
       return false;
     }
     if (a == WeldAction::Failed) {
@@ -790,6 +803,22 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
           while (isActive(state_) && state_ != target &&
             stateOrdinal(state_) < stateOrdinal(target) && guard < 8)
           {
+            // W7 barrier: GRASP/RELEASE are owned by the executor (attach and
+            // detach must be confirmed first), so a controller phase change may
+            // NOT walk the state machine straight through them.  Without this the
+            // "lift" phase skips GRASP entirely and the sample is never grasped.
+            if (state_ == State::Grasp && weld_ != nullptr && !weld_attached_) {
+              record(now_s, "phase", "GRASP", "GRASP", "grasp_barrier",
+                     "holding GRASP: the attach is not confirmed yet");
+              break;
+            }
+            if (state_ == State::Release && weld_ != nullptr && weld_attached_ &&
+              !weld_release_done_)
+            {
+              record(now_s, "phase", "RELEASE", "RELEASE", "release_barrier",
+                     "holding RELEASE: the sample is still welded");
+              break;
+            }
             advance(now_s, "controller phase '" + po.name + "'");
             ++guard;
           }

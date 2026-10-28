@@ -19,8 +19,12 @@ bool isKnownPhaseName(const std::string & name)
 {
   // The frozen trajectory (dual_arm_object_task/trajectory.hpp) uses these
   // names; anything else is a contract mismatch, not a new phase.
-  return name == "approach" || name == "lift" || name == "transport" ||
-         name == "lower" || name == "settle" || name == "settle2" ||
+  // W7: "grasp"/"release" are executor states that need a stationary hold in the
+  // controller trajectory (the weld is created/torn down while the arm is still),
+  // so the trajectory may name them explicitly.  They carry no object motion.
+  return name == "approach" || name == "grasp" || name == "lift" ||
+         name == "transport" || name == "lower" || name == "release" ||
+         name == "settle" || name == "settle2" ||
          name == "settle_pre" || name == "settle_post";
 }
 
