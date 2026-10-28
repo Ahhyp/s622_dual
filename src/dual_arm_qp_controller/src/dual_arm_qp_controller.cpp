@@ -1151,7 +1151,17 @@ bool DualArmQpController::readState() {
 }
 
 bool DualArmQpController::writeCommand(const Vec12& q_cmd) {
-    if (command_interfaces_.size() != static_cast<size_t>(kNumJoints)) return false;
+    if (command_interfaces_.size() != static_cast<size_t>(kNumJoints)) {
+        // One log per process: this runs at the control rate, and "q_cmd advances
+        // while the robot does not move" is exactly what a silent refusal looks like.
+        if (!write_refused_logged_) {
+            write_refused_logged_ = true;
+            RCLCPP_ERROR(get_node()->get_logger(),
+                "writeCommand(): expected %d command interfaces, got %zu; q_cmd is NOT "
+                "reaching the hardware", kNumJoints, command_interfaces_.size());
+        }
+        return false;
+    }
     for (int i = 0; i < kNumJoints; ++i) {
         command_interfaces_[i].set_value(q_cmd[i]);
     }

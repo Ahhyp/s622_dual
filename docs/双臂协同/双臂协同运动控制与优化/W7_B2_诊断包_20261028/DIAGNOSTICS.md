@@ -1,5 +1,32 @@
 # W7 B-2 诊断证据（2026-10-28 17:12–17:15，实测）
 
+> **2026-10-28 20:00 更正（本条优先于下文所有内容）**
+> 本文件 §2/§3 的核心结论「`/joint_states` 12 个关节位移全部为 0，说明另有指令压住关节」
+> **已作废**：那是探针 `drive_probe.py` 的测量错误，不是 Gazebo 的行为。
+> 该脚本先令 `js_end = dict(n.js)`，随后计算 `js_end[k] - n.js[k]`，两边是同一个字典，
+> 结果恒为 0；同时 `qcmd_delta` 用的是 `n.samples[0]` 而不是本轮测试的起点。
+> 外部复核（GPT，2026-10-28）独立复现了这一点，判断正确。
+>
+> 修正探针后重测（`/tmp/w7fix/probe2.py`，按窗口取每关节 min/max/span，同时采
+> `status.q_state` / `status.q_cmd` / `/joint_states`；自测：静止 0.000、单关节移动 0.400、
+> 往返 0.200 而端点差 0.0）：
+>
+> | 指标 | 值 |
+> |---|---|
+> | `/joint_states` 单关节最大位移 `JS_SPAN_MAX` | **2.302684 rad** |
+> | 控制器状态接口位移 `QSTATE_SPAN_MAX` | **2.296908 rad** |
+> | 控制器目标位移 `QCMD_SPAN_MAX` | **2.328111 rad** |
+> | `JS` 对 `QSTATE` 的最大偏差 | 0.040000 rad |
+> | 末态 `q_cmd − q_state` 残差 | −0.0638 … +0.0640 rad |
+> | 控制器终态 | `COMPLETE`, `t_traj=2.0` |
+>
+> 结论：**控制链 QP → ros2_control → Gazebo 是通的，关节确实按命令运动了约 2.3 rad**；
+> B-2 不再是「命令写不进硬件」。原始实测见 `B2_REMEASURE_20261028/`。
+> 另：本轮还确认了一个**真实的生产缺陷**——`executor_node.cpp` 的 `driveWeld()` 一直用
+> `weld_.tick()` 的返回值发布 attach/detach，从未调用 `consumeSend()`，导致 `sent_` 永不置位、
+> 启动 detach 的重试节奏从未生效（这正是 B-3 偶发失败的原因）。已修复并有单测覆盖。
+
+
 本文件只记录**实测**输出，不含推断。环境：WSL2，`ROS_DOMAIN_ID=91`，headless Gazebo Fortress 6.16，
 `ros2 launch gz_launch c43_s4_full_flow.launch.py headless:=true`，日志 `/tmp/w7fix/run3/launch.log`。
 

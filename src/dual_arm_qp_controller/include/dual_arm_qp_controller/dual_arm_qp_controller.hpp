@@ -216,6 +216,8 @@ private:
     // Counted only while timing is enabled, so the production path is untouched.
     // Written on the RT thread, read by the timing_dump service: relaxed.
     std::atomic<std::uint64_t> publish_trylock_miss_{0};
+  /// One-shot log guard for a refused command write (RT path, log once not per cycle).
+  bool write_refused_logged_ = false;
 
     // parameters
     double dt_ = 0.008;

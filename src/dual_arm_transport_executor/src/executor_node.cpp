@@ -462,7 +462,12 @@ double quatAngle(const double * a, const double * b)
 void TransportExecutorNode::driveWeld()
 {
   const double now = nowSeconds();
-  const WeldAction a = weld_.tick(now);
+  // Two calls, two jobs (P0-1): tick() advances deadlines/decisions, consumeSend()
+  // returns the armed Request* exactly once and is what publishes it.  Publishing
+  // off tick()'s return value left `sent_` false forever, so the retry cadence
+  // never re-armed and a single dropped message failed the startup guard.
+  weld_.tick(now);
+  const WeldAction a = weld_.consumeSend(now);
   if (a == WeldAction::RequestAttach) {
     // Snapshot the parent->child vector immediately before the weld is created:
     // the snap is the CHANGE of that vector across the attach, so a measurement
@@ -478,7 +483,7 @@ void TransportExecutorNode::driveWeld()
   } else if (a == WeldAction::RequestDetach) {
     weld_detach_pub_->publish(std_msgs::msg::Empty());
     RCLCPP_INFO(get_logger(), "weld: detach requested");
-  } else if (a == WeldAction::Failed && !weld_failure_logged_) {
+  } else if (weld_.failed() && !weld_failure_logged_) {
     // Once: a terminal weld failure is reported every 8 ms otherwise, which buries
     // every other line in the log and makes the first failure hard to find.
     weld_failure_logged_ = true;
