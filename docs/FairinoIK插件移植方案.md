@@ -262,4 +262,4 @@ robotarm 的 IK 在其机器人+工具配置下真机验证过；移植后 DH �
 | `docs/机械臂参数.md` | S622 DH 参数（与 robotarm DHParams 对照依据） |
 | `fairino_robotarm-main/src/gazebo_launch/docs/gazebo_launch架构.md` | 双 move_group 设计依据 |
 | `fairino_robotarm-main/src/gazebo_launch/launch_utils/moveit_stack.py` | 双 move_group 启动实现参考 |
-| `docs/AI_CONTEXT.md` | grasp_frame 偏移 0.2168、抓取参数 |
+| `src/s622_moveit_descriptions/urdf/s622_moveit_descriptions.urdf.xacro` | wrist3→grasp_frame 0.2168 m、抓取参数 |

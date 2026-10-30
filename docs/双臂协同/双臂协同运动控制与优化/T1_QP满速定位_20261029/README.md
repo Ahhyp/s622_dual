@@ -141,8 +141,9 @@ advance RETREAT→COMPLETE  controller reported the trajectory reached its end
   换回 6.16 要改回 `s622_dual_arm::left_wrist3_link` / `c43_sample::base_link`。
 - D2-B 仍是 `INPUT_ERROR`（跨机重构建哈希），**没有**改 `PROVENANCE.md`、没有改 C3 判据；
   `LEDGER_OK` 只代表结构/覆盖，不是 S4.1 验收 PASS。
-- 工作树有迁移前已有的 Docker/GPU 改动（`CLAUDE.md`、`AI_CONTEXT.md`、`s622_gazebo.launch.py`、
+- 工作树有迁移前已有的 Docker/GPU 改动（`CLAUDE.md`、`s622_gazebo.launch.py`、
   `test_single_arm.launch.py`、`libfairino.so.2`），本轮没有回滚、没有 commit、没有 push。
+  注：`AI_CONTEXT.md` 原也在该列表，已于 2026-10-30 删除。
 
 ## 5. 证据索引
 
