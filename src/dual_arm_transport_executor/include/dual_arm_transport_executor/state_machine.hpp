@@ -81,6 +81,11 @@ struct ControllerStatus
   std::array<double, 12> dq{};
   int solve_fail_streak = 0;
   int active_limit_count = 0;
+  // Distance from the nearest joint *position* limit, in rad (signed: negative
+  // means past the limit).  This is what "the arm is running out of travel"
+  // actually looks like; active_limit_count is a velocity-cap saturation
+  // counter and must not be read as a position-limit violation.
+  double min_limit_margin_rad = 0.0;
   double e_obj_pos_m = 0.0;
   double e_obj_rot_rad = 0.0;
   double sigma_min_stack = 0.0;
@@ -121,6 +126,11 @@ struct Config
   double approach_timeout_s = 5.0;
   double grasp_timeout_s = 3.0;
   double release_timeout_s = 3.0;
+  /// S4-T16: when true, GRASP must wait for the node's gripper-close and
+  /// grasp-relative-check verdicts before it may request attach.  Default false
+  /// preserves the pre-S4-T16 software tests and the mock/dry-run profiles; the
+  /// C4.3 Gazebo launch sets it true.
+  bool require_grasp_check = false;
   double phase_timeout_scale = 1.5;
   // Plan §4.2.2: resume requires e_O <= 5 mm / 2 deg.
   double resume_pos_tol_m = 0.005;
@@ -128,6 +138,15 @@ struct Config
   double v_max = 2.5;
   int resume_fail_max = 2;
   int solve_fail_streak_limit = 10;
+  // Joint-limit pressure protection: HOLD only after this many *consecutive*
+  // status samples show the arm either at a velocity cap or inside
+  // limit_margin_rad of a position limit.  One saturated cycle is a normal
+  // transient of a transport start, not a fault (W7-B finding, 2026-10-28).
+  int limit_saturation_cycles = 25;
+  // How close to a position limit counts as "running out of room".  Default
+  // 0.0 = only an actual violation (margin < 0); a positive band is a profile
+  // choice (the Gazebo profile sets 0.05 rad).
+  double limit_margin_rad = 0.0;
 };
 
 struct StartRequest
@@ -171,6 +190,14 @@ public:
   void attachWeldClient(AttachClient * client) {weld_ = client;}
   AttachClient * weldClient() const {return weld_;}
   bool weldAttached() const {return weld_attached_;}
+  // C4.3 S4 S4-T16: two injected GRASP prerequisites.  The node owns the ROS
+  // action/pose plumbing; the state machine only consumes the verdicts.  A
+  // failed verdict latches FAULT(grasp_check_failed) and attach is never sent.
+  void noteGripperClosed(double now_s, bool ok, const std::string & detail);
+  void noteGraspCheck(double now_s, bool ok, const std::string & detail);
+  bool gripperReady() const {return gripper_ready_;}
+  bool graspCheckDone() const {return grasp_checked_;}
+  bool graspOk() const {return grasp_ok_;}
   void attachPhaseDriver(PhaseDriver * driver) {phase_ = driver;}
   PhaseDriver * phaseDriver() const {return phase_;}
   int phaseIndex() const {return phase_ != nullptr ? phase_->index() : -1;}
@@ -224,6 +251,8 @@ private:
   // C4.3 S4 W7: drives the attach client for GRASP / RELEASE.  Returns true when
   // it has taken over this tick (state is still latched or still waiting).
   bool tickWeld(double now_s);
+  bool limitPressure(const ControllerStatus & st) const;
+  int limit_streak_ = 0;
   void record(double now_s, const std::string & kind, const std::string & from,
               const std::string & to, const std::string & code, const std::string & detail);
   void advance(double now_s, const std::string & detail);
@@ -269,6 +298,10 @@ private:
   // confirmed *detach* would read as a confirmed attach.
   bool weld_attach_requested_ = false;
   bool weld_detach_requested_ = false;
+  // S4-T16: see noteGripperClosed()/noteGraspCheck().  Reset by start().
+  bool gripper_ready_ = false;
+  bool grasp_checked_ = false;
+  bool grasp_ok_ = false;
 
   CollisionGuard * collision_guard_ = nullptr;
   dual_arm::Iso3 object_pose_ = dual_arm::Iso3::Identity();

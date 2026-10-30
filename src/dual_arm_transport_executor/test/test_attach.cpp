@@ -235,13 +235,16 @@ TEST(AttachClient, DetachThatNeverConfirmsFails)
   EXPECT_TRUE(c.startupVerified());
 }
 
-// Attach requires a known-detached weld, not merely "no attached message yet".
-TEST(AttachClient, AttachIsRefusedWhenTheWeldStateIsStale)
+// T2 fix (2026-10-29): /c43/weld_state is event-driven.  A long-lived
+// "detached" sample is still the current state until a transition arrives, so an
+// attach requested after the 0.25 s freshness window must be SENT; a dead plugin
+// is caught by transition_timeout_s ("attach_not_confirmed"), not by sample age.
+TEST(AttachClient, AttachAcceptsAKnownDetachedStateOlderThanTheStaleWindow)
 {
   AttachClient c = releasedAt(0.1);
   c.requestAttach(1.0);   // last sample was at 0.1 s, stale_s = 0.25
-  EXPECT_EQ(c.tick(1.0), WeldAction::Failed);
-  EXPECT_EQ(c.outcome(), "attach_refused_weld_state_unknown");
+  EXPECT_EQ(c.tick(1.0), WeldAction::RequestAttach);
+  EXPECT_NE(c.outcome(), "attach_refused_weld_state_unknown");
 }
 
 // reset() must not leave a verified release or a live attempt behind.

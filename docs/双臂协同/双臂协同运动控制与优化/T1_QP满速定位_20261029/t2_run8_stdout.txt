@@ -1,0 +1,1610 @@
+executor start: True | accepted
+start_transport: True | queued (applied on the next control cycle)
+t= 0.00 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.01 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.05 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.07 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.09 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.11 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.16 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.18 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.22 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.24 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.26 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.27 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2751 fail=-
+t= 0.29 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.31 IDLE      phase=          t_traj= 0.00 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.31 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.33 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.34 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.36 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.38 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.40 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.42 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.44 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.46 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.47 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.49 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.51 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.56 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.60 RUNNING   phase=approach  t_traj= 0.10 lim= 0 weld=None         z=0.2749 fail=-
+t= 0.62 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2749 fail=-
+t= 0.65 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2749 fail=-
+t= 0.67 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2749 fail=-
+t= 0.71 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.74 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.76 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.78 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.80 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.82 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.84 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.87 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.89 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.91 RUNNING   phase=approach  t_traj= 0.21 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.93 RUNNING   phase=approach  t_traj= 0.31 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.95 RUNNING   phase=approach  t_traj= 0.31 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.97 RUNNING   phase=approach  t_traj= 0.31 lim= 0 weld=None         z=0.2750 fail=-
+t= 0.98 RUNNING   phase=approach  t_traj= 0.31 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.03 RUNNING   phase=approach  t_traj= 0.31 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.08 RUNNING   phase=approach  t_traj= 0.31 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.13 RUNNING   phase=approach  t_traj= 0.31 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.21 RUNNING   phase=approach  t_traj= 0.42 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.30 RUNNING   phase=approach  t_traj= 0.42 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.32 RUNNING   phase=approach  t_traj= 0.42 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.34 RUNNING   phase=approach  t_traj= 0.42 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.36 RUNNING   phase=approach  t_traj= 0.42 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.38 RUNNING   phase=approach  t_traj= 0.42 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.40 RUNNING   phase=approach  t_traj= 0.42 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.48 RUNNING   phase=approach  t_traj= 0.52 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.56 RUNNING   phase=approach  t_traj= 0.52 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.60 RUNNING   phase=approach  t_traj= 0.52 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.68 RUNNING   phase=approach  t_traj= 0.52 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.76 RUNNING   phase=approach  t_traj= 0.62 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.85 RUNNING   phase=approach  t_traj= 0.62 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.87 RUNNING   phase=approach  t_traj= 0.62 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.89 RUNNING   phase=approach  t_traj= 0.62 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.91 RUNNING   phase=approach  t_traj= 0.62 lim= 0 weld=None         z=0.2750 fail=-
+t= 1.95 RUNNING   phase=approach  t_traj= 0.62 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.01 RUNNING   phase=approach  t_traj= 0.62 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.07 RUNNING   phase=approach  t_traj= 0.73 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.09 RUNNING   phase=approach  t_traj= 0.73 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.12 RUNNING   phase=approach  t_traj= 0.73 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.20 RUNNING   phase=approach  t_traj= 0.73 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.26 RUNNING   phase=approach  t_traj= 0.73 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.35 RUNNING   phase=approach  t_traj= 0.83 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.45 RUNNING   phase=approach  t_traj= 0.83 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.57 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.59 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2749 fail=-
+t= 2.61 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2749 fail=-
+t= 2.63 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2749 fail=-
+t= 2.68 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2749 fail=-
+t= 2.72 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.75 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.77 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.82 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.84 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.86 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.88 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.90 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.92 RUNNING   phase=approach  t_traj= 0.94 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.94 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 2.96 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.01 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.03 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.05 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.07 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.09 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.11 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.14 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.16 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.18 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.21 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.23 RUNNING   phase=approach  t_traj= 1.04 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.25 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.26 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.28 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.30 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.32 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.34 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.38 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.40 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.42 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.46 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.48 RUNNING   phase=approach  t_traj= 1.14 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.49 RUNNING   phase=approach  t_traj= 1.25 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.55 RUNNING   phase=approach  t_traj= 1.25 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.66 RUNNING   phase=approach  t_traj= 1.25 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.80 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.82 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.84 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.89 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.91 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.93 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.95 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.96 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 3.98 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.00 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.03 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.05 RUNNING   phase=approach  t_traj= 1.35 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.07 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.08 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.10 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.13 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.15 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.17 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.20 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.22 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.24 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.26 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2751 fail=-
+t= 4.28 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.30 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.32 RUNNING   phase=approach  t_traj= 1.46 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.34 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.35 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.37 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.39 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.41 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.43 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.45 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.47 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.49 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.51 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.53 RUNNING   phase=approach  t_traj= 1.56 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.58 RUNNING   phase=approach  t_traj= 1.66 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.63 RUNNING   phase=approach  t_traj= 1.66 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.71 RUNNING   phase=approach  t_traj= 1.66 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.79 RUNNING   phase=approach  t_traj= 1.66 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.88 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.94 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.96 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.97 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2750 fail=-
+t= 4.99 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.01 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2747 fail=-
+t= 5.03 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2747 fail=-
+t= 5.09 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.11 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.13 RUNNING   phase=approach  t_traj= 1.77 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.15 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.17 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.19 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.21 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.23 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.25 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.27 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.29 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.31 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.32 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.37 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.39 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2748 fail=-
+t= 5.41 RUNNING   phase=approach  t_traj= 1.87 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.43 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.45 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.47 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.49 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.50 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.52 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.57 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.59 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.61 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.62 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.64 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.66 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.68 RUNNING   phase=approach  t_traj= 1.98 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.70 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.72 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.74 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2749 fail=-
+t= 5.76 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.78 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.80 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.82 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.84 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.86 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.88 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.90 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.92 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.96 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 5.98 RUNNING   phase=approach  t_traj= 2.08 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.00 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.02 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.04 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.06 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.08 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.10 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.12 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.14 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.16 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.18 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.20 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.22 RUNNING   phase=approach  t_traj= 2.18 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.24 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.26 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.28 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.30 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.32 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.34 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.37 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.39 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.41 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.43 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.44 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.46 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.48 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.50 RUNNING   phase=approach  t_traj= 2.29 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.52 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.54 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.56 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.58 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.59 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.61 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.63 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.65 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.67 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2750 fail=-
+t= 6.69 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.71 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.73 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.75 RUNNING   phase=approach  t_traj= 2.39 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.77 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.79 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.80 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.82 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.84 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.86 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2751 fail=-
+t= 6.90 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2748 fail=-
+t= 6.92 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2748 fail=-
+t= 6.94 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2748 fail=-
+t= 6.96 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2748 fail=-
+t= 6.98 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.00 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.01 RUNNING   phase=approach  t_traj= 2.50 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.03 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.05 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.07 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.09 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.11 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.12 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.14 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.16 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.18 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.20 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.22 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2748 fail=-
+t= 7.24 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.26 RUNNING   phase=approach  t_traj= 2.60 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.27 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.29 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.31 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.33 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.35 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.39 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.41 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.45 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.47 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.49 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.50 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.52 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.54 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.57 RUNNING   phase=approach  t_traj= 2.70 lim= 0 weld=None         z=0.2749 fail=-
+t= 7.58 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.60 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.62 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.67 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.69 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.71 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.73 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.75 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.76 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.78 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.80 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.84 RUNNING   phase=approach  t_traj= 2.81 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.86 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.87 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.89 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.91 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.93 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.96 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 7.98 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 8.00 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 8.06 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 8.10 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 8.12 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 8.15 RUNNING   phase=approach  t_traj= 2.91 lim= 0 weld=None         z=0.2750 fail=-
+t= 8.15 RUNNING   phase=grasp     t_traj= 3.02 lim= 0 weld=None         z=0.2750 fail=-
+t= 8.17 RUNNING   phase=grasp     t_traj= 3.02 lim= 0 weld=None         z=0.2750 fail=-
+t= 8.18 RUNNING   phase=grasp     t_traj= 3.02 lim= 0 weld=attached     z=0.2750 fail=-
+t= 8.19 RUNNING   phase=grasp     t_traj= 3.02 lim= 0 weld=attached     z=0.2750 fail=-
+t= 8.21 RUNNING   phase=grasp     t_traj= 3.02 lim= 0 weld=attached     z=0.2750 fail=-
+t= 8.23 RUNNING   phase=grasp     t_traj= 3.02 lim= 0 weld=attached     z=0.2750 fail=-
+t= 8.25 RUNNING   phase=grasp     t_traj= 3.02 lim= 0 weld=attached     z=0.2750 fail=-
+t= 8.27 RUNNING   phase=grasp     t_traj= 3.02 lim= 0 weld=attached     z=0.2750 fail=-
+t= 8.29 RUNNING   phase=grasp     t_traj= 3.12 lim= 0 weld=attached     z=0.2750 fail=-
+t= 8.31 RUNNING   phase=grasp     t_traj= 3.12 lim= 0 weld=attached     z=0.2751 fail=-
+t= 8.33 RUNNING   phase=grasp     t_traj= 3.12 lim= 0 weld=attached     z=0.2751 fail=-
+t= 8.35 RUNNING   phase=grasp     t_traj= 3.12 lim= 0 weld=attached     z=0.2751 fail=-
+t= 8.37 RUNNING   phase=grasp     t_traj= 3.12 lim= 0 weld=attached     z=0.2751 fail=-
+t= 8.39 RUNNING   phase=grasp     t_traj= 3.12 lim= 0 weld=attached     z=0.2752 fail=-
+t= 8.41 RUNNING   phase=grasp     t_traj= 3.12 lim= 0 weld=attached     z=0.2753 fail=-
+t= 8.43 RUNNING   phase=grasp     t_traj= 3.22 lim= 0 weld=attached     z=0.2755 fail=-
+t= 8.45 RUNNING   phase=grasp     t_traj= 3.22 lim= 0 weld=attached     z=0.2757 fail=-
+t= 8.47 RUNNING   phase=grasp     t_traj= 3.22 lim= 0 weld=attached     z=0.2759 fail=-
+t= 8.49 RUNNING   phase=grasp     t_traj= 3.22 lim= 0 weld=attached     z=0.2762 fail=-
+t= 8.51 RUNNING   phase=grasp     t_traj= 3.22 lim= 0 weld=attached     z=0.2763 fail=-
+t= 8.53 RUNNING   phase=grasp     t_traj= 3.22 lim= 0 weld=attached     z=0.2765 fail=-
+t= 8.55 RUNNING   phase=grasp     t_traj= 3.33 lim= 0 weld=attached     z=0.2766 fail=-
+t= 8.57 RUNNING   phase=grasp     t_traj= 3.33 lim= 0 weld=attached     z=0.2767 fail=-
+t= 8.59 RUNNING   phase=grasp     t_traj= 3.33 lim= 0 weld=attached     z=0.2767 fail=-
+t= 8.61 RUNNING   phase=grasp     t_traj= 3.33 lim= 0 weld=attached     z=0.2767 fail=-
+t= 8.63 RUNNING   phase=grasp     t_traj= 3.33 lim= 0 weld=attached     z=0.2767 fail=-
+t= 8.65 RUNNING   phase=grasp     t_traj= 3.33 lim= 0 weld=attached     z=0.2767 fail=-
+t= 8.67 RUNNING   phase=grasp     t_traj= 3.33 lim= 0 weld=attached     z=0.2767 fail=-
+t= 8.69 RUNNING   phase=grasp     t_traj= 3.43 lim= 0 weld=attached     z=0.2766 fail=-
+t= 8.71 RUNNING   phase=grasp     t_traj= 3.43 lim= 0 weld=attached     z=0.2766 fail=-
+t= 8.73 RUNNING   phase=grasp     t_traj= 3.43 lim= 0 weld=attached     z=0.2765 fail=-
+t= 8.75 RUNNING   phase=grasp     t_traj= 3.43 lim= 0 weld=attached     z=0.2765 fail=-
+t= 8.77 RUNNING   phase=grasp     t_traj= 3.43 lim= 0 weld=attached     z=0.2765 fail=-
+t= 8.79 RUNNING   phase=grasp     t_traj= 3.43 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.81 RUNNING   phase=grasp     t_traj= 3.54 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.83 RUNNING   phase=grasp     t_traj= 3.54 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.85 RUNNING   phase=grasp     t_traj= 3.54 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.87 RUNNING   phase=grasp     t_traj= 3.54 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.89 RUNNING   phase=grasp     t_traj= 3.54 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.91 RUNNING   phase=grasp     t_traj= 3.54 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.93 RUNNING   phase=grasp     t_traj= 3.54 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.95 RUNNING   phase=grasp     t_traj= 3.64 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.97 RUNNING   phase=grasp     t_traj= 3.64 lim= 0 weld=attached     z=0.2764 fail=-
+t= 8.99 RUNNING   phase=grasp     t_traj= 3.64 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.01 RUNNING   phase=grasp     t_traj= 3.64 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.03 RUNNING   phase=grasp     t_traj= 3.64 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.05 RUNNING   phase=grasp     t_traj= 3.64 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.07 RUNNING   phase=grasp     t_traj= 3.74 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.09 RUNNING   phase=grasp     t_traj= 3.74 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.13 RUNNING   phase=grasp     t_traj= 3.74 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.15 RUNNING   phase=grasp     t_traj= 3.74 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.17 RUNNING   phase=grasp     t_traj= 3.74 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.19 RUNNING   phase=grasp     t_traj= 3.74 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.21 RUNNING   phase=grasp     t_traj= 3.85 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.23 RUNNING   phase=grasp     t_traj= 3.85 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.25 RUNNING   phase=grasp     t_traj= 3.85 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.27 RUNNING   phase=grasp     t_traj= 3.85 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.29 RUNNING   phase=grasp     t_traj= 3.85 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.33 RUNNING   phase=grasp     t_traj= 3.95 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.39 RUNNING   phase=grasp     t_traj= 3.95 lim= 0 weld=attached     z=0.2765 fail=-
+t= 9.49 RUNNING   phase=grasp     t_traj= 4.06 lim= 0 weld=attached     z=0.2765 fail=-
+t=10.67 RUNNING   phase=grasp     t_traj= 4.99 lim= 0 weld=attached     z=0.2765 fail=-
+t=10.69 RUNNING   phase=grasp     t_traj= 4.99 lim= 0 weld=attached     z=0.2765 fail=-
+t=10.71 RUNNING   phase=grasp     t_traj= 4.99 lim= 0 weld=attached     z=0.2766 fail=-
+t=10.73 RUNNING   phase=grasp     t_traj= 4.99 lim= 0 weld=attached     z=0.2767 fail=-
+t=10.75 RUNNING   phase=grasp     t_traj= 4.99 lim= 0 weld=attached     z=0.2768 fail=-
+t=10.76 RUNNING   phase=lift      t_traj= 5.10 lim= 0 weld=attached     z=0.2768 fail=-
+t=10.77 RUNNING   phase=lift      t_traj= 5.10 lim= 0 weld=attached     z=0.2769 fail=-
+t=10.79 RUNNING   phase=lift      t_traj= 5.10 lim= 0 weld=attached     z=0.2771 fail=-
+t=10.81 RUNNING   phase=lift      t_traj= 5.10 lim= 0 weld=attached     z=0.2772 fail=-
+t=10.83 RUNNING   phase=lift      t_traj= 5.10 lim= 0 weld=attached     z=0.2773 fail=-
+t=10.85 RUNNING   phase=lift      t_traj= 5.10 lim= 0 weld=attached     z=0.2775 fail=-
+t=10.87 RUNNING   phase=lift      t_traj= 5.10 lim= 0 weld=attached     z=0.2776 fail=-
+t=10.89 RUNNING   phase=lift      t_traj= 5.10 lim= 0 weld=attached     z=0.2777 fail=-
+t=10.91 RUNNING   phase=lift      t_traj= 5.20 lim= 0 weld=attached     z=0.2779 fail=-
+t=10.93 RUNNING   phase=lift      t_traj= 5.20 lim= 0 weld=attached     z=0.2780 fail=-
+t=10.95 RUNNING   phase=lift      t_traj= 5.20 lim= 0 weld=attached     z=0.2781 fail=-
+t=10.97 RUNNING   phase=lift      t_traj= 5.20 lim= 0 weld=attached     z=0.2782 fail=-
+t=10.99 RUNNING   phase=lift      t_traj= 5.20 lim= 0 weld=attached     z=0.2783 fail=-
+t=11.01 RUNNING   phase=lift      t_traj= 5.20 lim= 0 weld=attached     z=0.2784 fail=-
+t=11.03 RUNNING   phase=lift      t_traj= 5.30 lim= 0 weld=attached     z=0.2785 fail=-
+t=11.05 RUNNING   phase=lift      t_traj= 5.30 lim= 0 weld=attached     z=0.2786 fail=-
+t=11.07 RUNNING   phase=lift      t_traj= 5.30 lim= 0 weld=attached     z=0.2787 fail=-
+t=11.09 RUNNING   phase=lift      t_traj= 5.30 lim= 0 weld=attached     z=0.2788 fail=-
+t=11.11 RUNNING   phase=lift      t_traj= 5.30 lim= 0 weld=attached     z=0.2789 fail=-
+t=11.13 RUNNING   phase=lift      t_traj= 5.30 lim= 0 weld=attached     z=0.2790 fail=-
+t=11.15 RUNNING   phase=lift      t_traj= 5.41 lim= 0 weld=attached     z=0.2791 fail=-
+t=11.17 RUNNING   phase=lift      t_traj= 5.41 lim= 0 weld=attached     z=0.2792 fail=-
+t=11.19 RUNNING   phase=lift      t_traj= 5.41 lim= 0 weld=attached     z=0.2793 fail=-
+t=11.21 RUNNING   phase=lift      t_traj= 5.41 lim= 0 weld=attached     z=0.2794 fail=-
+t=11.23 RUNNING   phase=lift      t_traj= 5.41 lim= 0 weld=attached     z=0.2795 fail=-
+t=11.25 RUNNING   phase=lift      t_traj= 5.41 lim= 0 weld=attached     z=0.2797 fail=-
+t=11.27 RUNNING   phase=lift      t_traj= 5.41 lim= 0 weld=attached     z=0.2798 fail=-
+t=11.29 RUNNING   phase=lift      t_traj= 5.51 lim= 0 weld=attached     z=0.2799 fail=-
+t=11.31 RUNNING   phase=lift      t_traj= 5.51 lim= 0 weld=attached     z=0.2800 fail=-
+t=11.33 RUNNING   phase=lift      t_traj= 5.51 lim= 0 weld=attached     z=0.2801 fail=-
+t=11.35 RUNNING   phase=lift      t_traj= 5.51 lim= 0 weld=attached     z=0.2802 fail=-
+t=11.37 RUNNING   phase=lift      t_traj= 5.51 lim= 0 weld=attached     z=0.2803 fail=-
+t=11.39 RUNNING   phase=lift      t_traj= 5.51 lim= 0 weld=attached     z=0.2804 fail=-
+t=11.41 RUNNING   phase=lift      t_traj= 5.62 lim= 0 weld=attached     z=0.2805 fail=-
+t=11.43 RUNNING   phase=lift      t_traj= 5.62 lim= 0 weld=attached     z=0.2806 fail=-
+t=11.45 RUNNING   phase=lift      t_traj= 5.62 lim= 0 weld=attached     z=0.2807 fail=-
+t=11.47 RUNNING   phase=lift      t_traj= 5.62 lim= 0 weld=attached     z=0.2808 fail=-
+t=11.49 RUNNING   phase=lift      t_traj= 5.62 lim= 0 weld=attached     z=0.2809 fail=-
+t=11.51 RUNNING   phase=lift      t_traj= 5.62 lim= 0 weld=attached     z=0.2810 fail=-
+t=11.53 RUNNING   phase=lift      t_traj= 5.62 lim= 0 weld=attached     z=0.2812 fail=-
+t=11.55 RUNNING   phase=lift      t_traj= 5.72 lim= 0 weld=attached     z=0.2813 fail=-
+t=11.57 RUNNING   phase=lift      t_traj= 5.72 lim= 0 weld=attached     z=0.2814 fail=-
+t=11.59 RUNNING   phase=lift      t_traj= 5.72 lim= 0 weld=attached     z=0.2815 fail=-
+t=11.61 RUNNING   phase=lift      t_traj= 5.72 lim= 0 weld=attached     z=0.2816 fail=-
+t=11.63 RUNNING   phase=lift      t_traj= 5.72 lim= 0 weld=attached     z=0.2817 fail=-
+t=11.65 RUNNING   phase=lift      t_traj= 5.72 lim= 0 weld=attached     z=0.2818 fail=-
+t=11.67 RUNNING   phase=lift      t_traj= 5.82 lim= 0 weld=attached     z=0.2819 fail=-
+t=11.69 RUNNING   phase=lift      t_traj= 5.82 lim= 0 weld=attached     z=0.2820 fail=-
+t=11.71 RUNNING   phase=lift      t_traj= 5.82 lim= 0 weld=attached     z=0.2821 fail=-
+t=11.73 RUNNING   phase=lift      t_traj= 5.82 lim= 0 weld=attached     z=0.2822 fail=-
+t=11.75 RUNNING   phase=lift      t_traj= 5.82 lim= 0 weld=attached     z=0.2823 fail=-
+t=11.77 RUNNING   phase=lift      t_traj= 5.82 lim= 0 weld=attached     z=0.2824 fail=-
+t=11.79 RUNNING   phase=lift      t_traj= 5.82 lim= 0 weld=attached     z=0.2825 fail=-
+t=11.81 RUNNING   phase=lift      t_traj= 5.93 lim= 0 weld=attached     z=0.2826 fail=-
+t=11.83 RUNNING   phase=lift      t_traj= 5.93 lim= 0 weld=attached     z=0.2828 fail=-
+t=11.85 RUNNING   phase=lift      t_traj= 5.93 lim= 0 weld=attached     z=0.2829 fail=-
+t=11.87 RUNNING   phase=lift      t_traj= 5.93 lim= 0 weld=attached     z=0.2830 fail=-
+t=11.89 RUNNING   phase=lift      t_traj= 5.93 lim= 0 weld=attached     z=0.2831 fail=-
+t=11.91 RUNNING   phase=lift      t_traj= 5.93 lim= 0 weld=attached     z=0.2832 fail=-
+t=11.93 RUNNING   phase=lift      t_traj= 6.03 lim= 0 weld=attached     z=0.2833 fail=-
+t=11.95 RUNNING   phase=lift      t_traj= 6.03 lim= 0 weld=attached     z=0.2834 fail=-
+t=11.97 RUNNING   phase=lift      t_traj= 6.03 lim= 0 weld=attached     z=0.2835 fail=-
+t=11.99 RUNNING   phase=lift      t_traj= 6.03 lim= 0 weld=attached     z=0.2836 fail=-
+t=12.01 RUNNING   phase=lift      t_traj= 6.03 lim= 0 weld=attached     z=0.2837 fail=-
+t=12.03 RUNNING   phase=lift      t_traj= 6.03 lim= 0 weld=attached     z=0.2838 fail=-
+t=12.05 RUNNING   phase=lift      t_traj= 6.03 lim= 0 weld=attached     z=0.2839 fail=-
+t=12.07 RUNNING   phase=lift      t_traj= 6.14 lim= 0 weld=attached     z=0.2840 fail=-
+t=12.09 RUNNING   phase=lift      t_traj= 6.14 lim= 0 weld=attached     z=0.2841 fail=-
+t=12.11 RUNNING   phase=lift      t_traj= 6.14 lim= 0 weld=attached     z=0.2842 fail=-
+t=12.13 RUNNING   phase=lift      t_traj= 6.14 lim= 0 weld=attached     z=0.2843 fail=-
+t=12.15 RUNNING   phase=lift      t_traj= 6.14 lim= 0 weld=attached     z=0.2845 fail=-
+t=12.17 RUNNING   phase=lift      t_traj= 6.14 lim= 0 weld=attached     z=0.2846 fail=-
+t=12.19 RUNNING   phase=lift      t_traj= 6.14 lim= 0 weld=attached     z=0.2847 fail=-
+t=12.21 RUNNING   phase=lift      t_traj= 6.24 lim= 0 weld=attached     z=0.2848 fail=-
+t=12.23 RUNNING   phase=lift      t_traj= 6.24 lim= 0 weld=attached     z=0.2849 fail=-
+t=12.25 RUNNING   phase=lift      t_traj= 6.24 lim= 0 weld=attached     z=0.2850 fail=-
+t=12.27 RUNNING   phase=lift      t_traj= 6.24 lim= 0 weld=attached     z=0.2851 fail=-
+t=12.29 RUNNING   phase=lift      t_traj= 6.24 lim= 0 weld=attached     z=0.2852 fail=-
+t=12.31 RUNNING   phase=lift      t_traj= 6.24 lim= 0 weld=attached     z=0.2853 fail=-
+t=12.33 RUNNING   phase=lift      t_traj= 6.34 lim= 0 weld=attached     z=0.2854 fail=-
+t=12.35 RUNNING   phase=lift      t_traj= 6.34 lim= 0 weld=attached     z=0.2855 fail=-
+t=12.37 RUNNING   phase=lift      t_traj= 6.34 lim= 0 weld=attached     z=0.2856 fail=-
+t=12.39 RUNNING   phase=lift      t_traj= 6.34 lim= 0 weld=attached     z=0.2857 fail=-
+t=12.41 RUNNING   phase=lift      t_traj= 6.34 lim= 0 weld=attached     z=0.2858 fail=-
+t=12.43 RUNNING   phase=lift      t_traj= 6.34 lim= 0 weld=attached     z=0.2859 fail=-
+t=12.45 RUNNING   phase=lift      t_traj= 6.45 lim= 0 weld=attached     z=0.2861 fail=-
+t=12.47 RUNNING   phase=lift      t_traj= 6.45 lim= 0 weld=attached     z=0.2862 fail=-
+t=12.49 RUNNING   phase=lift      t_traj= 6.45 lim= 0 weld=attached     z=0.2863 fail=-
+t=12.51 RUNNING   phase=lift      t_traj= 6.45 lim= 0 weld=attached     z=0.2864 fail=-
+t=12.53 RUNNING   phase=lift      t_traj= 6.45 lim= 0 weld=attached     z=0.2865 fail=-
+t=12.55 RUNNING   phase=lift      t_traj= 6.45 lim= 0 weld=attached     z=0.2866 fail=-
+t=12.57 RUNNING   phase=lift      t_traj= 6.45 lim= 0 weld=attached     z=0.2867 fail=-
+t=12.59 RUNNING   phase=lift      t_traj= 6.55 lim= 0 weld=attached     z=0.2868 fail=-
+t=12.61 RUNNING   phase=lift      t_traj= 6.55 lim= 0 weld=attached     z=0.2869 fail=-
+t=12.63 RUNNING   phase=lift      t_traj= 6.55 lim= 0 weld=attached     z=0.2870 fail=-
+t=12.65 RUNNING   phase=lift      t_traj= 6.55 lim= 0 weld=attached     z=0.2871 fail=-
+t=12.67 RUNNING   phase=lift      t_traj= 6.55 lim= 0 weld=attached     z=0.2872 fail=-
+t=12.69 RUNNING   phase=lift      t_traj= 6.55 lim= 0 weld=attached     z=0.2873 fail=-
+t=12.71 RUNNING   phase=lift      t_traj= 6.66 lim= 0 weld=attached     z=0.2874 fail=-
+t=12.73 RUNNING   phase=lift      t_traj= 6.66 lim= 0 weld=attached     z=0.2875 fail=-
+t=12.75 RUNNING   phase=lift      t_traj= 6.66 lim= 0 weld=attached     z=0.2877 fail=-
+t=12.77 RUNNING   phase=lift      t_traj= 6.66 lim= 0 weld=attached     z=0.2878 fail=-
+t=12.79 RUNNING   phase=lift      t_traj= 6.66 lim= 0 weld=attached     z=0.2879 fail=-
+t=12.81 RUNNING   phase=lift      t_traj= 6.66 lim= 0 weld=attached     z=0.2880 fail=-
+t=12.83 RUNNING   phase=lift      t_traj= 6.66 lim= 0 weld=attached     z=0.2881 fail=-
+t=12.85 RUNNING   phase=lift      t_traj= 6.76 lim= 0 weld=attached     z=0.2882 fail=-
+t=12.87 RUNNING   phase=lift      t_traj= 6.76 lim= 0 weld=attached     z=0.2883 fail=-
+t=12.89 RUNNING   phase=lift      t_traj= 6.76 lim= 0 weld=attached     z=0.2884 fail=-
+t=12.91 RUNNING   phase=lift      t_traj= 6.76 lim= 0 weld=attached     z=0.2885 fail=-
+t=12.93 RUNNING   phase=lift      t_traj= 6.76 lim= 0 weld=attached     z=0.2886 fail=-
+t=12.95 RUNNING   phase=lift      t_traj= 6.76 lim= 0 weld=attached     z=0.2887 fail=-
+t=12.97 RUNNING   phase=lift      t_traj= 6.86 lim= 0 weld=attached     z=0.2888 fail=-
+t=12.99 RUNNING   phase=lift      t_traj= 6.86 lim= 0 weld=attached     z=0.2889 fail=-
+t=13.01 RUNNING   phase=lift      t_traj= 6.86 lim= 0 weld=attached     z=0.2890 fail=-
+t=13.03 RUNNING   phase=lift      t_traj= 6.86 lim= 0 weld=attached     z=0.2892 fail=-
+t=13.05 RUNNING   phase=lift      t_traj= 6.86 lim= 0 weld=attached     z=0.2893 fail=-
+t=13.07 RUNNING   phase=lift      t_traj= 6.86 lim= 0 weld=attached     z=0.2894 fail=-
+t=13.09 RUNNING   phase=lift      t_traj= 6.86 lim= 0 weld=attached     z=0.2895 fail=-
+t=13.11 RUNNING   phase=lift      t_traj= 6.97 lim= 0 weld=attached     z=0.2896 fail=-
+t=13.13 RUNNING   phase=lift      t_traj= 6.97 lim= 0 weld=attached     z=0.2897 fail=-
+t=13.15 RUNNING   phase=lift      t_traj= 6.97 lim= 0 weld=attached     z=0.2898 fail=-
+t=13.17 RUNNING   phase=lift      t_traj= 6.97 lim= 0 weld=attached     z=0.2899 fail=-
+t=13.19 RUNNING   phase=lift      t_traj= 6.97 lim= 0 weld=attached     z=0.2900 fail=-
+t=13.21 RUNNING   phase=lift      t_traj= 6.97 lim= 0 weld=attached     z=0.2901 fail=-
+t=13.23 RUNNING   phase=lift      t_traj= 7.07 lim= 0 weld=attached     z=0.2902 fail=-
+t=13.25 RUNNING   phase=lift      t_traj= 7.07 lim= 0 weld=attached     z=0.2903 fail=-
+t=13.27 RUNNING   phase=lift      t_traj= 7.07 lim= 0 weld=attached     z=0.2904 fail=-
+t=13.29 RUNNING   phase=lift      t_traj= 7.07 lim= 0 weld=attached     z=0.2905 fail=-
+t=13.31 RUNNING   phase=lift      t_traj= 7.07 lim= 0 weld=attached     z=0.2906 fail=-
+t=13.33 RUNNING   phase=lift      t_traj= 7.07 lim= 0 weld=attached     z=0.2908 fail=-
+t=13.35 RUNNING   phase=lift      t_traj= 7.07 lim= 0 weld=attached     z=0.2909 fail=-
+t=13.37 RUNNING   phase=lift      t_traj= 7.18 lim= 0 weld=attached     z=0.2910 fail=-
+t=13.39 RUNNING   phase=lift      t_traj= 7.18 lim= 0 weld=attached     z=0.2911 fail=-
+t=13.41 RUNNING   phase=lift      t_traj= 7.18 lim= 0 weld=attached     z=0.2912 fail=-
+t=13.43 RUNNING   phase=lift      t_traj= 7.18 lim= 0 weld=attached     z=0.2913 fail=-
+t=13.45 RUNNING   phase=lift      t_traj= 7.18 lim= 0 weld=attached     z=0.2914 fail=-
+t=13.47 RUNNING   phase=lift      t_traj= 7.18 lim= 0 weld=attached     z=0.2915 fail=-
+t=13.49 RUNNING   phase=lift      t_traj= 7.28 lim= 0 weld=attached     z=0.2916 fail=-
+t=13.51 RUNNING   phase=lift      t_traj= 7.28 lim= 0 weld=attached     z=0.2917 fail=-
+t=13.53 RUNNING   phase=lift      t_traj= 7.28 lim= 0 weld=attached     z=0.2918 fail=-
+t=13.55 RUNNING   phase=lift      t_traj= 7.28 lim= 0 weld=attached     z=0.2919 fail=-
+t=13.57 RUNNING   phase=lift      t_traj= 7.28 lim= 0 weld=attached     z=0.2920 fail=-
+t=13.59 RUNNING   phase=lift      t_traj= 7.28 lim= 0 weld=attached     z=0.2921 fail=-
+t=13.61 RUNNING   phase=lift      t_traj= 7.28 lim= 0 weld=attached     z=0.2922 fail=-
+t=13.63 RUNNING   phase=lift      t_traj= 7.38 lim= 0 weld=attached     z=0.2923 fail=-
+t=13.65 RUNNING   phase=lift      t_traj= 7.38 lim= 0 weld=attached     z=0.2925 fail=-
+t=13.67 RUNNING   phase=lift      t_traj= 7.38 lim= 0 weld=attached     z=0.2926 fail=-
+t=13.69 RUNNING   phase=lift      t_traj= 7.38 lim= 0 weld=attached     z=0.2927 fail=-
+t=13.71 RUNNING   phase=lift      t_traj= 7.38 lim= 0 weld=attached     z=0.2928 fail=-
+t=13.73 RUNNING   phase=lift      t_traj= 7.38 lim= 0 weld=attached     z=0.2929 fail=-
+t=13.75 RUNNING   phase=lift      t_traj= 7.49 lim= 0 weld=attached     z=0.2930 fail=-
+t=13.77 RUNNING   phase=lift      t_traj= 7.49 lim= 0 weld=attached     z=0.2931 fail=-
+t=13.79 RUNNING   phase=lift      t_traj= 7.49 lim= 0 weld=attached     z=0.2932 fail=-
+t=13.81 RUNNING   phase=lift      t_traj= 7.49 lim= 0 weld=attached     z=0.2933 fail=-
+t=13.83 RUNNING   phase=lift      t_traj= 7.49 lim= 0 weld=attached     z=0.2934 fail=-
+t=13.85 RUNNING   phase=lift      t_traj= 7.49 lim= 0 weld=attached     z=0.2935 fail=-
+t=13.87 RUNNING   phase=lift      t_traj= 7.49 lim= 0 weld=attached     z=0.2936 fail=-
+t=13.89 RUNNING   phase=lift      t_traj= 7.59 lim= 0 weld=attached     z=0.2937 fail=-
+t=13.91 RUNNING   phase=lift      t_traj= 7.59 lim= 0 weld=attached     z=0.2938 fail=-
+t=13.93 RUNNING   phase=lift      t_traj= 7.59 lim= 0 weld=attached     z=0.2939 fail=-
+t=13.95 RUNNING   phase=lift      t_traj= 7.59 lim= 0 weld=attached     z=0.2941 fail=-
+t=13.97 RUNNING   phase=lift      t_traj= 7.59 lim= 0 weld=attached     z=0.2942 fail=-
+t=13.99 RUNNING   phase=lift      t_traj= 7.59 lim= 0 weld=attached     z=0.2943 fail=-
+t=14.01 RUNNING   phase=lift      t_traj= 7.70 lim= 0 weld=attached     z=0.2944 fail=-
+t=14.03 RUNNING   phase=lift      t_traj= 7.70 lim= 0 weld=attached     z=0.2945 fail=-
+t=14.05 RUNNING   phase=lift      t_traj= 7.70 lim= 0 weld=attached     z=0.2946 fail=-
+t=14.07 RUNNING   phase=lift      t_traj= 7.70 lim= 0 weld=attached     z=0.2947 fail=-
+t=14.09 RUNNING   phase=lift      t_traj= 7.70 lim= 0 weld=attached     z=0.2948 fail=-
+t=14.11 RUNNING   phase=lift      t_traj= 7.70 lim= 0 weld=attached     z=0.2949 fail=-
+t=14.13 RUNNING   phase=lift      t_traj= 7.70 lim= 0 weld=attached     z=0.2950 fail=-
+t=14.15 RUNNING   phase=lift      t_traj= 7.80 lim= 0 weld=attached     z=0.2951 fail=-
+t=14.17 RUNNING   phase=lift      t_traj= 7.80 lim= 0 weld=attached     z=0.2952 fail=-
+t=14.19 RUNNING   phase=lift      t_traj= 7.80 lim= 0 weld=attached     z=0.2953 fail=-
+t=14.21 RUNNING   phase=lift      t_traj= 7.80 lim= 0 weld=attached     z=0.2954 fail=-
+t=14.23 RUNNING   phase=lift      t_traj= 7.80 lim= 0 weld=attached     z=0.2955 fail=-
+t=14.25 RUNNING   phase=lift      t_traj= 7.80 lim= 0 weld=attached     z=0.2957 fail=-
+t=14.27 RUNNING   phase=lift      t_traj= 7.80 lim= 0 weld=attached     z=0.2958 fail=-
+t=14.29 RUNNING   phase=lift      t_traj= 7.90 lim= 0 weld=attached     z=0.2959 fail=-
+t=14.31 RUNNING   phase=lift      t_traj= 7.90 lim= 0 weld=attached     z=0.2960 fail=-
+t=14.33 RUNNING   phase=lift      t_traj= 7.90 lim= 0 weld=attached     z=0.2961 fail=-
+t=14.35 RUNNING   phase=lift      t_traj= 7.90 lim= 0 weld=attached     z=0.2962 fail=-
+t=14.37 RUNNING   phase=lift      t_traj= 7.90 lim= 0 weld=attached     z=0.2963 fail=-
+t=14.39 RUNNING   phase=lift      t_traj= 7.90 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.40 RUNNING   phase=transport t_traj= 8.01 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.41 RUNNING   phase=transport t_traj= 8.01 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.43 RUNNING   phase=transport t_traj= 8.01 lim= 0 weld=attached     z=0.2966 fail=-
+t=14.45 RUNNING   phase=transport t_traj= 8.01 lim= 0 weld=attached     z=0.2966 fail=-
+t=14.47 RUNNING   phase=transport t_traj= 8.01 lim= 0 weld=attached     z=0.2967 fail=-
+t=14.49 RUNNING   phase=transport t_traj= 8.01 lim= 0 weld=attached     z=0.2967 fail=-
+t=14.51 RUNNING   phase=transport t_traj= 8.01 lim= 0 weld=attached     z=0.2966 fail=-
+t=14.53 RUNNING   phase=transport t_traj= 8.11 lim= 0 weld=attached     z=0.2966 fail=-
+t=14.55 RUNNING   phase=transport t_traj= 8.11 lim= 0 weld=attached     z=0.2966 fail=-
+t=14.57 RUNNING   phase=transport t_traj= 8.11 lim= 0 weld=attached     z=0.2966 fail=-
+t=14.59 RUNNING   phase=transport t_traj= 8.11 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.61 RUNNING   phase=transport t_traj= 8.11 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.63 RUNNING   phase=transport t_traj= 8.11 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.65 RUNNING   phase=transport t_traj= 8.11 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.67 RUNNING   phase=transport t_traj= 8.22 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.69 RUNNING   phase=transport t_traj= 8.22 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.71 RUNNING   phase=transport t_traj= 8.22 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.73 RUNNING   phase=transport t_traj= 8.22 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.75 RUNNING   phase=transport t_traj= 8.22 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.77 RUNNING   phase=transport t_traj= 8.22 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.79 RUNNING   phase=transport t_traj= 8.32 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.81 RUNNING   phase=transport t_traj= 8.32 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.83 RUNNING   phase=transport t_traj= 8.32 lim= 0 weld=attached     z=0.2964 fail=-
+t=14.85 RUNNING   phase=transport t_traj= 8.32 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.87 RUNNING   phase=transport t_traj= 8.32 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.89 RUNNING   phase=transport t_traj= 8.32 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.91 RUNNING   phase=transport t_traj= 8.32 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.93 RUNNING   phase=transport t_traj= 8.42 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.95 RUNNING   phase=transport t_traj= 8.42 lim= 0 weld=attached     z=0.2965 fail=-
+t=14.97 RUNNING   phase=transport t_traj= 8.42 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.01 RUNNING   phase=transport t_traj= 8.42 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.03 RUNNING   phase=transport t_traj= 8.42 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.05 RUNNING   phase=transport t_traj= 8.53 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.07 RUNNING   phase=transport t_traj= 8.53 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.09 RUNNING   phase=transport t_traj= 8.53 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.11 RUNNING   phase=transport t_traj= 8.53 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.13 RUNNING   phase=transport t_traj= 8.53 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.17 RUNNING   phase=transport t_traj= 8.53 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.31 RUNNING   phase=transport t_traj= 8.74 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.41 RUNNING   phase=transport t_traj= 8.74 lim= 0 weld=attached     z=0.2965 fail=-
+t=15.53 RUNNING   phase=transport t_traj= 8.84 lim= 0 weld=attached     z=0.2965 fail=-
+t=18.17 RUNNING   phase=lower     t_traj=11.02 lim= 0 weld=attached     z=0.2965 fail=-
+t=18.17 RUNNING   phase=lower     t_traj=11.02 lim= 0 weld=attached     z=0.2965 fail=-
+t=18.19 RUNNING   phase=lower     t_traj=11.02 lim= 0 weld=attached     z=0.2964 fail=-
+t=18.21 RUNNING   phase=lower     t_traj=11.02 lim= 0 weld=attached     z=0.2964 fail=-
+t=18.23 RUNNING   phase=lower     t_traj=11.02 lim= 0 weld=attached     z=0.2963 fail=-
+t=18.25 RUNNING   phase=lower     t_traj=11.02 lim= 0 weld=attached     z=0.2961 fail=-
+t=18.27 RUNNING   phase=lower     t_traj=11.02 lim= 0 weld=attached     z=0.2960 fail=-
+t=18.29 RUNNING   phase=lower     t_traj=11.02 lim= 0 weld=attached     z=0.2959 fail=-
+t=18.31 RUNNING   phase=lower     t_traj=11.13 lim= 0 weld=attached     z=0.2957 fail=-
+t=18.33 RUNNING   phase=lower     t_traj=11.13 lim= 0 weld=attached     z=0.2956 fail=-
+t=18.35 RUNNING   phase=lower     t_traj=11.13 lim= 0 weld=attached     z=0.2955 fail=-
+t=18.37 RUNNING   phase=lower     t_traj=11.13 lim= 0 weld=attached     z=0.2953 fail=-
+t=18.39 RUNNING   phase=lower     t_traj=11.13 lim= 0 weld=attached     z=0.2952 fail=-
+t=18.41 RUNNING   phase=lower     t_traj=11.13 lim= 0 weld=attached     z=0.2951 fail=-
+t=18.43 RUNNING   phase=lower     t_traj=11.23 lim= 0 weld=attached     z=0.2949 fail=-
+t=18.45 RUNNING   phase=lower     t_traj=11.23 lim= 0 weld=attached     z=0.2948 fail=-
+t=18.47 RUNNING   phase=lower     t_traj=11.23 lim= 0 weld=attached     z=0.2947 fail=-
+t=18.49 RUNNING   phase=lower     t_traj=11.23 lim= 0 weld=attached     z=0.2946 fail=-
+t=18.51 RUNNING   phase=lower     t_traj=11.23 lim= 0 weld=attached     z=0.2945 fail=-
+t=18.53 RUNNING   phase=lower     t_traj=11.23 lim= 0 weld=attached     z=0.2944 fail=-
+t=18.55 RUNNING   phase=lower     t_traj=11.23 lim= 0 weld=attached     z=0.2943 fail=-
+t=18.57 RUNNING   phase=lower     t_traj=11.34 lim= 0 weld=attached     z=0.2942 fail=-
+t=18.59 RUNNING   phase=lower     t_traj=11.34 lim= 0 weld=attached     z=0.2941 fail=-
+t=18.61 RUNNING   phase=lower     t_traj=11.34 lim= 0 weld=attached     z=0.2940 fail=-
+t=18.63 RUNNING   phase=lower     t_traj=11.34 lim= 0 weld=attached     z=0.2939 fail=-
+t=18.65 RUNNING   phase=lower     t_traj=11.34 lim= 0 weld=attached     z=0.2938 fail=-
+t=18.67 RUNNING   phase=lower     t_traj=11.34 lim= 0 weld=attached     z=0.2937 fail=-
+t=18.69 RUNNING   phase=lower     t_traj=11.44 lim= 0 weld=attached     z=0.2936 fail=-
+t=18.71 RUNNING   phase=lower     t_traj=11.44 lim= 0 weld=attached     z=0.2935 fail=-
+t=18.73 RUNNING   phase=lower     t_traj=11.44 lim= 0 weld=attached     z=0.2934 fail=-
+t=18.75 RUNNING   phase=lower     t_traj=11.44 lim= 0 weld=attached     z=0.2933 fail=-
+t=18.77 RUNNING   phase=lower     t_traj=11.44 lim= 0 weld=attached     z=0.2932 fail=-
+t=18.79 RUNNING   phase=lower     t_traj=11.44 lim= 0 weld=attached     z=0.2931 fail=-
+t=18.81 RUNNING   phase=lower     t_traj=11.44 lim= 0 weld=attached     z=0.2929 fail=-
+t=18.83 RUNNING   phase=lower     t_traj=11.54 lim= 0 weld=attached     z=0.2928 fail=-
+t=18.85 RUNNING   phase=lower     t_traj=11.54 lim= 0 weld=attached     z=0.2927 fail=-
+t=18.87 RUNNING   phase=lower     t_traj=11.54 lim= 0 weld=attached     z=0.2926 fail=-
+t=18.89 RUNNING   phase=lower     t_traj=11.54 lim= 0 weld=attached     z=0.2925 fail=-
+t=18.91 RUNNING   phase=lower     t_traj=11.54 lim= 0 weld=attached     z=0.2924 fail=-
+t=18.93 RUNNING   phase=lower     t_traj=11.54 lim= 0 weld=attached     z=0.2923 fail=-
+t=18.95 RUNNING   phase=lower     t_traj=11.65 lim= 0 weld=attached     z=0.2922 fail=-
+t=18.97 RUNNING   phase=lower     t_traj=11.65 lim= 0 weld=attached     z=0.2921 fail=-
+t=18.99 RUNNING   phase=lower     t_traj=11.65 lim= 0 weld=attached     z=0.2920 fail=-
+t=19.01 RUNNING   phase=lower     t_traj=11.65 lim= 0 weld=attached     z=0.2919 fail=-
+t=19.03 RUNNING   phase=lower     t_traj=11.65 lim= 0 weld=attached     z=0.2918 fail=-
+t=19.05 RUNNING   phase=lower     t_traj=11.65 lim= 0 weld=attached     z=0.2917 fail=-
+t=19.07 RUNNING   phase=lower     t_traj=11.65 lim= 0 weld=attached     z=0.2916 fail=-
+t=19.09 RUNNING   phase=lower     t_traj=11.75 lim= 0 weld=attached     z=0.2915 fail=-
+t=19.11 RUNNING   phase=lower     t_traj=11.75 lim= 0 weld=attached     z=0.2913 fail=-
+t=19.13 RUNNING   phase=lower     t_traj=11.75 lim= 0 weld=attached     z=0.2912 fail=-
+t=19.15 RUNNING   phase=lower     t_traj=11.75 lim= 0 weld=attached     z=0.2911 fail=-
+t=19.17 RUNNING   phase=lower     t_traj=11.75 lim= 0 weld=attached     z=0.2910 fail=-
+t=19.19 RUNNING   phase=lower     t_traj=11.75 lim= 0 weld=attached     z=0.2909 fail=-
+t=19.21 RUNNING   phase=lower     t_traj=11.86 lim= 0 weld=attached     z=0.2908 fail=-
+t=19.23 RUNNING   phase=lower     t_traj=11.86 lim= 0 weld=attached     z=0.2907 fail=-
+t=19.25 RUNNING   phase=lower     t_traj=11.86 lim= 0 weld=attached     z=0.2906 fail=-
+t=19.27 RUNNING   phase=lower     t_traj=11.86 lim= 0 weld=attached     z=0.2905 fail=-
+t=19.29 RUNNING   phase=lower     t_traj=11.86 lim= 0 weld=attached     z=0.2904 fail=-
+t=19.31 RUNNING   phase=lower     t_traj=11.86 lim= 0 weld=attached     z=0.2903 fail=-
+t=19.33 RUNNING   phase=lower     t_traj=11.86 lim= 0 weld=attached     z=0.2902 fail=-
+t=19.35 RUNNING   phase=lower     t_traj=11.96 lim= 0 weld=attached     z=0.2901 fail=-
+t=19.37 RUNNING   phase=lower     t_traj=11.96 lim= 0 weld=attached     z=0.2900 fail=-
+t=19.39 RUNNING   phase=lower     t_traj=11.96 lim= 0 weld=attached     z=0.2899 fail=-
+t=19.41 RUNNING   phase=lower     t_traj=11.96 lim= 0 weld=attached     z=0.2897 fail=-
+t=19.43 RUNNING   phase=lower     t_traj=11.96 lim= 0 weld=attached     z=0.2896 fail=-
+t=19.45 RUNNING   phase=lower     t_traj=11.96 lim= 0 weld=attached     z=0.2895 fail=-
+t=19.47 RUNNING   phase=lower     t_traj=12.06 lim= 0 weld=attached     z=0.2894 fail=-
+t=19.49 RUNNING   phase=lower     t_traj=12.06 lim= 0 weld=attached     z=0.2893 fail=-
+t=19.51 RUNNING   phase=lower     t_traj=12.06 lim= 0 weld=attached     z=0.2892 fail=-
+t=19.53 RUNNING   phase=lower     t_traj=12.06 lim= 0 weld=attached     z=0.2891 fail=-
+t=19.55 RUNNING   phase=lower     t_traj=12.06 lim= 0 weld=attached     z=0.2890 fail=-
+t=19.57 RUNNING   phase=lower     t_traj=12.06 lim= 0 weld=attached     z=0.2889 fail=-
+t=19.59 RUNNING   phase=lower     t_traj=12.06 lim= 0 weld=attached     z=0.2888 fail=-
+t=19.61 RUNNING   phase=lower     t_traj=12.17 lim= 0 weld=attached     z=0.2887 fail=-
+t=19.63 RUNNING   phase=lower     t_traj=12.17 lim= 0 weld=attached     z=0.2886 fail=-
+t=19.65 RUNNING   phase=lower     t_traj=12.17 lim= 0 weld=attached     z=0.2885 fail=-
+t=19.67 RUNNING   phase=lower     t_traj=12.17 lim= 0 weld=attached     z=0.2884 fail=-
+t=19.69 RUNNING   phase=lower     t_traj=12.17 lim= 0 weld=attached     z=0.2883 fail=-
+t=19.71 RUNNING   phase=lower     t_traj=12.17 lim= 0 weld=attached     z=0.2881 fail=-
+t=19.73 RUNNING   phase=lower     t_traj=12.17 lim= 0 weld=attached     z=0.2880 fail=-
+t=19.75 RUNNING   phase=lower     t_traj=12.27 lim= 0 weld=attached     z=0.2879 fail=-
+t=19.77 RUNNING   phase=lower     t_traj=12.27 lim= 0 weld=attached     z=0.2878 fail=-
+t=19.79 RUNNING   phase=lower     t_traj=12.27 lim= 0 weld=attached     z=0.2877 fail=-
+t=19.81 RUNNING   phase=lower     t_traj=12.27 lim= 0 weld=attached     z=0.2876 fail=-
+t=19.83 RUNNING   phase=lower     t_traj=12.27 lim= 0 weld=attached     z=0.2875 fail=-
+t=19.85 RUNNING   phase=lower     t_traj=12.27 lim= 0 weld=attached     z=0.2874 fail=-
+t=19.87 RUNNING   phase=lower     t_traj=12.38 lim= 0 weld=attached     z=0.2873 fail=-
+t=19.89 RUNNING   phase=lower     t_traj=12.38 lim= 0 weld=attached     z=0.2872 fail=-
+t=19.91 RUNNING   phase=lower     t_traj=12.38 lim= 0 weld=attached     z=0.2871 fail=-
+t=19.93 RUNNING   phase=lower     t_traj=12.38 lim= 0 weld=attached     z=0.2870 fail=-
+t=19.95 RUNNING   phase=lower     t_traj=12.38 lim= 0 weld=attached     z=0.2869 fail=-
+t=19.97 RUNNING   phase=lower     t_traj=12.38 lim= 0 weld=attached     z=0.2868 fail=-
+t=19.99 RUNNING   phase=lower     t_traj=12.48 lim= 0 weld=attached     z=0.2867 fail=-
+t=20.01 RUNNING   phase=lower     t_traj=12.48 lim= 0 weld=attached     z=0.2865 fail=-
+t=20.03 RUNNING   phase=lower     t_traj=12.48 lim= 0 weld=attached     z=0.2864 fail=-
+t=20.05 RUNNING   phase=lower     t_traj=12.48 lim= 0 weld=attached     z=0.2863 fail=-
+t=20.07 RUNNING   phase=lower     t_traj=12.48 lim= 0 weld=attached     z=0.2862 fail=-
+t=20.09 RUNNING   phase=lower     t_traj=12.48 lim= 0 weld=attached     z=0.2861 fail=-
+t=20.11 RUNNING   phase=lower     t_traj=12.48 lim= 0 weld=attached     z=0.2860 fail=-
+t=20.13 RUNNING   phase=lower     t_traj=12.58 lim= 0 weld=attached     z=0.2859 fail=-
+t=20.15 RUNNING   phase=lower     t_traj=12.58 lim= 0 weld=attached     z=0.2858 fail=-
+t=20.17 RUNNING   phase=lower     t_traj=12.58 lim= 0 weld=attached     z=0.2857 fail=-
+t=20.19 RUNNING   phase=lower     t_traj=12.58 lim= 0 weld=attached     z=0.2856 fail=-
+t=20.21 RUNNING   phase=lower     t_traj=12.58 lim= 0 weld=attached     z=0.2855 fail=-
+t=20.23 RUNNING   phase=lower     t_traj=12.58 lim= 0 weld=attached     z=0.2854 fail=-
+t=20.25 RUNNING   phase=lower     t_traj=12.69 lim= 0 weld=attached     z=0.2853 fail=-
+t=20.27 RUNNING   phase=lower     t_traj=12.69 lim= 0 weld=attached     z=0.2852 fail=-
+t=20.29 RUNNING   phase=lower     t_traj=12.69 lim= 0 weld=attached     z=0.2851 fail=-
+t=20.31 RUNNING   phase=lower     t_traj=12.69 lim= 0 weld=attached     z=0.2849 fail=-
+t=20.33 RUNNING   phase=lower     t_traj=12.69 lim= 0 weld=attached     z=0.2848 fail=-
+t=20.35 RUNNING   phase=lower     t_traj=12.69 lim= 0 weld=attached     z=0.2847 fail=-
+t=20.37 RUNNING   phase=lower     t_traj=12.69 lim= 0 weld=attached     z=0.2846 fail=-
+t=20.39 RUNNING   phase=lower     t_traj=12.79 lim= 0 weld=attached     z=0.2845 fail=-
+t=20.41 RUNNING   phase=lower     t_traj=12.79 lim= 0 weld=attached     z=0.2844 fail=-
+t=20.43 RUNNING   phase=lower     t_traj=12.79 lim= 0 weld=attached     z=0.2843 fail=-
+t=20.45 RUNNING   phase=lower     t_traj=12.79 lim= 0 weld=attached     z=0.2842 fail=-
+t=20.47 RUNNING   phase=lower     t_traj=12.79 lim= 0 weld=attached     z=0.2841 fail=-
+t=20.49 RUNNING   phase=lower     t_traj=12.79 lim= 0 weld=attached     z=0.2840 fail=-
+t=20.51 RUNNING   phase=lower     t_traj=12.90 lim= 0 weld=attached     z=0.2839 fail=-
+t=20.53 RUNNING   phase=lower     t_traj=12.90 lim= 0 weld=attached     z=0.2838 fail=-
+t=20.55 RUNNING   phase=lower     t_traj=12.90 lim= 0 weld=attached     z=0.2837 fail=-
+t=20.57 RUNNING   phase=lower     t_traj=12.90 lim= 0 weld=attached     z=0.2836 fail=-
+t=20.59 RUNNING   phase=lower     t_traj=12.90 lim= 0 weld=attached     z=0.2835 fail=-
+t=20.61 RUNNING   phase=lower     t_traj=12.90 lim= 0 weld=attached     z=0.2833 fail=-
+t=20.63 RUNNING   phase=lower     t_traj=12.90 lim= 0 weld=attached     z=0.2832 fail=-
+t=20.65 RUNNING   phase=lower     t_traj=13.00 lim= 0 weld=attached     z=0.2831 fail=-
+t=20.67 RUNNING   phase=lower     t_traj=13.00 lim= 0 weld=attached     z=0.2830 fail=-
+t=20.69 RUNNING   phase=lower     t_traj=13.00 lim= 0 weld=attached     z=0.2829 fail=-
+t=20.71 RUNNING   phase=lower     t_traj=13.00 lim= 0 weld=attached     z=0.2828 fail=-
+t=20.73 RUNNING   phase=lower     t_traj=13.00 lim= 0 weld=attached     z=0.2827 fail=-
+t=20.75 RUNNING   phase=lower     t_traj=13.00 lim= 0 weld=attached     z=0.2826 fail=-
+t=20.77 RUNNING   phase=lower     t_traj=13.00 lim= 0 weld=attached     z=0.2825 fail=-
+t=20.79 RUNNING   phase=lower     t_traj=13.10 lim= 0 weld=attached     z=0.2824 fail=-
+t=20.81 RUNNING   phase=lower     t_traj=13.10 lim= 0 weld=attached     z=0.2823 fail=-
+t=20.83 RUNNING   phase=lower     t_traj=13.10 lim= 0 weld=attached     z=0.2822 fail=-
+t=20.85 RUNNING   phase=lower     t_traj=13.10 lim= 0 weld=attached     z=0.2821 fail=-
+t=20.87 RUNNING   phase=lower     t_traj=13.10 lim= 0 weld=attached     z=0.2820 fail=-
+t=20.89 RUNNING   phase=lower     t_traj=13.10 lim= 0 weld=attached     z=0.2819 fail=-
+t=20.91 RUNNING   phase=lower     t_traj=13.21 lim= 0 weld=attached     z=0.2817 fail=-
+t=20.93 RUNNING   phase=lower     t_traj=13.21 lim= 0 weld=attached     z=0.2816 fail=-
+t=20.95 RUNNING   phase=lower     t_traj=13.21 lim= 0 weld=attached     z=0.2815 fail=-
+t=20.97 RUNNING   phase=lower     t_traj=13.21 lim= 0 weld=attached     z=0.2814 fail=-
+t=20.99 RUNNING   phase=lower     t_traj=13.21 lim= 0 weld=attached     z=0.2813 fail=-
+t=21.01 RUNNING   phase=lower     t_traj=13.21 lim= 0 weld=attached     z=0.2812 fail=-
+t=21.03 RUNNING   phase=lower     t_traj=13.31 lim= 0 weld=attached     z=0.2811 fail=-
+t=21.05 RUNNING   phase=lower     t_traj=13.31 lim= 0 weld=attached     z=0.2810 fail=-
+t=21.07 RUNNING   phase=lower     t_traj=13.31 lim= 0 weld=attached     z=0.2809 fail=-
+t=21.09 RUNNING   phase=lower     t_traj=13.31 lim= 0 weld=attached     z=0.2808 fail=-
+t=21.11 RUNNING   phase=lower     t_traj=13.31 lim= 0 weld=attached     z=0.2807 fail=-
+t=21.13 RUNNING   phase=lower     t_traj=13.31 lim= 0 weld=attached     z=0.2806 fail=-
+t=21.15 RUNNING   phase=lower     t_traj=13.31 lim= 0 weld=attached     z=0.2805 fail=-
+t=21.17 RUNNING   phase=lower     t_traj=13.42 lim= 0 weld=attached     z=0.2804 fail=-
+t=21.19 RUNNING   phase=lower     t_traj=13.42 lim= 0 weld=attached     z=0.2803 fail=-
+t=21.21 RUNNING   phase=lower     t_traj=13.42 lim= 0 weld=attached     z=0.2801 fail=-
+t=21.23 RUNNING   phase=lower     t_traj=13.42 lim= 0 weld=attached     z=0.2800 fail=-
+t=21.25 RUNNING   phase=lower     t_traj=13.42 lim= 0 weld=attached     z=0.2799 fail=-
+t=21.27 RUNNING   phase=lower     t_traj=13.42 lim= 0 weld=attached     z=0.2798 fail=-
+t=21.29 RUNNING   phase=lower     t_traj=13.42 lim= 0 weld=attached     z=0.2797 fail=-
+t=21.31 RUNNING   phase=lower     t_traj=13.52 lim= 0 weld=attached     z=0.2796 fail=-
+t=21.33 RUNNING   phase=lower     t_traj=13.52 lim= 0 weld=attached     z=0.2795 fail=-
+t=21.35 RUNNING   phase=lower     t_traj=13.52 lim= 0 weld=attached     z=0.2794 fail=-
+t=21.37 RUNNING   phase=lower     t_traj=13.52 lim= 0 weld=attached     z=0.2793 fail=-
+t=21.39 RUNNING   phase=lower     t_traj=13.52 lim= 0 weld=attached     z=0.2792 fail=-
+t=21.41 RUNNING   phase=lower     t_traj=13.52 lim= 0 weld=attached     z=0.2791 fail=-
+t=21.43 RUNNING   phase=lower     t_traj=13.62 lim= 0 weld=attached     z=0.2790 fail=-
+t=21.45 RUNNING   phase=lower     t_traj=13.62 lim= 0 weld=attached     z=0.2789 fail=-
+t=21.47 RUNNING   phase=lower     t_traj=13.62 lim= 0 weld=attached     z=0.2788 fail=-
+t=21.49 RUNNING   phase=lower     t_traj=13.62 lim= 0 weld=attached     z=0.2787 fail=-
+t=21.51 RUNNING   phase=lower     t_traj=13.62 lim= 0 weld=attached     z=0.2785 fail=-
+t=21.53 RUNNING   phase=lower     t_traj=13.62 lim= 0 weld=attached     z=0.2784 fail=-
+t=21.55 RUNNING   phase=lower     t_traj=13.73 lim= 0 weld=attached     z=0.2783 fail=-
+t=21.57 RUNNING   phase=lower     t_traj=13.73 lim= 0 weld=attached     z=0.2782 fail=-
+t=21.59 RUNNING   phase=lower     t_traj=13.73 lim= 0 weld=attached     z=0.2781 fail=-
+t=21.61 RUNNING   phase=lower     t_traj=13.73 lim= 0 weld=attached     z=0.2780 fail=-
+t=21.63 RUNNING   phase=lower     t_traj=13.73 lim= 0 weld=attached     z=0.2779 fail=-
+t=21.65 RUNNING   phase=lower     t_traj=13.73 lim= 0 weld=attached     z=0.2778 fail=-
+t=21.67 RUNNING   phase=lower     t_traj=13.73 lim= 0 weld=attached     z=0.2777 fail=-
+t=21.69 RUNNING   phase=lower     t_traj=13.83 lim= 0 weld=attached     z=0.2776 fail=-
+t=21.71 RUNNING   phase=lower     t_traj=13.83 lim= 0 weld=attached     z=0.2775 fail=-
+t=21.73 RUNNING   phase=lower     t_traj=13.83 lim= 0 weld=attached     z=0.2774 fail=-
+t=21.75 RUNNING   phase=lower     t_traj=13.83 lim= 0 weld=attached     z=0.2773 fail=-
+t=21.77 RUNNING   phase=lower     t_traj=13.83 lim= 0 weld=attached     z=0.2772 fail=-
+t=21.79 RUNNING   phase=lower     t_traj=13.83 lim= 0 weld=attached     z=0.2771 fail=-
+t=21.81 RUNNING   phase=lower     t_traj=13.94 lim= 0 weld=attached     z=0.2769 fail=-
+t=21.83 RUNNING   phase=lower     t_traj=13.94 lim= 0 weld=attached     z=0.2768 fail=-
+t=21.85 RUNNING   phase=lower     t_traj=13.94 lim= 0 weld=attached     z=0.2767 fail=-
+t=21.87 RUNNING   phase=lower     t_traj=13.94 lim= 0 weld=attached     z=0.2766 fail=-
+t=21.89 RUNNING   phase=lower     t_traj=13.94 lim= 0 weld=attached     z=0.2765 fail=-
+t=21.91 RUNNING   phase=lower     t_traj=13.94 lim= 0 weld=attached     z=0.2764 fail=-
+t=21.93 RUNNING   phase=lower     t_traj=13.94 lim= 0 weld=attached     z=0.2763 fail=-
+t=21.94 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=attached     z=0.2763 fail=-
+t=21.95 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=attached     z=0.2763 fail=-
+t=21.96 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2763 fail=-
+t=21.98 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2762 fail=-
+t=22.00 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2762 fail=-
+t=22.03 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2762 fail=-
+t=22.07 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.09 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.12 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.14 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.16 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.18 RUNNING   phase=release   t_traj=14.04 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.19 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.21 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.23 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.25 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.26 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.30 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.32 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.33 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.35 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.37 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.38 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.40 RUNNING   phase=release   t_traj=14.14 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.42 RUNNING   phase=release   t_traj=14.25 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.44 RUNNING   phase=release   t_traj=14.25 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.46 RUNNING   phase=release   t_traj=14.25 lim= 0 weld=detached     z=0.2761 fail=-
+t=22.49 RUNNING   phase=release   t_traj=14.25 lim= 0 weld=detached     z=0.2760 fail=-
+t=22.51 RUNNING   phase=release   t_traj=14.25 lim= 0 weld=detached     z=0.2760 fail=-
+t=22.53 RUNNING   phase=release   t_traj=14.25 lim= 0 weld=detached     z=0.2759 fail=-
+t=22.55 RUNNING   phase=release   t_traj=14.25 lim= 0 weld=detached     z=0.2758 fail=-
+t=22.58 RUNNING   phase=release   t_traj=14.25 lim= 0 weld=detached     z=0.2757 fail=-
+t=22.60 RUNNING   phase=release   t_traj=14.25 lim= 0 weld=detached     z=0.2757 fail=-
+t=22.64 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2757 fail=-
+t=22.66 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2757 fail=-
+t=22.68 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2756 fail=-
+t=22.71 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2756 fail=-
+t=22.73 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2756 fail=-
+t=22.76 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2756 fail=-
+t=22.79 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2755 fail=-
+t=22.81 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2755 fail=-
+t=22.84 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2755 fail=-
+t=22.86 RUNNING   phase=release   t_traj=14.35 lim= 0 weld=detached     z=0.2755 fail=-
+t=22.88 RUNNING   phase=release   t_traj=14.46 lim= 0 weld=detached     z=0.2755 fail=-
+t=22.91 RUNNING   phase=release   t_traj=14.46 lim= 0 weld=detached     z=0.2754 fail=-
+t=22.93 RUNNING   phase=release   t_traj=14.46 lim= 0 weld=detached     z=0.2754 fail=-
+t=22.95 RUNNING   phase=release   t_traj=14.46 lim= 0 weld=detached     z=0.2754 fail=-
+t=22.98 RUNNING   phase=release   t_traj=14.46 lim= 0 weld=detached     z=0.2754 fail=-
+t=23.00 RUNNING   phase=release   t_traj=14.46 lim= 0 weld=detached     z=0.2754 fail=-
+t=23.02 RUNNING   phase=release   t_traj=14.46 lim= 0 weld=detached     z=0.2753 fail=-
+t=23.05 RUNNING   phase=release   t_traj=14.46 lim= 0 weld=detached     z=0.2753 fail=-
+t=23.07 RUNNING   phase=release   t_traj=14.46 lim= 0 weld=detached     z=0.2753 fail=-
+t=23.10 RUNNING   phase=release   t_traj=14.56 lim= 0 weld=detached     z=0.2753 fail=-
+t=23.12 RUNNING   phase=release   t_traj=14.56 lim= 0 weld=detached     z=0.2753 fail=-
+t=23.15 RUNNING   phase=release   t_traj=14.56 lim= 0 weld=detached     z=0.2752 fail=-
+t=23.17 RUNNING   phase=release   t_traj=14.56 lim= 0 weld=detached     z=0.2752 fail=-
+t=23.19 RUNNING   phase=release   t_traj=14.56 lim= 0 weld=detached     z=0.2752 fail=-
+t=23.21 RUNNING   phase=release   t_traj=14.56 lim= 0 weld=detached     z=0.2752 fail=-
+t=23.24 RUNNING   phase=release   t_traj=14.56 lim= 0 weld=detached     z=0.2752 fail=-
+t=23.27 RUNNING   phase=release   t_traj=14.56 lim= 0 weld=detached     z=0.2751 fail=-
+t=23.28 RUNNING   phase=release   t_traj=14.56 lim= 0 weld=detached     z=0.2751 fail=-
+t=23.30 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2751 fail=-
+t=23.32 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2751 fail=-
+t=23.33 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2751 fail=-
+t=23.36 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2751 fail=-
+t=23.39 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.40 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.42 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.44 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.48 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.53 RUNNING   phase=release   t_traj=14.66 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.59 RUNNING   phase=release   t_traj=14.77 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.66 RUNNING   phase=release   t_traj=14.77 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.73 RUNNING   phase=release   t_traj=14.77 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.80 RUNNING   phase=release   t_traj=14.87 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.85 RUNNING   phase=release   t_traj=14.87 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.89 RUNNING   phase=release   t_traj=14.87 lim= 0 weld=detached     z=0.2750 fail=-
+t=23.93 RUNNING   phase=release   t_traj=14.87 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.01 RUNNING   phase=release   t_traj=14.87 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.08 RUNNING   phase=release   t_traj=14.87 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.12 RUNNING   phase=release   t_traj=14.87 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.20 RUNNING   phase=release   t_traj=14.98 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.24 RUNNING   phase=release   t_traj=14.98 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.28 RUNNING   phase=release   t_traj=14.98 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.34 RUNNING   phase=release   t_traj=14.98 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.37 RUNNING   phase=release   t_traj=14.98 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.45 RUNNING   phase=release   t_traj=15.08 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.54 RUNNING   phase=release   t_traj=15.08 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.64 RUNNING   phase=release   t_traj=15.18 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.71 RUNNING   phase=release   t_traj=15.18 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.79 RUNNING   phase=release   t_traj=15.18 lim= 0 weld=detached     z=0.2750 fail=-
+t=24.88 RUNNING   phase=release   t_traj=15.29 lim= 0 weld=detached     z=0.2750 fail=-
+t=25.02 RUNNING   phase=release   t_traj=15.29 lim= 0 weld=detached     z=0.2750 fail=-
+t=25.21 RUNNING   phase=release   t_traj=15.39 lim= 0 weld=detached     z=0.2750 fail=-
+t=25.23 RUNNING   phase=release   t_traj=15.39 lim= 0 weld=detached     z=0.2745 fail=-
+t=25.25 RUNNING   phase=release   t_traj=15.39 lim= 0 weld=detached     z=0.2745 fail=-
+t=25.27 RUNNING   phase=release   t_traj=15.39 lim= 0 weld=detached     z=0.2745 fail=-
+t=25.29 RUNNING   phase=release   t_traj=15.39 lim= 0 weld=detached     z=0.2745 fail=-
+t=25.30 RUNNING   phase=release   t_traj=15.39 lim= 0 weld=detached     z=0.2745 fail=-
+t=25.33 RUNNING   phase=release   t_traj=15.39 lim= 0 weld=detached     z=0.2746 fail=-
+t=25.34 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2746 fail=-
+t=25.37 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2746 fail=-
+t=25.39 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2746 fail=-
+t=25.40 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2746 fail=-
+t=25.43 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2746 fail=-
+t=25.45 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2746 fail=-
+t=25.49 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2747 fail=-
+t=25.50 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2747 fail=-
+t=25.52 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2747 fail=-
+t=25.57 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2748 fail=-
+t=25.59 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2748 fail=-
+t=25.62 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2748 fail=-
+t=25.64 RUNNING   phase=release   t_traj=15.50 lim= 0 weld=detached     z=0.2748 fail=-
+t=25.66 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2748 fail=-
+t=25.67 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2748 fail=-
+t=25.72 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2748 fail=-
+t=25.74 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2748 fail=-
+t=25.76 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.82 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.84 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.85 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.87 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.89 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.91 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.93 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.95 RUNNING   phase=release   t_traj=15.60 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.96 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=25.98 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=26.00 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=26.02 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=26.04 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=26.06 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=26.08 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=26.10 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=26.12 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=26.14 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2749 fail=-
+t=26.15 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.17 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.19 RUNNING   phase=release   t_traj=15.70 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.21 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.23 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.25 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.27 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.30 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.32 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.34 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.36 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.38 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.40 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.42 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.44 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.46 RUNNING   phase=release   t_traj=15.81 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.49 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.51 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.53 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.55 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.57 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.59 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.61 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.63 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.65 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.67 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.71 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.76 RUNNING   phase=release   t_traj=15.91 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.84 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.91 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.95 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=26.97 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.04 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.06 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.07 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.09 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.11 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.13 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.15 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.17 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.19 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.21 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.25 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.27 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.29 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=27.31 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.34 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.38 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.40 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.42 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.44 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.50 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.52 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.54 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.56 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.57 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.61 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=27.63 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.65 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.67 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.69 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.73 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.75 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.84 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.86 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.88 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.90 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.92 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.93 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=27.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.00 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.05 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.07 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.11 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.15 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.20 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.22 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.27 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.49 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.86 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=28.96 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.03 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.05 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.07 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=29.10 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=29.12 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=29.14 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=29.15 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=29.17 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=29.19 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=29.21 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=29.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=29.24 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.26 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.29 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.30 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.32 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.34 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.43 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.45 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.47 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.49 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.51 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.53 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.55 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.57 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.61 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.63 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.65 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=29.67 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.69 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.71 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.73 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.75 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.85 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.86 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.88 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.90 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.92 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.94 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.96 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=29.99 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.01 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.06 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.16 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.25 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.32 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.68 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.72 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.78 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.84 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.90 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.95 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=30.96 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.06 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.13 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.15 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.17 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.21 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.24 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.26 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.28 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.30 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.32 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.34 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.37 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.39 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.45 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.54 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.56 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.57 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.62 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.64 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.66 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.68 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.70 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.73 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.75 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.80 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.85 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.89 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.91 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.94 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=31.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.05 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.11 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.18 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.24 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.26 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.30 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.34 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.38 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.42 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.50 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.55 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.64 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.70 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=32.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.09 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.35 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.61 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.65 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.73 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.95 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.97 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=33.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.00 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.04 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.06 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.10 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=34.12 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=34.17 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.18 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.20 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.25 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.27 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.31 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.35 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.37 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.45 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.51 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.54 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.60 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.66 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.69 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.73 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.84 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.90 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=34.97 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=35.13 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=35.15 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=35.17 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=35.19 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=35.21 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=35.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=35.24 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=35.26 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=35.28 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=35.30 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=35.32 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.34 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.38 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.42 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.45 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.50 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.52 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.53 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.55 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.57 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.62 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.63 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.66 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.68 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.70 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.72 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.73 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.76 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.80 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.85 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.87 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.88 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.90 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.92 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.94 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2752 fail=-
+t=35.99 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=36.00 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.03 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.05 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.07 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.20 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.24 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.30 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.31 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.35 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.39 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.42 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.50 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.51 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.55 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.57 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.61 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.62 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.64 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.67 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.69 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.72 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.74 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.76 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.84 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.86 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.90 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=36.93 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.00 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.11 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.12 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2747 fail=-
+t=37.14 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2747 fail=-
+t=37.16 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2747 fail=-
+t=37.18 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2747 fail=-
+t=37.20 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2747 fail=-
+t=37.21 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2747 fail=-
+t=37.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2747 fail=-
+t=37.25 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2747 fail=-
+t=37.29 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=37.31 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=37.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=37.38 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=37.40 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=37.42 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=37.44 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=37.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.50 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.52 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.54 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.62 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.64 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.66 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.68 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.70 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.73 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=37.75 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.87 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.89 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.91 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.93 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=37.99 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.01 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.07 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.21 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.33 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.49 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.62 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.69 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.75 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.85 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.87 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.89 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.91 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=38.93 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=38.95 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=38.96 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=38.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.00 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.04 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.06 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.08 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.10 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.12 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.14 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.16 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.18 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.20 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.26 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.27 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.30 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2751 fail=-
+t=39.38 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.39 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.43 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.45 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.47 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.49 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.51 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.53 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.55 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.57 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.60 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.62 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.66 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.68 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.72 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.74 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.76 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.85 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.89 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.95 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=39.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.08 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.09 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.11 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.15 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.19 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.27 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.31 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.32 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=40.38 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=40.40 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=40.42 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=40.44 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=40.45 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.47 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.49 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.51 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.53 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.55 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.56 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.58 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.63 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.65 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.69 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.75 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.85 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.87 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.89 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.91 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.93 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=40.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.00 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.08 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.20 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.26 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.34 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.42 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.50 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.60 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.75 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.91 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=41.97 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.05 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.12 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.17 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.31 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.52 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.63 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.66 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=42.68 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.73 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.76 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.80 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.82 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.84 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.86 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.88 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.90 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.92 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.94 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.96 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=42.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=43.00 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=43.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=43.04 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=43.06 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=43.08 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=43.10 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.12 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.13 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.15 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.17 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.19 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.21 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.23 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.26 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.31 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.35 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.39 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.43 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.47 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.49 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.53 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.58 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.64 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.68 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.70 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.74 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.86 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=43.97 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=44.06 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=44.08 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.10 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.12 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.14 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.19 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.21 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.24 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.26 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.29 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.34 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.38 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.43 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.50 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.53 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.55 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.57 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.60 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.62 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.64 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.66 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.71 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.74 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.76 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.78 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.80 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.82 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.84 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.86 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.90 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.94 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=44.96 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=44.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.01 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.05 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.07 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.09 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.11 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.13 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.16 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.18 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.22 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.24 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.28 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.32 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.35 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.37 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.39 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.53 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.58 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.62 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.64 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.71 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.80 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.86 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.90 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=45.96 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.01 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.05 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.09 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.13 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.19 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.24 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.35 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.37 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.39 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.41 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.45 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.56 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.61 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.63 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.65 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.67 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.70 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.72 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.76 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=46.96 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=47.05 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=47.16 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=47.22 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=47.27 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=47.34 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=47.40 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=47.42 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=47.44 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=47.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=47.48 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=47.49 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=47.51 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2748 fail=-
+t=47.55 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.57 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.61 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.63 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.65 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.69 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.72 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.74 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.79 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.81 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.83 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.85 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.87 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.89 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.91 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.93 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.97 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=47.99 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=48.01 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=48.03 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=48.05 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=48.09 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2749 fail=-
+t=48.11 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.13 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.18 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.20 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.24 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.27 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.29 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.32 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.39 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.42 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.46 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.51 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.56 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.62 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.66 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.70 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.77 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.85 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.92 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=48.98 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.04 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.10 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.18 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.22 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.30 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.36 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.43 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.47 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.59 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.76 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.87 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.92 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.94 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=49.97 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=50.00 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+t=50.02 COMPLETE  phase=release   t_traj=16.00 lim= 0 weld=detached     z=0.2750 fail=-
+wrote docs/双臂协同/双臂协同运动控制与优化/T1_QP满速定位_20261029/t2_run8_clean.json transitions 1607

@@ -177,6 +177,11 @@ private:
   double last_send_s_ = -1.0;
   int attempts_ = 0;
   bool sent_ = false;    ///< the armed request has been published (consumeSend)
+  /// T2 fix (2026-10-29): the action that is waiting for consumeSend().  Kept
+  /// separate from action_ because TWO callers tick the client (the node's
+  /// driveWeld and the state machine's tickWeld); a later tick used to overwrite
+  /// action_ with Wait and silently swallow the armed attach.
+  WeldAction armed_action_ = WeldAction::Idle;
   bool armed_ = false;   ///< tick() decided a Request* is due, not yet published
   bool startup_verified_ = false;
   bool detach_required_ = false;   ///< after a snap violation, no retry until detach

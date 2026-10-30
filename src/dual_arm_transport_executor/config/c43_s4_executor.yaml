@@ -46,3 +46,8 @@ c43_s4_transport_executor:
     # sample by more than 2 mm within 100 ms.  This is NOT a new threshold.
     weld_max_snap_m: 0.002
 
+    # W7-B: joint-limit pressure is judged on *position* margin, and only after a
+    # sustained run of samples.  active_limit_count counts velocity-cap saturation,
+    # which a normal transport start produces on most joints.
+    limit_saturation_cycles: 25
+    limit_margin_rad: 0.05

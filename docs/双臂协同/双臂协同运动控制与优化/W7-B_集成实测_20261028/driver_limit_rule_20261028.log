@@ -1,0 +1,13 @@
+controller: IDLE active: False q12 ok: 12
+executor service visible: True
+start_transport accepted: True | queued (applied on the next control cycle)
+executor start: True | accepted
+t= 0.00 active=False idx=-1 name=          t_traj= 0.00 state=IDLE     lim=0 margin=1.7768
+t= 0.13 active=True idx= 0 name=approach  t_traj= 0.10 state=RUNNING  lim=10 margin=1.7255
+t= 0.26 active=True idx= 0 name=approach  t_traj= 0.21 state=RUNNING  lim=12 margin=1.6308
+t= 0.33 active=True idx= 0 name=approach  t_traj= 0.26 state=HOLD     lim=0 margin=1.5760
+t= 0.46 active=True idx= 0 name=approach  t_traj= 0.26 state=HOLD     lim=0 margin=1.5305
+t= 0.59 active=True idx= 0 name=approach  t_traj= 0.26 state=HOLD     lim=0 margin=1.5225
+t= 0.73 active=True idx= 0 name=approach  t_traj= 0.26 state=HOLD     lim=0 margin=1.5211
+t= 0.86 active=True idx= 0 name=approach  t_traj= 0.26 state=HOLD     lim=0 margin=1.5208
+weld_state transitions: []

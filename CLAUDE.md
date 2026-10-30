@@ -18,21 +18,30 @@
 
 ## 环境
 
-- **ROS 2 Humble**（`/opt/ros/humble/`）
-- **Python 3.10**，使用 conda `yolov8` 环境
+- **宿主机**：Ubuntu 26.04（没有任何 `ros-humble-*` 二进制包，ROS 不能装在宿主机）
+- **ROS 2 Humble + Gazebo Fortress 全部跑在 Docker 容器里**：镜像 `s622:humble-ros-yolo`，运行容器 `s622_run`
+- 工作区 `/home/kz/s622_dual` 挂载为容器内 `/workspace`；容器内 Python 3.10（`/usr/bin/python3`）
+- **GPU**：宿主机 Quadro RTX 4000 已透进容器（`--gpus all`）。Gazebo **服务器**（相机传感器）用 NVIDIA，Gazebo **GUI 和 RViz 走 mesa/llvmpipe**（NVIDIA GLX 在 Xwayland 双卡下 3D 会黑屏，见经验教训 13）；`RENDER=software ./scripts/env/10_container.sh recreate` 可整体回退 llvmpipe
+- YOLO 运行时在容器内独立 venv `/opt/ros-yolo-venv`（**torch 2.14.1+cu130**，YOLO 走 GPU；ultralytics），不污染 ROS 系统 Python
 - 源码位于 `src/`，按分层目录组织
+- 完整部署说明：[docs/环境部署_Ubuntu26.04_Docker.md](docs/环境部署_Ubuntu26.04_Docker.md)
 
 ## 构建
 
 ```bash
+# 宿主机（脚本内置 sg docker 兜底 docker 组权限）
+./scripts/env/10_container.sh ensure
+./scripts/env/10_container.sh run "bash /workspace/scripts/env/04_build_ws.sh --clean"
+```
+
+容器内等价命令（merge-install + symlink-install，与旧流程一致）：
+
+```bash
 source /opt/ros/humble/setup.bash
-eval "$(conda shell.bash hook)" && conda activate yolov8
-
-rm -rf build install
+rm -rf build install log
 colcon build --merge-install --symlink-install \
-    --cmake-args "-DPython3_EXECUTABLE=$(which python3)"
-
-source install/setup.bash
+    --parallel-workers $(nproc) --continue-on-error \
+    --cmake-args -DPython3_EXECUTABLE=/usr/bin/python3 -DCMAKE_BUILD_TYPE=Release
 ```
 
 ## 目录结构
@@ -94,20 +103,14 @@ src/                          ← 所有包平铺，不再用子目录分类
 ## 快速启动（双臂协同需要仿真正在运行）
 
 ```bash
-# 终端 1：仿真
-ros2 launch gz_launch s622_gazebo.launch.py
+# 终端 1（宿主机）：仿真 = Gazebo + MoveIt2 + RViz + YOLO + Servo 一起拉起
+./scripts/env/10_container.sh run "bash /workspace/scripts/env/06_run_sim.sh"
 
-# 终端 2：YOLO（必须在 conda yolov8 环境）
-source install/setup.bash
-eval "$(conda shell.bash hook)" && conda activate yolov8
-ros2 run yolov8_obb yolov8_obb_node --ros-args \
-  -p model_path:="$HOME/my_S622/src/yolov8_obb/models/yolo-obb-gazebo.pt" \
-  -p image_topic:="/camera/color/image_raw" \
-  -p detections_topic:="/yolov8/obb_detections" \
-  -p confidence_threshold:=0.05 -p imgsz:=1024 -p publish_empty:=true
+# 单臂入口也保留了一个别名（等价于上面）
+# ./scripts/env/10_container.sh run "ros2 launch gz_launch test_single_arm.launch.py"
 
-# 终端 3：visual_servo
-source install/setup.bash
+# 终端 2（宿主机开容器 shell）：visual_servo
+./scripts/env/10_container.sh shell
 ros2 run visual_servo visual_servo_node --ros-args \
   -p enable_motion:=true -p z_strategy:="table" \
   -p table_z:=0.0 -p grasp_height_above_table:=0.030 \
@@ -118,7 +121,15 @@ ros2 run visual_servo visual_servo_node --ros-args \
 
 # 触发抓取
 ros2 topic pub /servo_trigger std_msgs/msg/Bool "data: true" --once
+
+# 停止仿真（被杀掉的进程会变僵尸，只有重启容器能回收）
+./scripts/env/10_container.sh run "bash /workspace/scripts/env/08_stop_sim.sh --hard"
+docker restart s622_run
 ```
+
+> YOLO 检测节点（`obb_node`）已由 launch 自动启动，解释器默认 `/opt/ros-yolo-venv/bin/python3`，
+> 权重自动探测；不需要再单独开终端。要单独跑时用同一个 venv：
+> `ros2 run yolov8_obb yolov8_obb_node --ros-args -p model_path:=$(ros2 pkg prefix --share yolov8_obb)/...`
 
 ## 可用 Skill
 
@@ -128,9 +139,9 @@ ros2 topic pub /servo_trigger std_msgs/msg/Bool "data: true" --once
 
 ## 经验教训
 
-1. 构建前先 `eval "$(conda shell.bash hook)" && conda activate yolov8`，非交互式 shell 不能直接用 `conda activate`
-2. 用 `-DPython3_EXECUTABLE=$(which python3)` 确保 CMake 找到 conda 环境的 Python
-3. 首次编译前必须 `rm -rf build install` 清理缓存
+1. **ROS 环境在容器里**（宿主机 Ubuntu 26.04 没有 Humble 二进制）；宿主机命令走 `scripts/env/10_container.sh`，脚本内部用 `sg docker` 兜底 docker 组权限
+2. 容器内天然是 `/usr/bin/python3`（3.10），构建仍保留 `-DPython3_EXECUTABLE=/usr/bin/python3`，避免 CMake 找错解释器
+3. 首次编译前必须 `rm -rf build install log` 清理缓存
 4. 不擅自修改原项目 CMakeLists.txt，构建失败优先检查系统依赖
 5. 厂商包直接整批复制，不要逐包搭建（配置依赖互相耦合）
 6. 复制 s622_moveit_descriptions 时删除 camera 引用，等仿真阶段再引入
@@ -139,3 +150,21 @@ ros2 topic pub /servo_trigger std_msgs/msg/Bool "data: true" --once
    - `src/s622_moveit_descriptions/urdf/camera/camera.xacro`（修改，hfov=82.4°, vfov=52.5°）
    - **真机部署时恢复使用 realsense-ros 驱动即可，不需回滚**
 8. **IK 架构**：项目有两套 IK。主路径 `plan_to_pose_smart()` 通过 `/fairino/get_all_ik` service 调 DH 解析法拿全部解并评分，MoveIt 只做碰撞检测+轨迹插值。`kinematics.yaml` 配的 KDL 仅作 fallback。`_compute_ik_kdl()` 是死代码。`fairino_planning_ros/FairinoIKPlugin` 存在但未启用。详见 [IK 架构说明](docs/IK架构说明.md)。
+9. **编译成功 ≠ 能运行**：2026-10-28 换机后 33 个包一次编译通过，但启动时连缺三个运行期依赖——`gz_ros2_control`（没有它 Gazebo 里根本没有 `/controller_manager`，spawner 一直等待）、`moveit_servo`（`servo_node_main` 起不来）、`realsense2_description`（URDF 里 `$(find ...)` 解析失败，launch 直接退出）。换机验收必须真的 `ros2 launch` 一次，并用 `ros2 control list_controllers` + 一条轨迹确认闭环。
+10. **launch 里不要写作者机器的绝对路径**：`s622_gazebo.launch.py` 原来写死 `~/my_S622/.../yolo-obb-gazebo.pt` 和 `/home/yep/miniconda3/envs/yolov8/bin/python3`，换机后 YOLO 节点必死。现已改为自动探测 + launch 参数（`yolo_model_path` / `yolo_python` / `start_yolo`）。
+11. **GPU 渲染（2026-10-29 启用）**：宿主机 Quadro RTX 4000 经 `nvidia-container-toolkit` 透进容器，`10_container.sh` 自动加 `--gpus all -e NVIDIA_DRIVER_CAPABILITIES=all -e LIBGL_ALWAYS_SOFTWARE=0`，并按 `s622.render` 标签在模式变化时自动重建。相机 4 fps → 12 fps（带 YOLO）／17.4 fps（`start_yolo:=false`，接近传感器 20 Hz 上限）。
+    - 排查要点：容器内 `glxinfo -B` 的 renderer 必须是 NVIDIA；`nvidia-smi` 里要有 `ign gazebo server/gui`（Type=G）；缺 `graphics` 能力时会静默落回 llvmpipe
+    - 瓶颈演化：先是渲染（llvmpipe）→ 换 GPU 后变成 YOLO CPU 推理 → 换 CUDA torch 后回到物理仿真 + llvmpipe GUI（见经验教训 14）
+    - 细节见 [docs/环境部署_Ubuntu26.04_Docker.md](docs/环境部署_Ubuntu26.04_Docker.md) 第 8 节
+12. **docker 免 sudo / 免审批**：`kz` 在 `docker` 组里，但补充组是**进程启动时继承**的，DSH 常驻进程一直没拿到 gid 117，所以每条 docker 命令都 `permission denied`、只能提权并逐条审批。解法是 socket ACL + `docker.socket` drop-in（`scripts/env/10-docker-socket-acl.conf`，见部署文档第 9 节）：`systemctl restart docker.socket` 会自动补 ACL，之后普通沙箱里 `docker ps` / `docker run --gpus all` 直接可用。注意 ACL 等价于 docker 组权限，docker API 等同 root。
+    - 没有"按命令白名单放行"这种 DSH 能力（审批只有 `ask` / `never`），只能从 OS 权限层解决；`danger-full-access` 预设是全局关审批，别当默认
+13. **GUI 3D 黑屏 → 拆分渲染**：开 GPU 后 Gazebo/RViz 菜单正常但 3D 视口全黑。原因是 GNOME Wayland + Intel/NVIDIA 双卡下，容器里经 Xwayland 用 NVIDIA GLX 渲染的窗口合成不到屏幕。现在 `s622_gazebo.launch.py`：Gazebo **服务器** `-s` 单独跑（相机传感器吃 GPU），Gazebo **GUI** 用 `ign gazebo -g` + `LIBGL_ALWAYS_SOFTWARE=1` + **`__GLX_VENDOR_LIBRARY_NAME=mesa`**，RViz 同样走 mesa。
+    - 关键坑：只设 `LIBGL_ALWAYS_SOFTWARE=1` 无效，GLVND 仍选 NVIDIA；必须加 `__GLX_VENDOR_LIBRARY_NAME=mesa`，`glxinfo -B` 才会显示 `llvmpipe`
+    - 相机 17.4 fps（`start_yolo:=false`）／14.7~15.9 fps（带 YOLO，YOLO 已切 CUDA 见 14）；GUI 18~31 fps
+    - 调试时注意：NVIDIA 渲染下 `xwd` 抓到的 GL 区域恒为黑（DRI3 读不回来），**不能拿截图当"屏幕黑屏"的证据**；软件渲染下才抓得到
+    - 细节见 [docs/环境部署_Ubuntu26.04_Docker.md](docs/环境部署_Ubuntu26.04_Docker.md) 第 10 节
+14. **YOLO 切 CUDA（2026-10-29）**：`/opt/ros-yolo-venv` 从 `torch 2.14.1+cpu` 换成 `2.14.1+cu130`（PyPI Linux 轮子自带 CUDA 13 运行库）。相机 ~10 → **14.7~15.9 fps**，宿主 load 15 → 10，YOLO 日志 `Using device: 0`。
+    - 坑 1：`pip install torch==2.14.1` **不会**替换 `2.14.1+cpu`（PEP 440 本地版本号），必须 `--force-reinstall`
+    - 坑 2：`download.pytorch.org` 直连会卡死（下到 17 MB 不动），走 PyPI/清华镜像反而快；拿到的同样是 CUDA 版
+    - 已 `docker commit` 进镜像（17.3 GB），`recreate` 不丢；`05_install_yolo.sh` 默认装 CUDA 版并带 CPU 回退
+    - 细节见 [docs/环境部署_Ubuntu26.04_Docker.md](docs/环境部署_Ubuntu26.04_Docker.md) 第 11 节

@@ -1,0 +1,12 @@
+[c43_s4_executor-8] [INFO] [1793191559.607835779] [c43_s4_transport_executor]: state HOLD -> FAULT (code 'hold_invariant_violated')
+[c43_s4_executor-8] [INFO] [1793191559.612077918] [c43_s4_transport_executor]: artifacts written to /tmp/w7b3/artifacts/c43_s4_w7_run
+[c43_s4_executor-8] [INFO] [1793191573.354703793] [c43_s4_transport_executor]: phase table learned from the controller (5 phases, total 14.000 s); auditing the external phase index
+[ign gazebo-1] [INFO] [1793191583.714483975] [dual_arm_qp_controller]: transport: state=COMPLETE t=14.000/14.000s committed=1 e_obj=2.907e-01 m solve=0.101 ms
+[ign gazebo-1] [INFO] [1793191597.192107229] [dual_arm_qp_controller]: transport: state=COMPLETE t=14.000/14.000s committed=1 e_obj=2.907e-01 m solve=0.110 ms
+[ign gazebo-1] [INFO] [1793191609.930250577] [dual_arm_qp_controller]: transport: state=COMPLETE t=14.000/14.000s committed=1 e_obj=2.907e-01 m solve=0.211 ms
+[ign gazebo-1] [INFO] [1793191622.699875251] [dual_arm_qp_controller]: transport: state=COMPLETE t=14.000/14.000s committed=1 e_obj=2.907e-01 m solve=0.153 ms
+[ign gazebo-1] [INFO] [1793191636.159388571] [dual_arm_qp_controller]: transport: state=COMPLETE t=14.000/14.000s committed=1 e_obj=2.907e-01 m solve=0.243 ms
+[ign gazebo-1] [INFO] [1793191648.873658843] [dual_arm_qp_controller]: transport: state=COMPLETE t=14.000/14.000s committed=1 e_obj=2.907e-01 m solve=0.102 ms
+[INFO] [c43_s4_executor-8]: sending signal 'SIGINT' to process[c43_s4_executor-8]
+[c43_s4_executor-8] [INFO] [1793191652.786907945] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+[INFO] [c43_s4_executor-8]: process has finished cleanly [pid 269087]

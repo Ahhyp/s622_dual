@@ -7,29 +7,36 @@
 ## 1. 项目概况
 
 - **项目**：S622（Fairino）6-DOF 机械臂智能抓取系统的学习复现
-- **仿真**：Gazebo Fortress 6.16 + RViz2 + MoveIt2 + ros2_control
+- **仿真**：Gazebo Fortress 6.18（容器内） + RViz2 + MoveIt2 + ros2_control
 - **视觉**：Intel RealSense D435 RGBD 相机（仿真），YOLOv8 OBB 目标检测
 - **控制**：MoveIt Servo 笛卡尔速度控制 + 2D 图像空间视觉伺服（IBVS）
-- **操作系统**：WSL2 Ubuntu 22.04，ROS 2 Humble
+- **操作系统**：宿主机 Ubuntu 26.04；ROS 2 Humble + Gazebo 全部跑在 Docker 容器 `s622_run`（镜像 `s622:humble-ros-yolo`，容器内 Ubuntu 22.04）
 - **源项目**：`~/S622_robotarm/`（26 包完整项目，本项目的参考）
 
 ## 2. 环境设置
 
-```bash
-source /opt/ros/humble/setup.bash
-eval "$(conda shell.bash hook)" && conda activate yolov8
+> 2026-10-28 起环境迁到 Docker（详见 [环境部署_Ubuntu26.04_Docker.md](环境部署_Ubuntu26.04_Docker.md)）。
+> 宿主机没有 ROS，所有 ROS 命令都要在容器里执行。
 
-# 构建
-rm -rf build install
-colcon build --merge-install --symlink-install \
-    --cmake-args "-DPython3_EXECUTABLE=$(which python3)"
-source install/setup.bash
+```bash
+# 宿主机：启动容器（首次会创建，自动 xhost + X11 挂载）
+./scripts/env/10_container.sh ensure
+
+# 宿主机：进容器交互 shell（已 source /opt/ros/humble + install/setup.bash）
+./scripts/env/10_container.sh shell
+
+# 宿主机：跑一条命令 / 启动仿真
+./scripts/env/10_container.sh run "ros2 pkg list | grep s622"
+./scripts/env/10_container.sh run "bash /workspace/scripts/env/06_run_sim.sh"
+
+# 重新构建（--clean 清空 build/install/log）
+./scripts/env/10_container.sh run "bash /workspace/scripts/env/04_build_ws.sh --clean"
 ```
 
 **注意**：
-- 必须用 conda `yolov8` 环境（Python 3.10 + ultralytics + torch）
-- `ros2 launch` 的子进程不会继承 conda 环境 → YOLO 节点需在 conda 终端单独启动
-- WSL2 重启后需 `wsl --shutdown`（Windows PowerShell）恢复图形
+- YOLO 运行时在容器内 venv `/opt/ros-yolo-venv`（torch CPU + ultralytics），launch 会自动用它
+- 容器内是 `/usr/bin/python3`（3.10），不需要 conda；构建仍带 `-DPython3_EXECUTABLE=/usr/bin/python3`
+- GUI 走 Xwayland + llvmpipe 软件渲染（相机约 4 fps）；未装 nvidia-container-toolkit，GPU 暂未启用
 
 ## 3. 目录结构
 
@@ -286,3 +293,16 @@ table_z (0.0) + 半高 (0.02) + grasp_frame→指尖偏移 (0.01) = 0.030
 | [代码级项目搭建流程](代码级项目搭建流程.md)      | 13 阶段搭建规范        |
 | [原项目结构](原项目结构.md)                      | 源项目 26 包目录树     |
 | [issues.md](issues.md)                           | 问题记录               |
+
+## 11. 当前活跃任务（C4.3 S4）
+
+本文件讲的是项目整体背景。**任务级的交接**（正在做什么、卡在哪、下一步动哪个文件）
+见 [C4.3_S4_AI交接_新会话必读_20261028.md](双臂协同/双臂协同运动控制与优化/C4.3_S4_AI交接_新会话必读_20261028.md)。
+
+一句话现状：W2/W3/W4/W5/W6 软件范围已关闭；W7 的 T1（QP 让 10–12 个关节顶速度上限）已在
+2026-10-29 定位并修复，并在 Gazebo 里跑通一次 **weld-only** 的 `GRASP→LIFT→…→RELEASE`。
+S4-T16 的夹爪 JTC/抓持检查已接（正常跑 PASS、5 mm 注入拒绝）；W7 仍是
+`IMPLEMENTATION_COMPLETE / INTEGRATION_HOLD`，剩余是 S4-T16 物理抬高实验/标定、
+完整释放顺序与 C6 原生 RT。证据见
+[T1_QP满速定位_20261029/README.md](双臂协同/双臂协同运动控制与优化/T1_QP满速定位_20261029/README.md)
+与 W7 证据文档 §10。

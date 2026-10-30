@@ -442,7 +442,7 @@ entries:
     layer: S4.2
     planned_step: W6
     source: "§7 S4-T16"
-    software_state: PARTIAL
+    software_state: IMPLEMENTED
     gate_state: OPEN
     metrics:
       - metric: "grasp_check_reject"
@@ -452,9 +452,9 @@ entries:
         threshold_status: PENDING_CALIBRATION
         source: "§7 S4-T16"
         evidence_state: PARTIAL
-        evidence_ref: "build/dual_arm_transport_executor/test_results/（test_attach_adapter.gtest.xml）（software stub 语义）"
-        evidence_observed: "适配器 stub 语义覆盖（Unattached/Requested/AttachedSimulated/Failed）；无真实夹爪与 5 mm 抬高实验"
-        scope: "software-only；不得声称真机验证"
+        evidence_ref: "docs/双臂协同/双臂协同运动控制与优化/T1_QP满速定位_20261029/（s4t16_normal_pass.log、s4t16_5mm_reject.log、s4t16_run7_normal.json、s4t16_run8_inject5mm.json、executor_artifacts_s4t16_fault/）；build/dual_arm_transport_executor/test_results/（test_grasp_check/test_grasp_gate）"
+        evidence_observed: "2026-10-29：已接左手 JTC 与 finger_position；GRASP 入口先快照样品位姿，再闭合手指、做抓持检查（3 mm/1° 为规划的 [待标定] 建议值）。正常跑 PASS：pos 1.469 mm / rot 0.007637 rad，随后 attach、lift +1.94 cm、COMPLETE。5 mm 反例用 ROS 边界注入（c43_sample 抬高 5 mm，臂保持 q_grasp12）：FAIL pos 7.251 mm，GRASP→FAULT(grasp_check_failed)，attach 未发出。物理抬高 5 mm 未做（垫块会把臂推离 q_grasp12，start gate 拒绝）；真实夹爪力/接触未测"
+        scope: "software-only；ROS 边界注入不是物理抬高；不得声称真机验证"
 
   - test_id: S4-T17
     title: "长时间实时性（P1）"
@@ -497,9 +497,10 @@ entries:
         threshold: "[待标定]"
         threshold_status: PENDING_CALIBRATION
         source: "§7 S4-T18"
-        evidence_state: NOT_RUN
-        evidence_ref: "未执行（属 W6；需 Gazebo 插件实测）"
-        scope: "禁止用共享库字符串当证据"
+        evidence_state: PARTIAL
+        evidence_ref: "docs/双臂协同/双臂协同运动控制与优化/T1_QP满速定位_20261029/（executor_artifacts_run8/events.csv、t2_run8_clean.json、t2_launch_clean.log）；W6-0_插件实测证据_20261028/plugin_probe.json（6.16）"
+        evidence_observed: "2026-10-29 在 Fortress 6.18 实跑：/c43/attach、/c43/detach、/c43/weld_state 被插件接受；attach 与 detach 均确认；attach 瞬移由客户端实测且在冻结 2 mm 判据内（outcome=attached）；6.18 的 pose/info 帧名不带 model:: 前缀。未做最小双体世界与 1 s 相对位姿稳定的 [待标定] 上限测量，故仍为 PARTIAL"
+        scope: "禁止用共享库字符串当证据；6.16/6.18 的 pose 帧名不同"
 
   - test_id: S4-T19
     title: "轨迹时钟与 HOLD/RESUME（P0-1）"

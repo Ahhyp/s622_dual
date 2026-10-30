@@ -20,12 +20,15 @@
 #include <vector>
 
 #include "dual_arm_transport_executor/attach_client.hpp"
+#include "dual_arm_transport_executor/phase_driver.hpp"
 #include "dual_arm_transport_executor/state_machine.hpp"
 #include "fake_controller.hpp"
 
 using dual_arm_transport_executor::AttachClient;
 using dual_arm_transport_executor::AttachClientConfig;
 using dual_arm_transport_executor::Config;
+using dual_arm_transport_executor::PhaseDriver;
+using dual_arm_transport_executor::PhaseSpec;
 using dual_arm_transport_executor::ControllerStatus;
 using dual_arm_transport_executor::StartRequest;
 using dual_arm_transport_executor::State;
@@ -200,6 +203,73 @@ TEST(FullFlow, W7_ConfirmedAttachWithInCriterionSnapUnlocksGrasp)
   EXPECT_EQ(r.sm.state(), State::Grasp);
   EXPECT_TRUE(r.sm.phaseDone(r.now, nullptr));
   EXPECT_EQ(r.sm.state(), State::Lift);
+}
+
+TEST(FullFlow, W7_TheLiftPhaseMayNotSkipGrasp)
+{
+  // The controller owns the trajectory phases, but GRASP belongs to the executor:
+  // entering "lift" while the weld is still open must NOT walk the state machine
+  // through GRASP (that is how a run "completes" without ever grasping).
+  Rig r;
+  r.prime();
+  r.releaseStartupWeld();
+  ASSERT_TRUE(r.start(nullptr));
+  PhaseDriver drv;
+  drv.configure({{"approach", 0.2}, {"grasp", 0.2}, {"lift", 0.2}});
+  ASSERT_EQ(drv.count(), 3);
+  r.sm.attachPhaseDriver(&drv);
+  r.fake.beginPhase(0.6);
+  r.fake.status().phase_count = 3;
+
+  r.fake.status().phase_index = 0;
+  r.fake.status().phase_name = "approach";
+  r.tick(1);
+  EXPECT_EQ(r.sm.state(), State::Approach);
+
+  r.fake.status().phase_index = 1;
+  r.fake.status().phase_name = "grasp";
+  r.tick(1);
+  ASSERT_EQ(r.sm.state(), State::Grasp);
+
+  r.fake.status().phase_index = 2;
+  r.fake.status().phase_name = "lift";
+  r.tick(1);
+  EXPECT_EQ(r.sm.state(), State::Grasp) << "lift must not skip the GRASP barrier";
+  EXPECT_FALSE(r.sm.weldAttached());
+}
+
+TEST(FullFlow, W7_ConfirmedAttachReleasesTheGraspBarrier)
+{
+  Rig r;
+  r.prime();
+  r.releaseStartupWeld();
+  ASSERT_TRUE(r.start(nullptr));
+  PhaseDriver drv;
+  drv.configure({{"approach", 0.2}, {"grasp", 0.2}, {"lift", 0.2}});
+  ASSERT_EQ(drv.count(), 3);
+  r.sm.attachPhaseDriver(&drv);
+  r.fake.beginPhase(0.6);
+  r.fake.status().phase_count = 3;
+  r.fake.status().phase_index = 0;
+  r.fake.status().phase_name = "approach";
+  r.tick(1);
+  r.fake.status().phase_index = 1;
+  r.fake.status().phase_name = "grasp";
+  r.tick(1);
+  ASSERT_EQ(r.sm.state(), State::Grasp);
+  r.fake.status().phase_index = 2;
+  r.fake.status().phase_name = "lift";
+  r.tick(1);
+  ASSERT_EQ(r.sm.state(), State::Grasp);
+  // The plugin confirms the attach with an in-criterion snap: GRASP completes.
+  r.plugin_state = WeldState::Detached;
+  r.tick(1);
+  r.weld.setMeasuredSnap(0.0005, 0.0);
+  r.plugin_state = WeldState::Attached;
+  r.tick(1);
+  EXPECT_TRUE(r.sm.weldAttached());
+  EXPECT_EQ(r.sm.state(), State::Lift);
+  EXPECT_FALSE(r.sm.latched());
 }
 
 TEST(FullFlow, W7_UnmeasuredSnapFailsClosed)

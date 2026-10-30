@@ -1,0 +1,8 @@
+[c43_s4_executor-8] [INFO] [1793192585.168104717] [c43_s4_transport_executor]: weld: detach requested
+[c43_s4_executor-8] [INFO] [1793192585.175756408] [c43_s4_transport_executor]: weld: startup weld released and confirmed -- the executor may now start
+[c43_s4_executor-8] [INFO] [1793192666.444203355] [c43_s4_transport_executor]: state APPROACH -> HOLD (code 'joint_limit_saturation')
+[c43_s4_executor-8] [WARN] [1793192666.444264855] [c43_s4_transport_executor]: requesting controller HOLD (seq=1): joint_limit_saturation
+[ign gazebo-1] [WARN] [1793192666.444829455] [dual_arm_qp_controller]: hold requested: seq=1 reason='joint_limit_saturation'
+[c43_s4_executor-8] [INFO] [1793192666.452207454] [c43_s4_transport_executor]: controller HOLD confirmed: frozen_by_executor_request (seq=1, attempts=1)
+[ign gazebo-1] [INFO] [1793192676.031802416] [dual_arm_qp_controller]: transport: state=HOLD t=0.256/14.000s committed=0 e_obj=0.000e+00 m solve=0.000 ms
+[ign gazebo-1] [INFO] [1793192689.562912149] [dual_arm_qp_controller]: transport: state=HOLD t=0.256/14.000s committed=0 e_obj=0.000e+00 m solve=0.000 ms

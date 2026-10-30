@@ -155,14 +155,49 @@ def generate_launch_description():
             parameters=[
                 os.path.join(ex_share, "config", "c43_s4_executor.yaml"),
                 {
-                    # Pose_V bridges to TFMessage with the gz scoped link names.
-                    "weld_parent_frame": "s622_dual_arm::left_wrist3_link",
-                    "weld_child_frame": "c43_sample::base_link",
-                    "weld_pose_topic": "/c43/weld_pose",
+                    # Gazebo Fortress 6.18's pose/info -> TFMessage bridge emits
+                    # UNscoped link names (left_wrist3_link, c43_sample); 6.16 was
+                    # measured with scoped "model::link" names.  The executor
+                    # matches these strings exactly, so the profile has to follow
+                    # the bridge of the running version (T2 fix 2026-10-29).
+                    "weld_parent_frame": "left_wrist3_link",
+                    "weld_child_frame": "c43_sample",
+                    "weld_pose_topic": os.environ.get("C43_WELD_POSE_TOPIC", "/c43/weld_pose"),
                     "artifacts_dir": os.environ.get("C43_W7_ARTIFACTS", "/tmp/c43_s4_w7"),
                     "run_id": os.environ.get("C43_W7_RUN_ID", "c43_s4_w7_run"),
+                    # T2 fix: the executor needs the five-phase table from cycle 0
+                    # (learning it from the live stream took a whole run, so the
+                    # 5 s approach timeout always fired first).  These MUST match
+                    # the start_transport request; the live phase index/name are
+                    # still audited and a mismatch is a HOLD.
+                    "phase_names": ["approach", "grasp", "lift", "transport", "lower", "release"],
+                    "phase_durations": [3.0, 2.0, 3.0, 3.0, 3.0, 2.0],
+                    "trajectory_duration_s": 16.0,
+                    # S4-T16 (2026-10-29): close the LEFT fingers, then check the
+                    # sample against the frozen grasp chain before attach.  The
+                    # 3 mm / 1 deg tolerances are the plan's SUGGESTED values and
+                    # remain [待标定]; they are profile defaults, not approved
+                    # acceptance thresholds.  require_grasp_check=false restores
+                    # the pre-S4-T16 behaviour.
+                    "require_grasp_check": True,
+                    "gripper_action": "/left_hand_controller/follow_joint_trajectory",
+                    "gripper_joint_names": ["left_finger1_joint", "left_finger2_joint"],
+                    "gripper_close_positions": [0.0251, -0.0251],
+                    "gripper_motion_s": 1.0,
+                    "gripper_position_tol": 0.002,
+                    "gripper_timeout_s": 2.5,
+                    "grasp_pos_tol_m": 0.003,
+                    "grasp_rot_tol_rad": 0.017453292519943295,
+                    "grasp_snapshot_max_age_s": 5.0,
+                    # T2 fix (2026-10-29): the executor's stale/timeout checks must
+                    # run on the same clock as the controller trajectory.  This
+                    # container runs the 125 Hz controller at ~50 Hz wall, so a
+                    # 10 Hz decimated status is 0.26-0.35 s WALL apart and tripped
+                    # stale_state; in sim time it is 13 x 8 ms = 0.104 s.
+                    "use_sim_time": True,
                 },
             ],
+            remappings=[("/clock", f"/world/{world_name}/clock")],
             output="screen",
         )],
         condition=IfCondition(LaunchConfiguration("executor")),

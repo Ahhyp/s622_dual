@@ -36,6 +36,8 @@ int stateOrdinal(State s)
 State stateForPhaseName(const std::string & name)
 {
   if (name == "approach") {return State::Approach;}
+  if (name == "grasp") {return State::Grasp;}
+  if (name == "release") {return State::Release;}
   if (name == "lift") {return State::Lift;}
   if (name == "transport") {return State::Transport;}
   if (name == "lower") {return State::Lower;}
@@ -273,6 +275,7 @@ void TransportStateMachine::advance(double now_s, const std::string & detail)
 
 bool TransportStateMachine::start(double now_s, const StartRequest & req, std::string * why)
 {
+  limit_streak_ = 0;
   if (state_ == State::Fault) {
     if (why) {*why = "fault_requires_reset";}
     record(now_s, "reject", toString(state_), toString(state_), "fault_requires_reset",
@@ -314,6 +317,17 @@ bool TransportStateMachine::start(double now_s, const StartRequest & req, std::s
   state_since_ = now_s;
   duration_ = req.duration_s;
   failure_code_.clear();
+  // S4-T16: GRASP prerequisites are re-armed on every new task; without this a
+  // second run would inherit the first run's verdicts.  Also reset the weld
+  // request latches: they are per-task, and a stale attach_requested would make
+  // the second run skip its attach entirely (W7-C repeat-run bug).
+  gripper_ready_ = !cfg_.require_grasp_check;
+  grasp_checked_ = !cfg_.require_grasp_check;
+  grasp_ok_ = !cfg_.require_grasp_check;
+  weld_attached_ = false;
+  weld_release_done_ = false;
+  weld_attach_requested_ = false;
+  weld_detach_requested_ = false;
   resume_fail_ = 0;
   resume_state_ = State::Idle;
   has_frozen_ = false;
@@ -322,6 +336,32 @@ bool TransportStateMachine::start(double now_s, const StartRequest & req, std::s
   record(now_s, "start", toString(from), toString(state_), "",
          "trajectory duration " + std::to_string(req.duration_s) + " s");
   return true;
+}
+
+void TransportStateMachine::noteGripperClosed(double now_s, bool ok,
+                                              const std::string & detail)
+{
+  // Late verdicts from a previous GRASP must not mutate a new state.
+  if (state_ != State::Grasp) {return;}
+  if (!ok) {
+    enterProtection(Protection::Fault, "grasp_check_failed", now_s, detail);
+    return;
+  }
+  gripper_ready_ = true;
+  record(now_s, "grasp", "GRASP", "GRASP", "gripper_closed", detail);
+}
+
+void TransportStateMachine::noteGraspCheck(double now_s, bool ok,
+                                           const std::string & detail)
+{
+  if (state_ != State::Grasp) {return;}
+  grasp_checked_ = true;
+  grasp_ok_ = ok;
+  record(now_s, "grasp", "GRASP", "GRASP",
+         ok ? "grasp_check_ok" : "grasp_check_failed", detail);
+  if (!ok) {
+    enterProtection(Protection::Fault, "grasp_check_failed", now_s, detail);
+  }
 }
 
 bool TransportStateMachine::abortTransport(const std::string & code, double now_s,
@@ -395,7 +435,7 @@ bool TransportStateMachine::resume(double now_s, std::string * why)
     reason = "object_pos_error";
   } else if (st.e_obj_rot_rad > cfg_.resume_rot_tol_rad) {
     reason = "object_rot_error";
-  } else if (st.active_limit_count > 0) {
+  } else if (st.min_limit_margin_rad < cfg_.limit_margin_rad) {
     reason = "active_limit";
   } else if (st.solve_fail_streak >= cfg_.solve_fail_streak_limit) {
     reason = "solve_streak";
@@ -431,6 +471,7 @@ bool TransportStateMachine::resume(double now_s, std::string * why)
 
 bool TransportStateMachine::reset(double now_s, std::string * why)
 {
+  limit_streak_ = 0;
   if (state_ == State::Abort) {
     if (why) {*why = "abort_requires_start";}
     record(now_s, "reject", toString(state_), toString(state_), "abort_requires_start",
@@ -566,7 +607,10 @@ void TransportStateMachine::checkTimeout(double now_s)
       limit = cfg_.approach_timeout_s; p = Protection::Fault; code = "grasp_check_failed";
       break;
     case State::Grasp:
-      limit = cfg_.grasp_timeout_s; p = Protection::Fault; code = "attach_failed";
+      limit = cfg_.grasp_timeout_s; p = Protection::Fault;
+      // Before the attach request this is a GRASP-prerequisite failure
+      // (S4-T16); after it, it is the attach itself that did not confirm.
+      code = weld_attach_requested_ ? "attach_failed" : "grasp_check_failed";
       break;
     case State::Lift:
     case State::Transport:
@@ -588,8 +632,35 @@ void TransportStateMachine::checkTimeout(double now_s)
   }
 }
 
+bool TransportStateMachine::limitPressure(const ControllerStatus & st) const
+{
+  // Either the solver keeps pushing joints at the velocity cap, or the arm is
+  // inside the margin of a position limit.  Both are "the arm is running out
+  // of room"; neither is a fault on its own.
+  const bool position_pressure = st.min_limit_margin_rad < cfg_.limit_margin_rad;
+  if (state_ == State::Grasp) {
+    // S4-T16 (2026-10-29): GRASP is a stationary contact phase.  Closing the
+    // fingers can make ONE joint touch the velocity cap for a few hundred ms;
+    // that is not the T1 runaway (10-12 joints).  W7-B's decision was "position
+    // margin + N consecutive samples": keep the position check, drop the
+    // velocity-cap term here.  Transport phases keep both.
+    return position_pressure;
+  }
+  return st.active_limit_count > 0 || position_pressure;
+}
+
 bool TransportStateMachine::tickWeld(double now_s)
 {
+  // S4-T16: the node closes the fingers and checks the sample against the frozen
+  // grasp chain; until both verdicts are in, GRASP must not request attach.
+  if (state_ == State::Grasp && cfg_.require_grasp_check && !weld_attached_) {
+    if (!gripper_ready_ || !grasp_checked_) {return true;}   // still waiting
+    if (!grasp_ok_) {
+      enterProtection(Protection::Fault, "grasp_check_failed", now_s,
+                      "grasp prerequisites rejected before attach");
+      return true;
+    }
+  }
   if (weld_ == nullptr) {return false;}
 
   if (state_ == State::Grasp && !weld_attached_) {
@@ -609,7 +680,15 @@ bool TransportStateMachine::tickWeld(double now_s)
     if (a == WeldAction::Confirmed && weld_attach_requested_) {
       weld_attached_ = true;
       record(now_s, "weld", "GRASP", "GRASP", "attached", weld_->reason());
-      return false;  // let the normal GRASP logic run on the next tick
+      // W7: with a controller phase table driving the run, the attach is the only
+      // "gripper closed" signal this build has (no gripper feedback yet), so a
+      // confirmed attach completes GRASP and the barrier can open.  Without a
+      // phase driver the caller still owns completion through phaseDone(), which
+      // is the W3-R1 behaviour those callers already rely on.
+      if (phase_ != nullptr && phase_->enabled()) {
+        advance(now_s, "attach confirmed (gripper simulated, see W7 open items)");
+      }
+      return false;
     }
     if (a == WeldAction::Failed) {
       enterProtection(Protection::Hold, "attach_failed", now_s,
@@ -633,6 +712,9 @@ bool TransportStateMachine::tickWeld(double now_s)
       weld_release_done_ = true;
       weld_attached_ = false;
       record(now_s, "weld", "RELEASE", "RELEASE", "detached", weld_->reason());
+      if (phase_ != nullptr && phase_->enabled()) {
+        advance(now_s, "detach confirmed (gripper simulated, see W7 open items)");
+      }
       return false;
     }
     if (a == WeldAction::Failed) {
@@ -731,10 +813,23 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
                     "solve_fail_streak " + std::to_string(st_in->solve_fail_streak));
     return;
   }
-  if (st_in->active_limit_count > 0) {
-    enterProtection(Protection::Hold, "joint_limit_saturation", now_s,
-                    "active_limit_count " + std::to_string(st_in->active_limit_count));
-    return;
+  // W7-B finding: active_limit_count counts joints whose |dq| is at the
+  // velocity cap (v_max*dt), which a normal transport start saturates on
+  // almost every joint.  Position-limit pressure is min_limit_margin_rad.
+  // Protect on *sustained* pressure only; one saturated cycle is a transient.
+  if (limitPressure(*st_in)) {
+    ++limit_streak_;
+    if (limit_streak_ > cfg_.limit_saturation_cycles) {
+      enterProtection(Protection::Hold, "joint_limit_saturation", now_s,
+                      "sustained limit pressure: " + std::to_string(limit_streak_) +
+                      " consecutive samples, velocity-capped joints " +
+                      std::to_string(st_in->active_limit_count) +
+                      ", nearest position limit " +
+                      std::to_string(st_in->min_limit_margin_rad) + " rad");
+      return;
+    }
+  } else {
+    limit_streak_ = 0;
   }
   if (st_in->executor_heartbeat_required && heartbeatStale(now_s)) {
     enterProtection(Protection::Hold, "executor_lost", now_s,
@@ -790,6 +885,22 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
           while (isActive(state_) && state_ != target &&
             stateOrdinal(state_) < stateOrdinal(target) && guard < 8)
           {
+            // W7 barrier: GRASP/RELEASE are owned by the executor (attach and
+            // detach must be confirmed first), so a controller phase change may
+            // NOT walk the state machine straight through them.  Without this the
+            // "lift" phase skips GRASP entirely and the sample is never grasped.
+            if (state_ == State::Grasp && weld_ != nullptr && !weld_attached_) {
+              record(now_s, "phase", "GRASP", "GRASP", "grasp_barrier",
+                     "holding GRASP: the attach is not confirmed yet");
+              break;
+            }
+            if (state_ == State::Release && weld_ != nullptr && weld_attached_ &&
+              !weld_release_done_)
+            {
+              record(now_s, "phase", "RELEASE", "RELEASE", "release_barrier",
+                     "holding RELEASE: the sample is still welded");
+              break;
+            }
             advance(now_s, "controller phase '" + po.name + "'");
             ++guard;
           }
@@ -820,6 +931,17 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
       advance(now_s, "controller reported the trajectory reached its end");
       return;
     }
+  }
+  // T2 fix (2026-10-29): in phase-driven mode the phase index owns the walking,
+  // but the C4.3 flow has no "retreat" phase.  After RELEASE confirms the detach
+  // the executor sits in RETREAT; without this rule it waits for a phase that
+  // never arrives and faults release_failed.  Reaching t_traj == duration is the
+  // same real controller signal as the fallback above, not a timer.
+  if (phase_driven && state_ == State::Retreat && st_in->transport_active &&
+      st_in->duration > 0.0 && st_in->t_traj >= st_in->duration - 1e-12)
+  {
+    advance(now_s, "controller reported the trajectory reached its end");
+    return;
   }
   checkTimeout(now_s);
 }

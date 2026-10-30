@@ -1,0 +1,14 @@
+# C4.3 S4 T1 fix (2026-10-29): Gazebo spawn pose for the RIGHT arm.
+#
+# See c43_s4_gazebo_initial_left.yaml for the full rationale: the arms must spawn
+# at q_grasp12 because TransportTask's frozen relative target is the FK there.
+# Values are q_grasp12 from src/dual_arm_transport/config/transport_baseline.yaml.
+initial_positions:
+  j1: 0.346555743776
+  j2: -1.434641795676
+  j3: -1.279963524342
+  j4: -1.997783660367
+  j5: 1.570796326795
+  j6: -2.795036909814
+  finger1_joint: 0.0
+  finger2_joint: 0.0
