@@ -76,6 +76,10 @@ struct AttachClientConfig
   /// (startup_release_timeout_s), not the attach attempt budget: giving up after
   /// three publishes is what turned a lost message into a failed run.
   double startup_retry_s = 0.25;
+  /// Test-only fault injection: after the startup release is verified, a
+  /// requested detach fails immediately instead of publishing.  Used to verify
+  /// the attached-FAULT path (no detach, no drop) without touching the plugin.
+  bool inject_detach_failure = false;
 };
 
 /// What the caller must do on the transport, this cycle.

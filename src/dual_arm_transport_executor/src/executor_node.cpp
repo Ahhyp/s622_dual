@@ -37,6 +37,8 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   cfg.approach_timeout_s = declare_parameter("approach_timeout_s", cfg.approach_timeout_s);
   cfg.grasp_timeout_s = declare_parameter("grasp_timeout_s", cfg.grasp_timeout_s);
   cfg.release_timeout_s = declare_parameter("release_timeout_s", cfg.release_timeout_s);
+  cfg.release_settle_s = declare_parameter("release_settle_s", cfg.release_settle_s);
+  cfg.retreat_timeout_s = declare_parameter("retreat_timeout_s", cfg.retreat_timeout_s);
   cfg.phase_timeout_scale = declare_parameter("phase_timeout_scale", cfg.phase_timeout_scale);
   cfg.resume_pos_tol_m = declare_parameter("resume_pos_tol_m", cfg.resume_pos_tol_m);
   cfg.resume_rot_tol_rad = declare_parameter("resume_rot_tol_rad", cfg.resume_rot_tol_rad);
@@ -44,6 +46,8 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   cfg.solve_fail_streak_limit = declare_parameter("solve_fail_streak_limit", cfg.solve_fail_streak_limit);
   cfg.limit_saturation_cycles = static_cast<int>(declare_parameter("limit_saturation_cycles", cfg.limit_saturation_cycles));
   cfg.limit_margin_rad = declare_parameter("limit_margin_rad", cfg.limit_margin_rad);
+  cfg.limit_min_saturated_joints = static_cast<int>(
+    declare_parameter("limit_min_saturated_joints", cfg.limit_min_saturated_joints));
   cfg.require_grasp_check = declare_parameter("require_grasp_check", cfg.require_grasp_check);
   sm_ = std::make_unique<TransportStateMachine>(cfg);
 
@@ -64,6 +68,8 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
     std::vector<std::string>{"left_finger1_joint", "left_finger2_joint"});
   gripper_close_positions_ = declare_parameter<std::vector<double>>(
     "gripper_close_positions", std::vector<double>{0.0251, -0.0251});
+  gripper_open_positions_ = declare_parameter<std::vector<double>>(
+    "gripper_open_positions", std::vector<double>{0.0305, -0.0305});
   gripper_motion_s_ = declare_parameter("gripper_motion_s", 1.0);
   gripper_position_tol_ = declare_parameter("gripper_position_tol", 0.002);
   gripper_timeout_s_ = declare_parameter("gripper_timeout_s", 2.5);
@@ -72,6 +78,7 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   grasp_snapshot_max_age_s_ = declare_parameter("grasp_snapshot_max_age_s", 5.0);
   wrist3_to_grasp_z_ = declare_parameter("wrist3_to_grasp_z", 0.2168);
   if (gripper_joint_names_.size() != gripper_close_positions_.size() ||
+    gripper_joint_names_.size() != gripper_open_positions_.size() ||
     gripper_joint_names_.empty())
   {
     RCLCPP_ERROR(get_logger(),
@@ -134,6 +141,8 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
     declare_parameter("weld_max_attach_attempts", wcfg.max_attach_attempts);
   wcfg.startup_release_timeout_s =
     declare_parameter("weld_startup_release_timeout_s", wcfg.startup_release_timeout_s);
+  wcfg.inject_detach_failure =
+    declare_parameter("weld_inject_detach_failure", wcfg.inject_detach_failure);
   wcfg.max_snap_m = declare_parameter("weld_max_snap_m", wcfg.max_snap_m);
   weld_.configure(wcfg);
   weld_parent_frame_ = declare_parameter<std::string>("weld_parent_frame", "left_grasp_frame");
@@ -343,6 +352,7 @@ void TransportExecutorNode::onTimer()
   // is published exactly once and the state machine sees the resulting action.
   driveWeld();
   driveGripper();
+  driveReleaseGripper();
   sm_->tick(nowSeconds(), status_.received ? &status_ : nullptr);
   afterTransition();
   driveAbortPropagation();
@@ -430,7 +440,7 @@ void TransportExecutorNode::driveHoldRequest()
 
 void TransportExecutorNode::beginAbortPropagation(const std::string & reason)
 {
-  if (abort_propagation_open_ || abort_req_.confirmed()) {return;}
+  if (abort_propagation_open_ || abort_req_.confirmed() || abort_req_.escalated()) {return;}
   abort_propagation_open_ = true;
   abort_req_.begin(nowSeconds(), reason.c_str());
   RCLCPP_WARN(get_logger(), "propagating ABORT to the controller: %s", reason.c_str());
@@ -447,7 +457,7 @@ void TransportExecutorNode::driveAbortPropagation()
   {
     beginAbortPropagation(sm_->failureCode());
   }
-  if (!abort_req_.started() || abort_req_.confirmed()) {return;}
+  if (!abort_req_.started() || abort_req_.confirmed() || abort_req_.escalated()) {return;}
 
   const int reply = abort_reply_.exchange(0);
   if (reply == 1) {abort_req_.onServiceReply(true, "queued");}
@@ -478,8 +488,16 @@ void TransportExecutorNode::driveAbortPropagation()
     return;
   }
   if (step.action == AbortAction::Escalate) {
-    // Never claim safety.  Escalate to a latching safety fault with its own code.
     abort_propagation_open_ = false;
+    if (sm_->state() == State::Fault) {
+      // Already FAULT: keep the original code (e.g. grasp_check_failed) as the
+      // root cause; a failed stop request must not overwrite it.
+      RCLCPP_ERROR(get_logger(),
+        "ABORT NOT CONFIRMED by the controller (%s); executor stays FAULT (%s)",
+        abort_req_.outcome().c_str(), sm_->failureCode().c_str());
+      return;
+    }
+    // Never claim safety.  Escalate to a latching safety fault with its own code.
     std::string why;
     (void)sm_->escalateFault(abort_req_.outcome(), obs.now_s,
       "controller did not confirm the ABORT", &why);
@@ -496,6 +514,18 @@ void TransportExecutorNode::afterTransition()
     RCLCPP_INFO(get_logger(), "state %s -> %s (code '%s')",
       toString(last_state_), toString(st), sm_->failureCode().c_str());
     last_state_ = st;
+  }
+  // FAULT is a stop, not a bookkeeping state.  Before this, only ABORT/HOLD
+  // propagated to the controller, so a grasp_check_failed FAULT left the QP
+  // trajectory running (measured 2026-10-29: controller reached COMPLETE and the
+  // sample was carried off the support).  Use the already-approved
+  // ~/abort_transport interface; no new service.
+  if (st == State::Fault && !abort_req_.started()) {
+    const bool attached = sm_->weldAttached();
+    RCLCPP_ERROR(get_logger(),
+      "FAULT (%s): weld is %s; propagating ABORT to the controller; refusing to detach",
+      sm_->failureCode().c_str(), attached ? "attached" : "not attached");
+    beginAbortPropagation(std::string("fault:") + sm_->failureCode());
   }
   if (artifacts_written_) {return;}
   if (st == State::Complete || st == State::Fault || st == State::Abort) {
@@ -576,6 +606,10 @@ Eigen::Matrix4d poseToMat(const double * p, const double * q)
 
 void TransportExecutorNode::driveWeld()
 {
+  // FAULT freezes the physical weld exactly where it is.  Ticking the attach
+  // client here would keep issuing attach/detach requests; detaching an attached
+  // sample without support confirmation is how payloads get dropped.
+  if (sm_->state() == State::Fault) {return;}
   const double now = nowSeconds();
   // Two calls, two jobs (P0-1): tick() advances deadlines/decisions, consumeSend()
   // returns the armed Request* exactly once and is what publishes it.  Publishing
@@ -672,6 +706,11 @@ void TransportExecutorNode::resetGripperState()
   gripper_result_ready_ = false;
   gripper_result_ok_ = false;
   gripper_start_at_s_ = -1.0;
+  release_open_started_ = false;
+  release_open_failed_ = false;
+  release_open_result_ready_ = false;
+  release_open_result_ok_ = false;
+  release_open_start_at_s_ = -1.0;
   grasp_snapshot_ok_ = false;
   grasp_snapshot_at_s_ = -1.0;
 }
@@ -710,12 +749,16 @@ void TransportExecutorNode::startGripper(double now_s)
 
 bool TransportExecutorNode::fingerPositionsAtTarget() const
 {
-  if (gripper_positions_.size() != gripper_close_positions_.size()) {return false;}
-  for (std::size_t i = 0; i < gripper_positions_.size(); ++i) {
+  return fingerPositionsAtTarget(gripper_close_positions_);
+}
+
+bool TransportExecutorNode::fingerPositionsAtTarget(
+  const std::vector<double> & targets) const
+{
+  if (gripper_positions_.size() != targets.size()) {return false;}
+  for (std::size_t i = 0; i < targets.size(); ++i) {
     if (!gripper_position_seen_[i]) {return false;}
-    if (std::fabs(gripper_positions_[i] - gripper_close_positions_[i]) >
-      gripper_position_tol_)
-    {
+    if (std::fabs(gripper_positions_[i] - targets[i]) > gripper_position_tol_) {
       return false;
     }
   }
@@ -751,6 +794,69 @@ bool TransportExecutorNode::computeGraspCheck(double now_s)
               r.ok ? "PASS" : "FAIL", detail);
   sm_->noteGraspCheck(now_s, r.ok, detail);
   return true;
+}
+
+void TransportExecutorNode::startReleaseGripper(double now_s)
+{
+  if (release_open_started_) {return;}
+  if (!gripper_client_) {return;}
+  if (!gripper_client_->action_server_is_ready()) {return;}
+  GripperAction::Goal goal;
+  goal.trajectory.joint_names = gripper_joint_names_;
+  trajectory_msgs::msg::JointTrajectoryPoint pt;
+  pt.positions = gripper_open_positions_;
+  pt.time_from_start = rclcpp::Duration::from_seconds(gripper_motion_s_);
+  goal.trajectory.points.push_back(pt);
+  auto opts = rclcpp_action::Client<GripperAction>::SendGoalOptions();
+  opts.goal_response_callback = [this](GripperGoalHandle::SharedPtr handle) {
+      if (!handle) {
+        release_open_result_ready_ = true;
+        release_open_result_ok_ = false;
+      }
+    };
+  opts.result_callback = [this](const GripperGoalHandle::WrappedResult & result) {
+      release_open_result_ready_ = true;
+      release_open_result_ok_ = (result.code == rclcpp_action::ResultCode::SUCCEEDED);
+      RCLCPP_INFO(get_logger(), "S4-T16: release finger-open finished: %s",
+                  release_open_result_ok_ ? "SUCCEEDED" : "FAILED");
+    };
+  gripper_client_->async_send_goal(goal, opts);
+  release_open_started_ = true;
+  release_open_start_at_s_ = now_s;
+  RCLCPP_INFO(get_logger(), "S4-T16: opening left fingers via %s", gripper_action_.c_str());
+}
+
+void TransportExecutorNode::driveReleaseGripper()
+{
+  if (sm_->state() != State::Release) {return;}
+  if (!sm_->releaseDetached()) {return;}
+  const double now = nowSeconds();
+  if (!sm_->releaseReadyToOpen(now)) {return;}   // frozen 100 ms settle
+  if (release_open_failed_) {return;}
+  if (!release_open_started_) {
+    if (release_open_start_at_s_ < 0.0) {release_open_start_at_s_ = now;}
+    startReleaseGripper(now);
+    if (!release_open_started_) {
+      if (now - release_open_start_at_s_ > gripper_timeout_s_) {
+        release_open_failed_ = true;
+        sm_->noteGripperOpened(now, false, "finger-open action server never became ready");
+      }
+      return;
+    }
+  }
+  if (release_open_result_ready_ && !release_open_result_ok_) {
+    release_open_failed_ = true;
+    sm_->noteGripperOpened(now, false, "finger-open JTC failed");
+    return;
+  }
+  if (fingerPositionsAtTarget(gripper_open_positions_)) {
+    sm_->noteGripperOpened(now, true, "finger positions reached the open targets");
+    return;
+  }
+  if (release_open_start_at_s_ >= 0.0 && now - release_open_start_at_s_ > gripper_timeout_s_) {
+    release_open_failed_ = true;
+    sm_->noteGripperOpened(now, false, "finger-open timeout");
+  }
 }
 
 void TransportExecutorNode::driveGripper()

@@ -14,7 +14,7 @@
 | `git status --porcelain` | **非 0（30 项）**：5 个迁移前已有的 Docker/GPU 环境改动 + 本次代码/配置/证据改动；**未 commit** |
 | `ros-humble-osqp-vendor` | 容器重建后缺失，已 `apt` 补装；否则 `dual_arm_qp_core` 只会建 ADMM 后端 |
 | 构建 | 9 包通过 |
-| 172 用例 | `172 tests, 0 errors, 0 failures, 0 skipped`（修复前后均通过） |
+| 用例 | `selfcheck_final.log` 为 T1/T2 阶段的 172；S4-T16 + FAULT 修复后最新 **188 tests / 0 failures** |
 | `test_fail_readstate` 注入符号 | 0 |
 | 冻结 S3 fixture / D2-B baseline sha256 | 与档案一致 |
 | `LEDGER_OK` | 通过 |
@@ -165,6 +165,13 @@ advance RETREAT→COMPLETE  controller reported the trajectory reached its end
 | `s4t16_5mm_reject.log` / `s4t16_run8_inject5mm.json` | S4-T16 反例：5 mm 注入 → `grasp_check_failed`，无 attach |
 | `executor_artifacts_s4t16_fault/` | 反例的执行器事件（`grasp_check_failed`，无 `attach_requested`） |
 | `pose_bias_relay.py` | 5 mm 反例用的 ROS 边界位姿中继 |
+| `fault_propagation_5mm.log` / `fault_prop_5mm3.json` | FAULT 传播：`grasp_check_failed` → 控制器 `ABORT`，t_traj=4.35 冻结，z=0.2748，无 attach |
+| `executor_artifacts_fault_propagation/` | FAULT 传播的执行器事件（无 attach） |
+| `fault_propagation_ctest_188.log` | FAULT 传播 + 仍附着 start gate 后的 188 用例回归（历史） |
+| `release_full_sequence.log` / `release_run4.json` / `release_finger_positions.txt` | 完整 RELEASE：detach→100 ms→张手→retreat→COMPLETE（19.5 s），手指 ±0.0305 |
+| `attached_fault_detach_fail.log` / `attached_fault_run1.json` / `attached_start_refused.txt` | 带物 FAULT：detach 注入失败，不拆焊；reset 后 start 拒绝 |
+| `approach_saturation_diagnosis.txt` | APPROACH 误触发：单关节 lim=1，非 T1 多关节失控；min_joints=6 |
+| `release_ctest_190.log` | APPROACH + RELEASE + 带物 FAULT 后的 190 用例回归 |
 | `code_changes.diff` | 本轮产品/配置改动（不含迁移前的环境改动） |
 
 ## 6. 复现
@@ -186,7 +193,7 @@ pkill -INT -f "[r]os2 launch gz_launch"; sleep 6; pkill -TERM -f "[i]gn gazebo"
 - W4 台账按实测更新：`S4-T18` 从 `NOT_RUN` 改为 `PARTIAL`（6.18 实跑，但缺最小双体世界与
   1 s 相对位姿稳定上限）；`S4-T16` 改为 `IMPLEMENTED` / evidence `PARTIAL`（代码接入、
   正常跑 PASS、5 mm 注入拒绝；物理抬高与 3 mm/1° 标定未做）；
-- 台账检查器仍 `LEDGER_OK`，执行器 172 用例仍全绿。
+- 台账检查器仍 `LEDGER_OK`，执行器最新 **188 用例**全绿。
 
 **仍未做（W7 仍 `INTEGRATION_HOLD`）：**
 
@@ -219,5 +226,46 @@ pkill -INT -f "[r]os2 launch gz_launch"; sleep 6; pkill -TERM -f "[i]gn gazebo"
 
 **边界**：5 mm 是 ROS 边界注入（只改执行器看到的 `c43_sample` z），不是物理抬高；运行中塞
 5 mm 垫块会把样品顶进夹爪、把臂推离 `q_grasp12`，start gate 直接拒绝。真实夹爪力/接触未测，
-3 mm/1° 仍是建议值。另：执行器 FAULT 后控制器仍把轨迹跑完（反例里样品被带落到 z=0.025），
-这是另一个安全传播缺口，未在本轮修。
+3 mm/1° 仍是建议值。2026-10-30 已修 FAULT 传播：执行器 FAULT 经现有 `~/abort_transport`
+停控制器（`fault_propagation_5mm.log`），5 mm 反例控制器 `ABORT`、`t_traj=4.35` 冻结、
+样品 z=0.2748 未被带落；已附着故障只做代码审查，`reset()` 后仍附着时 `start()` 已拒绝。
+
+
+## 9. FAULT 传播（2026-10-30）
+
+`grasp_check_failed` 原来只让执行器本地 FAULT，QP 控制器继续跑完轨迹（5 mm 反例控制器
+`COMPLETE`，样品被带落到 z=0.025）。现在：
+
+- `afterTransition()` 进入 FAULT 时经现有 `AbortRequester` 发 `~/abort_transport`（只启动一次）；
+- `driveWeld()` 在 FAULT 直接 return，不再 attach/detach；
+- 日志区分 `weld is attached / not attached`，两者都不拆焊；
+- `start()` 在 weld 仍附着/未知时拒绝，`why=weld_state_not_detached`。
+
+证据：`fault_propagation_5mm.log`（`grasp check FAIL 5.021 mm` → FAULT → 3 次 abort →
+`controller stop confirmed`）、`fault_prop_5mm3.json`（控制器 `ABORT`，`t_traj=4.35` 冻结，
+z=0.2748，无 attach）、`executor_artifacts_fault_propagation/events.csv`。
+回归 **190 tests / 0 failures**。已附着故障的 Gazebo 注入见 §12；真实夹爪力/接触未测。
+
+
+## 10. APPROACH 速度饱和误触发（2026-10-30）
+
+失败运行 `fault_prop_5mm2.json` 的 `max active_limit_count=1`，窗口内 `q_state` 几乎冻结；
+不是 T1 的 10–12 关节失控，也不是位置限位。执行器按 125 Hz tick 累加，控制器 Status 约
+10 Hz，同一个 `lim=1` 样本被重复计数约 12 次，25 tick≈0.2 s 单关节边界就 HOLD。
+修复：速度项要求 `active_limit_count >= limit_min_saturated_joints`（C4.3=6），位置裕度仍
+任意关节；`SingleJointCapDoesNotHoldButMultiJointDoes` 覆盖 1 关节不拦、10 关节仍拦。
+
+## 11. 完整 RELEASE（2026-10-30）
+
+`release_full_sequence.log` / `release_run4.json`：detach 确认 → 100 ms → 张手 JTC 成功 →
+手指 ±0.0305 → retreat 相位 → `COMPLETE`，t=19.50，样品 z=0.2750 未被推动。release 相位
+从 2.0 s 延长到 3.5 s，保证张手确认在 retreat 之前；总时长 19.5 s。
+张手失败/超时由 `W7_ReleaseOpenFailureIsAFaultAndDoesNotRetreat` 覆盖（190 用例）；
+Gazebo 张手失败注入因 start gate 姿态漂移未跑成。
+
+## 12. 带物 FAULT（2026-10-30）
+
+`C43_INJECT_DETACH_FAILURE=1` 让 release 的 detach 请求失败（startup 释放不受影响）：
+`FAULT(release_failed)`、日志 `weld is attached... refusing to detach`、无张手/退避；
+控制器 ABORT，样品保持 attached、z=0.2750；reset 后 start 返回 `weld_state_not_detached`。
+证据：`attached_fault_detach_fail.log`、`attached_fault_run1.json`、`attached_start_refused.txt`。

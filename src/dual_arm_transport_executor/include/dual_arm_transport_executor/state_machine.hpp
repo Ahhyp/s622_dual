@@ -126,6 +126,14 @@ struct Config
   double approach_timeout_s = 5.0;
   double grasp_timeout_s = 3.0;
   double release_timeout_s = 3.0;
+  /// RETREAT is a 2 s controller phase, but the controller's phase clock lags
+  /// sim time under load; 3 s reused from RELEASE produced a false
+  /// release_failed.  A real stuck retreat still faults after this bound.
+  double retreat_timeout_s = 6.0;
+  /// Plan §4.6.1: after the weld is confirmed detached, hold this long before
+  /// opening the fingers.  100 ms is a frozen ordering requirement, not a
+  /// tolerance to tune.
+  double release_settle_s = 0.1;
   /// S4-T16: when true, GRASP must wait for the node's gripper-close and
   /// grasp-relative-check verdicts before it may request attach.  Default false
   /// preserves the pre-S4-T16 software tests and the mock/dry-run profiles; the
@@ -143,6 +151,12 @@ struct Config
   // limit_margin_rad of a position limit.  One saturated cycle is a normal
   // transient of a transport start, not a fault (W7-B finding, 2026-10-28).
   int limit_saturation_cycles = 25;
+  // A single joint riding the velocity cap during a stationary APPROACH/GRASP
+  // is a contact/standstill boundary, not the T1 10-12 joint runaway.  The
+  // velocity term only counts when at least this many joints are at the cap;
+  // the position-margin term is still per-joint.  Default 1 preserves the old
+  // behaviour for the mock/dry-run profiles; the C4.3 Gazebo profile sets 6.
+  int limit_min_saturated_joints = 1;
   // How close to a position limit counts as "running out of room".  Default
   // 0.0 = only an actual violation (margin < 0); a positive band is a profile
   // choice (the Gazebo profile sets 0.05 rad).
@@ -198,6 +212,13 @@ public:
   bool gripperReady() const {return gripper_ready_;}
   bool graspCheckDone() const {return grasp_checked_;}
   bool graspOk() const {return grasp_ok_;}
+  // S4-T16 release order: detach confirmed -> >=100 ms -> fingers open ->
+  // RELEASE may advance to RETREAT.  The node owns the JTC; the state machine
+  // owns the ordering and the failure latch.
+  bool releaseDetached() const {return release_detached_;}
+  bool releaseOpened() const {return release_opened_;}
+  bool releaseReadyToOpen(double now_s) const;
+  void noteGripperOpened(double now_s, bool ok, const std::string & detail);
   void attachPhaseDriver(PhaseDriver * driver) {phase_ = driver;}
   PhaseDriver * phaseDriver() const {return phase_;}
   int phaseIndex() const {return phase_ != nullptr ? phase_->index() : -1;}
@@ -302,6 +323,10 @@ private:
   bool gripper_ready_ = false;
   bool grasp_checked_ = false;
   bool grasp_ok_ = false;
+  bool release_detached_ = false;
+  double release_detached_at_s_ = -1.0;
+  bool release_opened_ = false;
+  bool release_sequence_done_ = false;
 
   CollisionGuard * collision_guard_ = nullptr;
   dual_arm::Iso3 object_pose_ = dual_arm::Iso3::Identity();

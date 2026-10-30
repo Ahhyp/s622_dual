@@ -23,7 +23,8 @@ DEFAULT_PHASES = [
     ("lift",     3.0, 0.0, 0.0, 0.02, 0.0),
     ("transport",3.0, -0.02, 0.0, 0.0, 0.0),
     ("lower",    3.0, 0.0, 0.0, -0.02, 0.0),
-    ("release",  2.0, 0.0, 0.0, 0.0, 0.0),  # stationary hold: detach happens here
+    ("release",  3.5, 0.0, 0.0, 0.0, 0.0),  # stationary hold: detach + 100 ms + open
+    ("retreat",  2.0, 0.0, 0.0, 0.02, 0.0),  # back away after the fingers open
 ]
 
 class N(Node):

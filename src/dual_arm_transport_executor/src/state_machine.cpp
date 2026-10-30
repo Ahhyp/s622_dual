@@ -38,6 +38,7 @@ State stateForPhaseName(const std::string & name)
   if (name == "approach") {return State::Approach;}
   if (name == "grasp") {return State::Grasp;}
   if (name == "release") {return State::Release;}
+  if (name == "retreat") {return State::Retreat;}
   if (name == "lift") {return State::Lift;}
   if (name == "transport") {return State::Transport;}
   if (name == "lower") {return State::Lower;}
@@ -306,6 +307,17 @@ bool TransportStateMachine::start(double now_s, const StartRequest & req, std::s
            "start() refused: the physical attach state has not been released and verified");
     return false;
   }
+  // FAULT recovery: after a fault while attached, reset() returns to IDLE but
+  // the sample is still welded.  Starting a new task then would move an attached
+  // payload; refuse instead.  This is a refusal, not a detach -- dropping the
+  // sample without support confirmation is worse than staying stopped.
+  if (weld_ != nullptr && weld_->state() != WeldState::Detached) {
+    if (why) {*why = "weld_state_not_detached";}
+    record(now_s, "reject", toString(state_), toString(state_),
+           "weld_state_not_detached",
+           "start() refused: the sample is still welded or the weld state is unknown");
+    return false;
+  }
   const PrecheckResult pc = checkStart(cfg_, last_status_, has_status_, now_s);
   if (!pc.ok) {
     if (why) {*why = pc.code;}
@@ -328,6 +340,10 @@ bool TransportStateMachine::start(double now_s, const StartRequest & req, std::s
   weld_release_done_ = false;
   weld_attach_requested_ = false;
   weld_detach_requested_ = false;
+  release_detached_ = false;
+  release_detached_at_s_ = -1.0;
+  release_opened_ = false;
+  release_sequence_done_ = false;
   resume_fail_ = 0;
   resume_state_ = State::Idle;
   has_frozen_ = false;
@@ -349,6 +365,32 @@ void TransportStateMachine::noteGripperClosed(double now_s, bool ok,
   }
   gripper_ready_ = true;
   record(now_s, "grasp", "GRASP", "GRASP", "gripper_closed", detail);
+}
+
+bool TransportStateMachine::releaseReadyToOpen(double now_s) const
+{
+  return release_detached_ && !release_opened_ && release_detached_at_s_ >= 0.0 &&
+         now_s - release_detached_at_s_ >= cfg_.release_settle_s;
+}
+
+void TransportStateMachine::noteGripperOpened(double now_s, bool ok,
+                                              const std::string & detail)
+{
+  if (state_ != State::Release) {return;}
+  if (!release_detached_) {return;}
+  if (!ok) {
+    enterProtection(Protection::Fault, "release_failed", now_s, detail);
+    return;
+  }
+  release_opened_ = true;
+  release_sequence_done_ = true;
+  record(now_s, "release", "RELEASE", "RELEASE", "gripper_opened", detail);
+  // The fingers are open.  The retreat motion is a separate controller phase;
+  // advancing the executor now lets the phase driver follow it.  If the
+  // controller is still in the stationary release phase this is harmless.
+  if (phase_ != nullptr && phase_->enabled()) {
+    advance(now_s, "release complete: fingers open");
+  }
 }
 
 void TransportStateMachine::noteGraspCheck(double now_s, bool ok,
@@ -619,8 +661,10 @@ void TransportStateMachine::checkTimeout(double now_s)
       p = Protection::Hold; code = "phase_timeout";
       break;
     case State::Release:
-    case State::Retreat:
       limit = cfg_.release_timeout_s; p = Protection::Fault; code = "release_failed";
+      break;
+    case State::Retreat:
+      limit = cfg_.retreat_timeout_s; p = Protection::Fault; code = "release_failed";
       break;
     default:
       return;
@@ -646,7 +690,14 @@ bool TransportStateMachine::limitPressure(const ControllerStatus & st) const
     // velocity-cap term here.  Transport phases keep both.
     return position_pressure;
   }
-  return st.active_limit_count > 0 || position_pressure;
+  // S4-T16 follow-up (2026-10-30): APPROACH had the same false trigger.  A
+  // single joint at the velocity cap is a contact/standstill boundary; the T1
+  // runaway signature was 10-12 joints.  Require a majority of joints before
+  // the velocity term fires; a true multi-joint violation still trips after the
+  // same 25-tick window.  Position-limit pressure stays per-joint.
+  const bool velocity_pressure =
+    st.active_limit_count >= cfg_.limit_min_saturated_joints;
+  return velocity_pressure || position_pressure;
 }
 
 bool TransportStateMachine::tickWeld(double now_s)
@@ -711,10 +762,11 @@ bool TransportStateMachine::tickWeld(double now_s)
     if (a == WeldAction::Confirmed) {
       weld_release_done_ = true;
       weld_attached_ = false;
+      release_detached_ = true;
+      release_detached_at_s_ = now_s;
       record(now_s, "weld", "RELEASE", "RELEASE", "detached", weld_->reason());
-      if (phase_ != nullptr && phase_->enabled()) {
-        advance(now_s, "detach confirmed (gripper simulated, see W7 open items)");
-      }
+      // Do NOT advance yet: the 100 ms settle and finger-open confirmation are
+      // the remaining release steps.  tickWeld() holds RELEASE until they pass.
       return false;
     }
     if (a == WeldAction::Failed) {
@@ -723,6 +775,9 @@ bool TransportStateMachine::tickWeld(double now_s)
       return true;
     }
     return true;  // still waiting for a confirmed detach
+  }
+  if (state_ == State::Release && release_detached_ && !release_opened_) {
+    return true;  // wait for the 100 ms settle + finger-open verdict
   }
   return false;
 }
@@ -901,6 +956,11 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
                      "holding RELEASE: the sample is still welded");
               break;
             }
+            if (state_ == State::Release && !release_sequence_done_) {
+              record(now_s, "phase", "RELEASE", "RELEASE", "release_barrier",
+                     "holding RELEASE: settle/open sequence is not complete");
+              break;
+            }
             advance(now_s, "controller phase '" + po.name + "'");
             ++guard;
           }
@@ -932,11 +992,11 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
       return;
     }
   }
-  // T2 fix (2026-10-29): in phase-driven mode the phase index owns the walking,
-  // but the C4.3 flow has no "retreat" phase.  After RELEASE confirms the detach
-  // the executor sits in RETREAT; without this rule it waits for a phase that
-  // never arrives and faults release_failed.  Reaching t_traj == duration is the
-  // same real controller signal as the fallback above, not a timer.
+  // T2 fix (2026-10-29; extended 2026-10-30): in phase-driven mode the phase
+  // index owns the walking.  RETREAT is now an explicit 2 s controller phase, but
+  // the end-of-trajectory signal still completes the run (and remains the fallback
+  // for profiles without a retreat slot).  It is a real controller signal, not a
+  // timer.
   if (phase_driven && state_ == State::Retreat && st_in->transport_active &&
       st_in->duration > 0.0 && st_in->t_traj >= st_in->duration - 1e-12)
   {

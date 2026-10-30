@@ -14,7 +14,9 @@ c43_s4_transport_executor:
     heartbeat_timeout_s: 0.100      # plan E8, frozen
     approach_timeout_s: 5.0         # [待标定] plan §4.3.1
     grasp_timeout_s: 3.0            # [待标定] plan §4.3.1
-    release_timeout_s: 3.0          # [待标定] plan §4.3.1
+    release_timeout_s: 3.0            # [待标定] plan §4.3.1
+    release_settle_s: 0.1             # plan §4.6.1: detach -> 100 ms -> open
+    retreat_timeout_s: 6.0            # 2 s retreat phase + controller clock lag
     phase_timeout_scale: 1.5        # plan §4.3.1 "轨迹时长 x1.5"
     resume_pos_tol_m: 0.005         # plan §4.2.2 (5 mm)
     resume_rot_tol_rad: 0.03490658503988659   # plan §4.2.2 (2 deg)
@@ -46,8 +48,10 @@ c43_s4_transport_executor:
     # sample by more than 2 mm within 100 ms.  This is NOT a new threshold.
     weld_max_snap_m: 0.002
 
-    # W7-B: joint-limit pressure is judged on *position* margin, and only after a
-    # sustained run of samples.  active_limit_count counts velocity-cap saturation,
-    # which a normal transport start produces on most joints.
+    # W7-B / S4-T16 follow-up: position margin is per-joint; velocity-cap
+    # saturation requires a majority of joints (the T1 signature was 10-12).
+    # One joint at the cap during a stationary APPROACH/GRASP is a contact or
+    # standstill boundary, not a transport runaway.  Both remain [待标定].
     limit_saturation_cycles: 25
+    limit_min_saturated_joints: 6
     limit_margin_rad: 0.05

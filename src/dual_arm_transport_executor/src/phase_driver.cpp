@@ -24,6 +24,7 @@ bool isKnownPhaseName(const std::string & name)
   // so the trajectory may name them explicitly.  They carry no object motion.
   return name == "approach" || name == "grasp" || name == "lift" ||
          name == "transport" || name == "lower" || name == "release" ||
+         name == "retreat" ||
          name == "settle" || name == "settle2" ||
          name == "settle_pre" || name == "settle_post";
 }
