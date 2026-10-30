@@ -1,0 +1,13 @@
+t,kind,from,to,code,detail
+null,init,NONE,IDLE,,constructed
+18.059999999999999,start,IDLE,APPROACH,,trajectory duration 19.500000 s
+21.829999999999998,advance,APPROACH,GRASP,,controller phase 'grasp'
+21.829999999999998,weld,GRASP,GRASP,attach_requested,welding the gripper to the sample (startup guard verified)
+21.844999999999999,weld,GRASP,GRASP,attached,weld confirmed with snap within the frozen criterion
+21.844999999999999,advance,GRASP,LIFT,,"attach confirmed (gripper simulated, see W7 open items)"
+28.065000000000001,advance,LIFT,TRANSPORT,,controller phase 'transport'
+31.835000000000001,advance,TRANSPORT,LOWER,,controller phase 'lower'
+35.609999999999999,advance,LOWER,RELEASE,,controller phase 'release'
+35.619999999999997,weld,RELEASE,RELEASE,detach_requested,releasing the sample before opening the gripper (S4 :838 order)
+35.634999999999998,weld,RELEASE,RELEASE,detached,detach confirmed
+35.734999999999999,protection,RELEASE,FAULT,release_failed,test injection: release finger-open failure

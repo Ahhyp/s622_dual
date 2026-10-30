@@ -38,6 +38,9 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   cfg.grasp_timeout_s = declare_parameter("grasp_timeout_s", cfg.grasp_timeout_s);
   cfg.release_timeout_s = declare_parameter("release_timeout_s", cfg.release_timeout_s);
   cfg.release_settle_s = declare_parameter("release_settle_s", cfg.release_settle_s);
+  // Test-only: when set at runtime, a ready RELEASE reports finger-open failure
+  // instead of sending the JTC goal.  Default false; not a production path.
+  (void)declare_parameter("release_inject_open_failure", false);
   cfg.retreat_timeout_s = declare_parameter("retreat_timeout_s", cfg.retreat_timeout_s);
   cfg.phase_timeout_scale = declare_parameter("phase_timeout_scale", cfg.phase_timeout_scale);
   cfg.resume_pos_tol_m = declare_parameter("resume_pos_tol_m", cfg.resume_pos_tol_m);
@@ -833,6 +836,14 @@ void TransportExecutorNode::driveReleaseGripper()
   const double now = nowSeconds();
   if (!sm_->releaseReadyToOpen(now)) {return;}   // frozen 100 ms settle
   if (release_open_failed_) {return;}
+  bool inject_open_failure = false;
+  if (this->get_parameter("release_inject_open_failure", inject_open_failure) &&
+    inject_open_failure)
+  {
+    release_open_failed_ = true;
+    sm_->noteGripperOpened(now, false, "test injection: release finger-open failure");
+    return;
+  }
   if (!release_open_started_) {
     if (release_open_start_at_s_ < 0.0) {release_open_start_at_s_ = now;}
     startReleaseGripper(now);

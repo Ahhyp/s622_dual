@@ -1,0 +1,14 @@
+{
+  "schema": "c43_s4_w3r1_summary/v1",
+  "run_id": "c43_s4_w7_run",
+  "result": "release_failed",
+  "dry_run": false,
+  "cycles": 0,
+  "events": 12,
+  "protection_events": 1,
+  "advances": 5,
+  "rejections": 0,
+  "phases": [],
+  "final_state": "IDLE",
+  "extra": []
+}
