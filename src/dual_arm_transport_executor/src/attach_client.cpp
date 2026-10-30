@@ -134,6 +134,11 @@ void AttachClient::requestAttach(double now_s)
 
 void AttachClient::requestDetach(double now_s)
 {
+  if (cfg_.inject_detach_failure && startup_verified_) {
+    fail("detach_injected_failure",
+      "test injection: detach was not published; the weld stays attached");
+    return;
+  }
   mode_ = Mode::Detaching;
   sent_ = false;
   armed_ = false;

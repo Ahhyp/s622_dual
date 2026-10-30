@@ -140,6 +140,17 @@ void graspWithConfirmedAttach(Rig & r, double snap_m)
                // controller keeps moving)
 }
 
+TEST(FullFlow, W7_StartIsRefusedWhileTheSampleIsStillWelded)
+{
+  Rig r;
+  r.prime();
+  r.releaseStartupWeld();
+  r.weld.observe(WeldState::Attached, r.now);
+  std::string why;
+  EXPECT_FALSE(r.start(&why));
+  EXPECT_EQ(why, "weld_state_not_detached");
+}
+
 TEST(FullFlow, W7_StartIsRefusedUntilTheStartupWeldIsReleased)
 {
   Rig r;
@@ -331,6 +342,32 @@ TEST(FullFlow, W7_FullRunReachesCompleteAndDetachesAtRelease)
   }
   EXPECT_EQ(r.sm.state(), State::Complete);
   EXPECT_FALSE(r.sm.latched());
+}
+
+TEST(FullFlow, W7_ReleaseOpenFailureIsAFaultAndDoesNotRetreat)
+{
+  Rig r;
+  r.prime();
+  r.releaseStartupWeld();
+  ASSERT_TRUE(r.start(nullptr));
+  graspWithConfirmedAttach(r, 0.0001);
+  while (r.sm.state() != State::Release) {
+    ASSERT_FALSE(r.sm.latched());
+    ASSERT_TRUE(r.sm.phaseDone(r.now, nullptr));
+    r.tick(1);
+  }
+  // Detach first; then the node reports a finger-open failure.
+  r.plugin_state = WeldState::Attached;
+  r.tick(1);
+  r.plugin_state = WeldState::Detached;
+  r.tick(2);
+  ASSERT_TRUE(r.sm.releaseDetached());
+  r.now += 0.11;
+  EXPECT_TRUE(r.sm.releaseReadyToOpen(r.now));
+  r.sm.noteGripperOpened(r.now, false, "injected finger-open failure");
+  EXPECT_EQ(r.sm.state(), State::Fault);
+  EXPECT_EQ(r.sm.failureCode(), "release_failed");
+  EXPECT_EQ(r.sm.releaseOpened(), false);
 }
 
 TEST(FullFlow, W7_DetachThatNeverConfirmsIsAFault)

@@ -61,9 +61,12 @@ private:
   using GripperAction = control_msgs::action::FollowJointTrajectory;
   using GripperGoalHandle = rclcpp_action::ClientGoalHandle<GripperAction>;
   void driveGripper();
+  void driveReleaseGripper();
   void startGripper(double now_s);
+  void startReleaseGripper(double now_s);
   void resetGripperState();
   bool fingerPositionsAtTarget() const;
+  bool fingerPositionsAtTarget(const std::vector<double> & targets) const;
   /// Returns true when a verdict was sent to the state machine.  False means
   /// "pose not available yet"; the state machine's GRASP timeout is the bound.
   bool computeGraspCheck(double now_s);
@@ -133,6 +136,7 @@ private:
   std::string gripper_action_;
   std::vector<std::string> gripper_joint_names_;
   std::vector<double> gripper_close_positions_;
+  std::vector<double> gripper_open_positions_;
   double gripper_motion_s_ = 1.0;
   double gripper_position_tol_ = 0.002;
   double gripper_timeout_s_ = 2.5;
@@ -142,6 +146,11 @@ private:
   double wrist3_to_grasp_z_ = 0.2168;
   bool gripper_started_ = false;
   bool gripper_failed_ = false;
+  bool release_open_started_ = false;
+  bool release_open_failed_ = false;
+  bool release_open_result_ready_ = false;
+  bool release_open_result_ok_ = false;
+  double release_open_start_at_s_ = -1.0;
   bool gripper_result_ready_ = false;
   bool gripper_result_ok_ = false;
   bool gripper_goals_sent_ = false;

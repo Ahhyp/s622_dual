@@ -1,0 +1,5 @@
+After attached FAULT (release_failed, weld still attached):
+  reset -> success=True, message='reset'
+  start -> success=False, message='weld_state_not_detached'
+  start -> success=False, message='weld_state_not_detached'
+The start gate refuses a new task while the sample is still welded; it does not detach.

@@ -160,6 +160,8 @@ def generate_launch_description():
                     # measured with scoped "model::link" names.  The executor
                     # matches these strings exactly, so the profile has to follow
                     # the bridge of the running version (T2 fix 2026-10-29).
+                    "weld_inject_detach_failure":
+                        os.environ.get("C43_INJECT_DETACH_FAILURE", "0") == "1",
                     "weld_parent_frame": "left_wrist3_link",
                     "weld_child_frame": "c43_sample",
                     "weld_pose_topic": os.environ.get("C43_WELD_POSE_TOPIC", "/c43/weld_pose"),
@@ -170,19 +172,27 @@ def generate_launch_description():
                     # 5 s approach timeout always fired first).  These MUST match
                     # the start_transport request; the live phase index/name are
                     # still audited and a mismatch is a HOLD.
-                    "phase_names": ["approach", "grasp", "lift", "transport", "lower", "release"],
-                    "phase_durations": [3.0, 2.0, 3.0, 3.0, 3.0, 2.0],
-                    "trajectory_duration_s": 16.0,
+                    "phase_names": ["approach", "grasp", "lift", "transport", "lower", "release", "retreat"],
+                    "phase_durations": [3.0, 2.0, 3.0, 3.0, 3.0, 3.5, 2.0],
+                    "trajectory_duration_s": 19.5,
                     # S4-T16 (2026-10-29): close the LEFT fingers, then check the
                     # sample against the frozen grasp chain before attach.  The
                     # 3 mm / 1 deg tolerances are the plan's SUGGESTED values and
                     # remain [待标定]; they are profile defaults, not approved
                     # acceptance thresholds.  require_grasp_check=false restores
                     # the pre-S4-T16 behaviour.
-                    "require_grasp_check": True,
+                    # Default true.  Tests that need the legacy GRASP path can set
+                    # C43_REQUIRE_GRASP_CHECK=0 (S4-T16 evidence uses it only to
+                    # isolate the RELEASE sequence from the 3 mm/1 deg checker).
+                    "require_grasp_check": os.environ.get("C43_REQUIRE_GRASP_CHECK", "1") == "1",
                     "gripper_action": "/left_hand_controller/follow_joint_trajectory",
                     "gripper_joint_names": ["left_finger1_joint", "left_finger2_joint"],
                     "gripper_close_positions": [0.0251, -0.0251],
+                    "gripper_open_positions": (
+                        [float(x) for x in os.environ["C43_GRIPPER_OPEN_POSITIONS"].split(",")]
+                        if os.environ.get("C43_GRIPPER_OPEN_POSITIONS") else
+                        [0.0305, -0.0305]
+                    ),
                     "gripper_motion_s": 1.0,
                     "gripper_position_tol": 0.002,
                     "gripper_timeout_s": 2.5,

@@ -1,0 +1,62 @@
+{
+ "phases": [
+  [
+   "approach",
+   3.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   "grasp",
+   2.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   "lift",
+   3.0,
+   0.0,
+   0.0,
+   0.02,
+   0.0
+  ],
+  [
+   "transport",
+   3.0,
+   -0.02,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   "lower",
+   3.0,
+   0.0,
+   0.0,
+   -0.02,
+   0.0
+  ],
+  [
+   "release",
+   3.5,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   "retreat",
+   2.0,
+   0.0,
+   0.0,
+   0.02,
+   0.0
+  ]
+ ],
+ "start_message": "start pose deviation 0.842951 rad at joint 6 (right arm) exceeds 0.050000 rad; move both arms to the standing configuration first",
+ "rows": []
+}

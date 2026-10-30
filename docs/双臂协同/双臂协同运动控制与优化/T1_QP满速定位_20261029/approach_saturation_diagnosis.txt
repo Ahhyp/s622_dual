@@ -1,0 +1,8 @@
+Failure run fault_prop_5mm2: max active_limit_count = 1 (one joint), q_state frozen
+during the 0.2 s window.  The executor's limit_streak_ counts 125 Hz ticks while
+the controller publishes status at ~10 Hz, so one lim=1 sample is counted ~12
+times; 25 ticks ~= two status samples (0.2 s).  This is a single-joint
+contact/standstill boundary, not the T1 10-12 joint runaway and not a position
+limit.  Fix: velocity term needs >=6 saturated joints; position margin stays
+per-joint; same 25-tick (200 ms) window.  Unit test:
+SingleJointCapDoesNotHoldButMultiJointDoes (190 tests).

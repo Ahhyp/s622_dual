@@ -1,0 +1,4 @@
+Release run4 (7 phases, release 3.5 s): /joint_states immediately after COMPLETE
+left_finger2_joint: -0.03049919779485091
+left_finger1_joint:  0.03049999999999999
+=> both finger targets (open) reached after detach + 100 ms.

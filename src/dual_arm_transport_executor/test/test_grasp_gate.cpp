@@ -182,3 +182,44 @@ TEST(GraspGate, PositionLimitDuringGraspStillHolds)
   EXPECT_EQ(sm.state(), dae::State::Hold);
   EXPECT_EQ(sm.failureCode(), "joint_limit_saturation");
 }
+
+TEST(LimitPressure, SingleJointCapDoesNotHoldButMultiJointDoes)
+{
+  dae::Config cfg;
+  cfg.status_stale_timeout_s = 10.0;
+  cfg.limit_saturation_cycles = 3;
+  cfg.limit_margin_rad = 0.05;
+  cfg.limit_min_saturated_joints = 6;
+  dae::TransportStateMachine sm(cfg);
+  dae::StartRequest req;
+  req.duration_s = 16.0;
+  std::string why;
+  primeIdle(sm);
+  ASSERT_TRUE(sm.start(0.01, req, &why)) << why;
+  ASSERT_EQ(sm.state(), dae::State::Approach);
+
+  dae::ControllerStatus st = graspStatus();
+  st.phase_index = 0;
+  st.phase_name = "approach";
+  st.t_traj = 0.1;
+  st.min_limit_margin_rad = 1.0;
+
+  // One joint at the cap for 10 ticks: a contact/standstill boundary, not T1.
+  st.active_limit_count = 1;
+  for (int i = 0; i < 10; ++i) {
+    const double t = 0.2 + 0.008 * i;
+    st.stamp_s = t;
+    sm.tick(t, &st);
+  }
+  EXPECT_EQ(sm.state(), dae::State::Approach);
+
+  // A real multi-joint runaway (T1 signature) must still HOLD.
+  st.active_limit_count = 10;
+  for (int i = 0; i < 10; ++i) {
+    const double t = 0.4 + 0.008 * i;
+    st.stamp_s = t;
+    sm.tick(t, &st);
+  }
+  EXPECT_EQ(sm.state(), dae::State::Hold);
+  EXPECT_EQ(sm.failureCode(), "joint_limit_saturation");
+}
