@@ -6,13 +6,21 @@
 // controller's existing ~/start_transport service; this node does not resend it.
 #include "dual_arm_transport_executor/executor_node.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include <Eigen/Geometry>
+
+#include "dual_arm_qp_controller/frozen_baseline.hpp"
 #include "dual_arm_qp_controller/msg/transport_status.hpp"
+#include "dual_arm_transport_executor/grasp_check.hpp"
+#include "trajectory_msgs/msg/joint_trajectory_point.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
 
@@ -36,12 +44,81 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   cfg.solve_fail_streak_limit = declare_parameter("solve_fail_streak_limit", cfg.solve_fail_streak_limit);
   cfg.limit_saturation_cycles = static_cast<int>(declare_parameter("limit_saturation_cycles", cfg.limit_saturation_cycles));
   cfg.limit_margin_rad = declare_parameter("limit_margin_rad", cfg.limit_margin_rad);
+  cfg.require_grasp_check = declare_parameter("require_grasp_check", cfg.require_grasp_check);
   sm_ = std::make_unique<TransportStateMachine>(cfg);
 
   artifacts_dir_ = declare_parameter<std::string>("artifacts_dir", "/tmp/c43_w3r1");
   run_id_ = declare_parameter<std::string>("run_id", "executor_run");
   trajectory_duration_s_ = declare_parameter("trajectory_duration_s", 5.1);
   heartbeat_period_s_ = declare_parameter("heartbeat_period_s", 0.02);
+
+  // ---- C4.3 S4 S4-T16: gripper close + grasp-relative check -----------------
+  // [待标定] plan §4.3 suggests 3 mm / 1 deg; these are profile defaults, not
+  // approved acceptance thresholds.  require_grasp_check defaults false so the
+  // mock/dry-run profiles and the pre-S4-T16 tests keep their exact behaviour.
+  require_grasp_check_ = cfg.require_grasp_check;
+  gripper_action_ = declare_parameter<std::string>(
+    "gripper_action", "/left_hand_controller/follow_joint_trajectory");
+  gripper_joint_names_ = declare_parameter<std::vector<std::string>>(
+    "gripper_joint_names",
+    std::vector<std::string>{"left_finger1_joint", "left_finger2_joint"});
+  gripper_close_positions_ = declare_parameter<std::vector<double>>(
+    "gripper_close_positions", std::vector<double>{0.0251, -0.0251});
+  gripper_motion_s_ = declare_parameter("gripper_motion_s", 1.0);
+  gripper_position_tol_ = declare_parameter("gripper_position_tol", 0.002);
+  gripper_timeout_s_ = declare_parameter("gripper_timeout_s", 2.5);
+  grasp_pos_tol_m_ = declare_parameter("grasp_pos_tol_m", 0.003);
+  grasp_rot_tol_rad_ = declare_parameter("grasp_rot_tol_rad", 0.017453292519943295);
+  grasp_snapshot_max_age_s_ = declare_parameter("grasp_snapshot_max_age_s", 5.0);
+  wrist3_to_grasp_z_ = declare_parameter("wrist3_to_grasp_z", 0.2168);
+  if (gripper_joint_names_.size() != gripper_close_positions_.size() ||
+    gripper_joint_names_.empty())
+  {
+    RCLCPP_ERROR(get_logger(),
+                 "gripper_joint_names (%zu) and gripper_close_positions (%zu) are "
+                 "inconsistent; S4-T16 check disabled",
+                 gripper_joint_names_.size(), gripper_close_positions_.size());
+    require_grasp_check_ = false;
+  }
+  gripper_positions_.assign(gripper_joint_names_.size(), 0.0);
+  gripper_position_seen_.assign(gripper_joint_names_.size(), false);
+
+  // T2 fix (2026-10-29): the executor used to learn the phase table only from
+  // the live status stream, one slot at a time.  Because the controller publishes
+  // only the CURRENT phase, the table was complete only after the last phase had
+  // appeared -- i.e. after approach_timeout_s had already faulted a fresh run.
+  // The C4.3 flow passes the same phases it sends to start_transport here,
+  // so the driver is usable from cycle 0.  This is NOT a bypass: every live
+  // status is still audited by PhaseDriver::observeExternal() against these
+  // names, and a mismatch latches HOLD exactly as before.
+  {
+    const auto pre_names =
+      declare_parameter<std::vector<std::string>>("phase_names", std::vector<std::string>{});
+    const auto pre_durs =
+      declare_parameter<std::vector<double>>("phase_durations", std::vector<double>{});
+    if (!pre_names.empty()) {
+      if (pre_names.size() != pre_durs.size()) {
+        RCLCPP_ERROR(get_logger(),
+                     "phase_names (%zu) and phase_durations (%zu) differ; the phase table "
+                     "stays empty and will be learned from the live status stream",
+                     pre_names.size(), pre_durs.size());
+      } else {
+        std::vector<PhaseSpec> specs;
+        specs.reserve(pre_names.size());
+        for (std::size_t i = 0; i < pre_names.size(); ++i) {
+          specs.push_back(PhaseSpec{pre_names[i], pre_durs[i]});
+        }
+        phase_driver_.configure(specs);
+        phase_table_count_ = static_cast<int>(specs.size());
+        phase_table_known_ = phase_table_count_;
+        sm_->attachPhaseDriver(&phase_driver_);
+        phase_driver_attached_ = true;
+        RCLCPP_INFO(get_logger(),
+                    "phase table preloaded (%d phases, total %.3f s); live status is audited "
+                    "against it", phase_table_count_, phase_driver_.totalDuration());
+      }
+    }
+  }
 
   // ---- C4.3 S4 W7: physical attach (Gazebo DetachableJoint) ----
   // Topic names are the ones the plugin logs at load time (W6-0 evidence); the
@@ -92,6 +169,7 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
       StartRequest req;
       req.duration_s = trajectory_duration_s_;
       r->success = sm_->start(nowSeconds(), req, &why);
+      if (r->success) {resetGripperState();}
       r->message = why.empty() ? std::string("accepted") : why;
       afterTransition();
     });
@@ -121,7 +199,11 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
                       std::shared_ptr<std_srvs::srv::Trigger::Response> r) {
       std::string why;
       r->success = sm_->reset(nowSeconds(), &why);
-      if (r->success) {abort_req_.reset(); abort_propagation_open_ = false;}
+      if (r->success) {
+        abort_req_.reset();
+        abort_propagation_open_ = false;
+        resetGripperState();
+      }
       r->message = why.empty() ? std::string("reset") : why;
       afterTransition();
     });
@@ -138,6 +220,23 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   weld_pose_sub_ = create_subscription<tf2_msgs::msg::TFMessage>(
     weld_pose_topic, rclcpp::QoS(10),
     [this](tf2_msgs::msg::TFMessage::SharedPtr m) {onPoses(std::move(m));});
+
+  // S4-T16: the JTC action closes the LEFT fingers; /joint_states is the
+  // feedback that says the pads actually reached the close positions.
+  gripper_client_ = rclcpp_action::create_client<GripperAction>(this, gripper_action_);
+  joint_state_sub_ = create_subscription<sensor_msgs::msg::JointState>(
+    "/joint_states", qos,
+    [this](sensor_msgs::msg::JointState::SharedPtr m) {
+      for (std::size_t i = 0; i < gripper_joint_names_.size(); ++i) {
+        const auto it = std::find(m->name.begin(), m->name.end(), gripper_joint_names_[i]);
+        if (it == m->name.end()) {continue;}
+        const auto idx = static_cast<std::size_t>(std::distance(m->name.begin(), it));
+        if (idx < m->position.size()) {
+          gripper_positions_[i] = m->position[idx];
+          gripper_position_seen_[i] = true;
+        }
+      }
+    });
 
   // Fortress 6.16 welds at startup whether we ask or not (W6-0), so the guard is
   // armed immediately; start() is refused until it reports a confirmed release.
@@ -243,6 +342,7 @@ void TransportExecutorNode::onTimer()
   // W7: advance the attach client FIRST, so that a request produced by this tick
   // is published exactly once and the state machine sees the resulting action.
   driveWeld();
+  driveGripper();
   sm_->tick(nowSeconds(), status_.received ? &status_ : nullptr);
   afterTransition();
   driveAbortPropagation();
@@ -460,6 +560,18 @@ double quatAngle(const double * a, const double * b)
   const double c = d > 1.0 ? 1.0 : d;
   return 2.0 * std::acos(c);
 }
+
+// Pose (position + x y z w quaternion) -> homogeneous transform.
+Eigen::Matrix4d poseToMat(const double * p, const double * q)
+{
+  Eigen::Quaterniond quat(q[3], q[0], q[1], q[2]);
+  Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+  T.block<3, 3>(0, 0) = quat.normalized().toRotationMatrix();
+  T(0, 3) = p[0];
+  T(1, 3) = p[1];
+  T(2, 3) = p[2];
+  return T;
+}
 }  // namespace
 
 void TransportExecutorNode::driveWeld()
@@ -549,6 +661,161 @@ void TransportExecutorNode::onPoses(tf2_msgs::msg::TFMessage::SharedPtr m)
       child_quat_[2] = t.transform.rotation.z;
       child_quat_[3] = t.transform.rotation.w;
       have_child_pose_ = true;
+    }
+  }
+}
+
+void TransportExecutorNode::resetGripperState()
+{
+  gripper_started_ = false;
+  gripper_failed_ = false;
+  gripper_result_ready_ = false;
+  gripper_result_ok_ = false;
+  gripper_start_at_s_ = -1.0;
+  grasp_snapshot_ok_ = false;
+  grasp_snapshot_at_s_ = -1.0;
+}
+
+void TransportExecutorNode::startGripper(double now_s)
+{
+  if (gripper_started_) {return;}
+  if (!gripper_client_) {return;}
+  if (!gripper_client_->action_server_is_ready()) {return;}
+  GripperAction::Goal goal;
+  goal.trajectory.joint_names = gripper_joint_names_;
+  trajectory_msgs::msg::JointTrajectoryPoint pt;
+  pt.positions = gripper_close_positions_;
+  pt.time_from_start = rclcpp::Duration::from_seconds(gripper_motion_s_);
+  goal.trajectory.points.push_back(pt);
+  auto opts = rclcpp_action::Client<GripperAction>::SendGoalOptions();
+  opts.goal_response_callback = [this](GripperGoalHandle::SharedPtr handle) {
+      if (!handle) {
+        gripper_result_ready_ = true;
+        gripper_result_ok_ = false;
+        return;
+      }
+      RCLCPP_INFO(get_logger(), "S4-T16: gripper goal accepted");
+    };
+  opts.result_callback = [this](const GripperGoalHandle::WrappedResult & result) {
+      gripper_result_ready_ = true;
+      gripper_result_ok_ = (result.code == rclcpp_action::ResultCode::SUCCEEDED);
+      RCLCPP_INFO(get_logger(), "S4-T16: gripper goal finished: %s",
+                  gripper_result_ok_ ? "SUCCEEDED" : "FAILED");
+    };
+  gripper_client_->async_send_goal(goal, opts);
+  gripper_started_ = true;
+  gripper_start_at_s_ = now_s;
+  RCLCPP_INFO(get_logger(), "S4-T16: closing left fingers via %s", gripper_action_.c_str());
+}
+
+bool TransportExecutorNode::fingerPositionsAtTarget() const
+{
+  if (gripper_positions_.size() != gripper_close_positions_.size()) {return false;}
+  for (std::size_t i = 0; i < gripper_positions_.size(); ++i) {
+    if (!gripper_position_seen_[i]) {return false;}
+    if (std::fabs(gripper_positions_[i] - gripper_close_positions_[i]) >
+      gripper_position_tol_)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool TransportExecutorNode::computeGraspCheck(double now_s)
+{
+  if (!grasp_snapshot_ok_) {return false;}
+  if (now_s - grasp_snapshot_at_s_ > grasp_snapshot_max_age_s_) {
+    sm_->noteGraspCheck(now_s, false, "grasp snapshot is too old");
+    return true;
+  }
+  const Eigen::Matrix4d wrist = poseToMat(grasp_parent_pos_, grasp_parent_quat_);
+  const Eigen::Matrix4d sample = poseToMat(grasp_child_pos_, grasp_child_quat_);
+  const Eigen::Matrix4d measured = wrist.inverse() * sample;
+  // The frozen object_T_left_tcp is object -> TCP (grasp frame); the pose bridge
+  // measures wrist3 -> sample.  Convert the frozen chain into wrist3 -> object:
+  //   expected = wrist3_T_grasp * inverse(object_T_left_tcp)
+  const Eigen::Matrix4d frozen = dual_arm_qp_controller::frozenObjectTLeftTcp().matrix();
+  Eigen::Matrix4d wrist_T_grasp = Eigen::Matrix4d::Identity();
+  wrist_T_grasp(2, 3) = wrist3_to_grasp_z_;
+  const Eigen::Matrix4d expected = wrist_T_grasp * frozen.inverse();
+  GraspTolerances tol;
+  tol.pos_m = grasp_pos_tol_m_;
+  tol.rot_rad = grasp_rot_tol_rad_;
+  const GraspCheckResult r = checkGraspRelative(measured, expected, tol);
+  char detail[256];
+  std::snprintf(detail, sizeof(detail),
+                "pos=%.6f m (tol %.4f) rot=%.6f rad (tol %.5f)",
+                r.pos_m, tol.pos_m, r.rot_rad, tol.rot_rad);
+  RCLCPP_INFO(get_logger(), "S4-T16: grasp check %s: %s",
+              r.ok ? "PASS" : "FAIL", detail);
+  sm_->noteGraspCheck(now_s, r.ok, detail);
+  return true;
+}
+
+void TransportExecutorNode::driveGripper()
+{
+  if (!require_grasp_check_) {return;}
+  if (sm_->state() != State::Grasp) {return;}
+  const double now = nowSeconds();
+  if (gripper_failed_) {return;}
+  if (!grasp_snapshot_ok_) {
+    if (!have_parent_pose_ || !have_child_pose_) {
+      if (gripper_start_at_s_ < 0.0) {gripper_start_at_s_ = now;}
+      if (now - gripper_start_at_s_ > gripper_timeout_s_) {
+        gripper_failed_ = true;
+        sm_->noteGripperClosed(now, false, "no wrist/sample pose before grasp");
+      }
+      return;
+    }
+    for (int i = 0; i < 3; ++i) {
+      grasp_parent_pos_[i] = parent_pos_[i];
+      grasp_child_pos_[i] = child_pos_[i];
+    }
+    for (int i = 0; i < 4; ++i) {
+      grasp_parent_quat_[i] = parent_quat_[i];
+      grasp_child_quat_[i] = child_quat_[i];
+    }
+    grasp_snapshot_ok_ = true;
+    grasp_snapshot_at_s_ = now;
+    RCLCPP_INFO(get_logger(), "S4-T16: sampled the pre-close grasp pose");
+  }
+  if (!gripper_started_) {
+    if (gripper_start_at_s_ < 0.0) {gripper_start_at_s_ = now;}
+    startGripper(now);
+    if (!gripper_started_) {
+      if (now - gripper_start_at_s_ > gripper_timeout_s_) {
+        gripper_failed_ = true;
+        sm_->noteGripperClosed(now, false, "gripper action server never became ready");
+      }
+      return;
+    }
+  }
+  if (!sm_->gripperReady()) {
+    if (gripper_result_ready_ && !gripper_result_ok_) {
+      gripper_failed_ = true;
+      sm_->noteGripperClosed(now, false, "gripper JTC failed");
+      return;
+    }
+    if (fingerPositionsAtTarget()) {
+      if (gripper_positions_.size() >= 2) {
+        RCLCPP_INFO(get_logger(), "S4-T16: fingers at close targets (%.6f, %.6f)",
+                    gripper_positions_[0], gripper_positions_[1]);
+      }
+      sm_->noteGripperClosed(now, true, "finger positions reached the close targets");
+      return;
+    }
+    if (gripper_start_at_s_ >= 0.0 && now - gripper_start_at_s_ > gripper_timeout_s_) {
+      gripper_failed_ = true;
+      sm_->noteGripperClosed(now, false, "gripper close timeout");
+    }
+    return;
+  }
+  if (!sm_->graspCheckDone()) {
+    if (!computeGraspCheck(now) &&
+      gripper_start_at_s_ >= 0.0 && now - gripper_start_at_s_ > gripper_timeout_s_)
+    {
+      sm_->noteGraspCheck(now, false, "no fresh wrist/sample pose for the grasp check");
     }
   }
 }

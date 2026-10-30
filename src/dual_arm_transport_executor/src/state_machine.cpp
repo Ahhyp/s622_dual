@@ -317,6 +317,17 @@ bool TransportStateMachine::start(double now_s, const StartRequest & req, std::s
   state_since_ = now_s;
   duration_ = req.duration_s;
   failure_code_.clear();
+  // S4-T16: GRASP prerequisites are re-armed on every new task; without this a
+  // second run would inherit the first run's verdicts.  Also reset the weld
+  // request latches: they are per-task, and a stale attach_requested would make
+  // the second run skip its attach entirely (W7-C repeat-run bug).
+  gripper_ready_ = !cfg_.require_grasp_check;
+  grasp_checked_ = !cfg_.require_grasp_check;
+  grasp_ok_ = !cfg_.require_grasp_check;
+  weld_attached_ = false;
+  weld_release_done_ = false;
+  weld_attach_requested_ = false;
+  weld_detach_requested_ = false;
   resume_fail_ = 0;
   resume_state_ = State::Idle;
   has_frozen_ = false;
@@ -325,6 +336,32 @@ bool TransportStateMachine::start(double now_s, const StartRequest & req, std::s
   record(now_s, "start", toString(from), toString(state_), "",
          "trajectory duration " + std::to_string(req.duration_s) + " s");
   return true;
+}
+
+void TransportStateMachine::noteGripperClosed(double now_s, bool ok,
+                                              const std::string & detail)
+{
+  // Late verdicts from a previous GRASP must not mutate a new state.
+  if (state_ != State::Grasp) {return;}
+  if (!ok) {
+    enterProtection(Protection::Fault, "grasp_check_failed", now_s, detail);
+    return;
+  }
+  gripper_ready_ = true;
+  record(now_s, "grasp", "GRASP", "GRASP", "gripper_closed", detail);
+}
+
+void TransportStateMachine::noteGraspCheck(double now_s, bool ok,
+                                           const std::string & detail)
+{
+  if (state_ != State::Grasp) {return;}
+  grasp_checked_ = true;
+  grasp_ok_ = ok;
+  record(now_s, "grasp", "GRASP", "GRASP",
+         ok ? "grasp_check_ok" : "grasp_check_failed", detail);
+  if (!ok) {
+    enterProtection(Protection::Fault, "grasp_check_failed", now_s, detail);
+  }
 }
 
 bool TransportStateMachine::abortTransport(const std::string & code, double now_s,
@@ -570,7 +607,10 @@ void TransportStateMachine::checkTimeout(double now_s)
       limit = cfg_.approach_timeout_s; p = Protection::Fault; code = "grasp_check_failed";
       break;
     case State::Grasp:
-      limit = cfg_.grasp_timeout_s; p = Protection::Fault; code = "attach_failed";
+      limit = cfg_.grasp_timeout_s; p = Protection::Fault;
+      // Before the attach request this is a GRASP-prerequisite failure
+      // (S4-T16); after it, it is the attach itself that did not confirm.
+      code = weld_attach_requested_ ? "attach_failed" : "grasp_check_failed";
       break;
     case State::Lift:
     case State::Transport:
@@ -597,11 +637,30 @@ bool TransportStateMachine::limitPressure(const ControllerStatus & st) const
   // Either the solver keeps pushing joints at the velocity cap, or the arm is
   // inside the margin of a position limit.  Both are "the arm is running out
   // of room"; neither is a fault on its own.
-  return st.active_limit_count > 0 || st.min_limit_margin_rad < cfg_.limit_margin_rad;
+  const bool position_pressure = st.min_limit_margin_rad < cfg_.limit_margin_rad;
+  if (state_ == State::Grasp) {
+    // S4-T16 (2026-10-29): GRASP is a stationary contact phase.  Closing the
+    // fingers can make ONE joint touch the velocity cap for a few hundred ms;
+    // that is not the T1 runaway (10-12 joints).  W7-B's decision was "position
+    // margin + N consecutive samples": keep the position check, drop the
+    // velocity-cap term here.  Transport phases keep both.
+    return position_pressure;
+  }
+  return st.active_limit_count > 0 || position_pressure;
 }
 
 bool TransportStateMachine::tickWeld(double now_s)
 {
+  // S4-T16: the node closes the fingers and checks the sample against the frozen
+  // grasp chain; until both verdicts are in, GRASP must not request attach.
+  if (state_ == State::Grasp && cfg_.require_grasp_check && !weld_attached_) {
+    if (!gripper_ready_ || !grasp_checked_) {return true;}   // still waiting
+    if (!grasp_ok_) {
+      enterProtection(Protection::Fault, "grasp_check_failed", now_s,
+                      "grasp prerequisites rejected before attach");
+      return true;
+    }
+  }
   if (weld_ == nullptr) {return false;}
 
   if (state_ == State::Grasp && !weld_attached_) {
@@ -872,6 +931,17 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
       advance(now_s, "controller reported the trajectory reached its end");
       return;
     }
+  }
+  // T2 fix (2026-10-29): in phase-driven mode the phase index owns the walking,
+  // but the C4.3 flow has no "retreat" phase.  After RELEASE confirms the detach
+  // the executor sits in RETREAT; without this rule it waits for a phase that
+  // never arrives and faults release_failed.  Reaching t_traj == duration is the
+  // same real controller signal as the fallback above, not a timer.
+  if (phase_driven && state_ == State::Retreat && st_in->transport_active &&
+      st_in->duration > 0.0 && st_in->t_traj >= st_in->duration - 1e-12)
+  {
+    advance(now_s, "controller reported the trajectory reached its end");
+    return;
   }
   checkTimeout(now_s);
 }

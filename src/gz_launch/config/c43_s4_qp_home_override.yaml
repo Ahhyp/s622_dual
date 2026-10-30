@@ -1,12 +1,19 @@
-# C4.3 S4 W7 (B-1): Gazebo-only override of the QP controller's standing configuration.
+# C4.3 S4 W7 (B-1 / T1 fix 2026-10-29): Gazebo-only standing configuration.
 #
-# gz_ros2_control initialises the arms from
-# s622_moveit_config/config/initial_positions.yaml (j1..j6 = 0.5, -1.05, 1.05,
-# -1.05, -0.8, 0).  dual_arm_qp_controller refuses start_transport unless the live
-# joints are within 0.05 rad of `home_q`, so for this Gazebo profile "home" is the
-# pose the robot actually spawns in.  This file is passed to the controller spawner
-# with --param-file; S2's default home_q (q_grasp12) is untouched everywhere else.
+# History: gz_ros2_control used to initialise the arms from
+# s622_moveit_config/config/initial_positions.yaml ([0.5,-1.05,...]) while the
+# launch's `ros_gz_sim create -J` was silently ignored.  W7-B1 therefore set
+# home_q to that spawn pose so start_transport would pass -- but the transport's
+# frozen relative target is the grasp chain at q_grasp12, so every cycle started
+# with |e_rel| ~ 2.2 m / 2.9 rad and the QP saturated 10-12 joints.
+#
+# T1 fix: the Gazebo URDF now spawns each arm at its own q_grasp12 half
+# (c43_s4_gazebo_initial_{left,right}.yaml), so home_q is q_grasp12 again and
+# the spawn pose, the start gate and the frozen relative target agree.
+# This file is still passed with --param-file, now stating that same home.
 dual_arm_qp_controller:
   ros__parameters:
-    home_q: [0.5, -1.05, 1.05, -1.05, -0.8, 0.0,
-             0.5, -1.05, 1.05, -1.05, -0.8, 0.0]
+    home_q: [2.795036909814, -1.706950857914, 1.279963524342, -1.143808993223,
+             -1.570796326795, -0.346555743776,
+             0.346555743776, -1.434641795676, -1.279963524342, -1.997783660367,
+             1.570796326795, -2.795036909814]

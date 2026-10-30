@@ -1,0 +1,7 @@
+t,kind,from,to,code,detail
+null,init,NONE,IDLE,,constructed
+17.795000000000002,start,IDLE,APPROACH,,trajectory duration 16.000000 s
+21.565000000000001,advance,APPROACH,GRASP,,controller phase 'grasp'
+22.725000000000001,grasp,GRASP,GRASP,gripper_closed,finger positions reached the close targets
+22.73,grasp,GRASP,GRASP,grasp_check_failed,pos=0.007251 m (tol 0.0030) rot=0.010567 rad (tol 0.01745)
+22.73,protection,GRASP,FAULT,grasp_check_failed,pos=0.007251 m (tol 0.0030) rot=0.010567 rad (tol 0.01745)

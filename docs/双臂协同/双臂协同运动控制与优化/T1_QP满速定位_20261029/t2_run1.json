@@ -1,0 +1,105 @@
+{
+ "phases": [
+  [
+   "approach",
+   3.0,
+   0.0,
+   0.0,
+   0.02,
+   0.0
+  ],
+  [
+   "grasp",
+   2.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   "lift",
+   3.0,
+   0.0,
+   0.0,
+   0.02,
+   0.0
+  ],
+  [
+   "transport",
+   3.0,
+   -0.02,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   "lower",
+   3.0,
+   0.0,
+   0.0,
+   -0.02,
+   0.0
+  ]
+ ],
+ "rows": [
+  {
+   "t": 0.0,
+   "state": "IDLE",
+   "phase": -1,
+   "phase_name": "",
+   "t_traj": 0.0,
+   "active_limit_count": 0,
+   "q_state": [
+    2.79485,
+    -1.70715,
+    1.27829,
+    -1.14061,
+    -1.57085,
+    -0.3467,
+    0.34652,
+    -1.43519,
+    -1.27915,
+    -1.99575,
+    1.57036,
+    -2.79503
+   ],
+   "e_obj_pos_m": 0.0,
+   "e_obj_rot_rad": 0.0,
+   "weld": null,
+   "sample_z": null,
+   "failure_code": ""
+  },
+  {
+   "t": 0.402,
+   "state": "ABORT",
+   "phase": -1,
+   "phase_name": "",
+   "t_traj": 0.0,
+   "active_limit_count": 0,
+   "q_state": [
+    2.79503,
+    -1.70676,
+    1.2797,
+    -1.14477,
+    -1.57082,
+    -0.34672,
+    0.34671,
+    -1.43451,
+    -1.27932,
+    -1.99944,
+    1.57123,
+    -2.79506
+   ],
+   "e_obj_pos_m": 0.0,
+   "e_obj_rot_rad": 0.0,
+   "weld": null,
+   "sample_z": null,
+   "failure_code": "aborted_by_request"
+  }
+ ],
+ "start_message": "yaw_sweep_deg must have 1 or phases+1 entries",
+ "executor_start": [
+  true,
+  "accepted"
+ ]
+}

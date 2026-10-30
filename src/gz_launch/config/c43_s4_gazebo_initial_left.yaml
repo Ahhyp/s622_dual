@@ -1,0 +1,24 @@
+# C4.3 S4 T1 fix (2026-10-29): Gazebo spawn pose for the LEFT arm.
+#
+# Why this file exists
+# -------------------
+# The C4.3 transport task latches its relative target from the frozen S2 grasp
+# chain (object_T_left_tcp / object_T_right_tcp), which is the FK at q_grasp12.
+# `ros_gz_sim create -J` does NOT set the joints: gz_ros2_control overwrites them
+# with <state_interface><param name="initial_value"> from the URDF, which used to
+# come from s622_moveit_config/config/initial_positions.yaml ([0.5,-1.05,...]).
+# The arms therefore spawned ~2.2 m / 2.9 rad away from the grasp relative pose,
+# and the QP saturated 10-12 joints on every cycle trying to close that error.
+#
+# The C4.3 launch now points each arm at its own q_grasp12 file, so the spawn
+# pose, the controller's default home_q and the frozen grasp chain all agree.
+# Values are q_grasp12 from src/dual_arm_transport/config/transport_baseline.yaml.
+initial_positions:
+  j1: 2.795036909814
+  j2: -1.706950857914
+  j3: 1.279963524342
+  j4: -1.143808993223
+  j5: -1.570796326795
+  j6: -0.346555743776
+  finger1_joint: 0.0
+  finger2_joint: 0.0

@@ -126,6 +126,11 @@ struct Config
   double approach_timeout_s = 5.0;
   double grasp_timeout_s = 3.0;
   double release_timeout_s = 3.0;
+  /// S4-T16: when true, GRASP must wait for the node's gripper-close and
+  /// grasp-relative-check verdicts before it may request attach.  Default false
+  /// preserves the pre-S4-T16 software tests and the mock/dry-run profiles; the
+  /// C4.3 Gazebo launch sets it true.
+  bool require_grasp_check = false;
   double phase_timeout_scale = 1.5;
   // Plan §4.2.2: resume requires e_O <= 5 mm / 2 deg.
   double resume_pos_tol_m = 0.005;
@@ -185,6 +190,14 @@ public:
   void attachWeldClient(AttachClient * client) {weld_ = client;}
   AttachClient * weldClient() const {return weld_;}
   bool weldAttached() const {return weld_attached_;}
+  // C4.3 S4 S4-T16: two injected GRASP prerequisites.  The node owns the ROS
+  // action/pose plumbing; the state machine only consumes the verdicts.  A
+  // failed verdict latches FAULT(grasp_check_failed) and attach is never sent.
+  void noteGripperClosed(double now_s, bool ok, const std::string & detail);
+  void noteGraspCheck(double now_s, bool ok, const std::string & detail);
+  bool gripperReady() const {return gripper_ready_;}
+  bool graspCheckDone() const {return grasp_checked_;}
+  bool graspOk() const {return grasp_ok_;}
   void attachPhaseDriver(PhaseDriver * driver) {phase_ = driver;}
   PhaseDriver * phaseDriver() const {return phase_;}
   int phaseIndex() const {return phase_ != nullptr ? phase_->index() : -1;}
@@ -285,6 +298,10 @@ private:
   // confirmed *detach* would read as a confirmed attach.
   bool weld_attach_requested_ = false;
   bool weld_detach_requested_ = false;
+  // S4-T16: see noteGripperClosed()/noteGraspCheck().  Reset by start().
+  bool gripper_ready_ = false;
+  bool grasp_checked_ = false;
+  bool grasp_ok_ = false;
 
   CollisionGuard * collision_guard_ = nullptr;
   dual_arm::Iso3 object_pose_ = dual_arm::Iso3::Identity();

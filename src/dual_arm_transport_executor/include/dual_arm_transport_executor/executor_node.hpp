@@ -10,6 +10,9 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/node_options.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <control_msgs/action/follow_joint_trajectory.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 
 #include "dual_arm_qp_controller/msg/transport_status.hpp"
 #include "std_msgs/msg/empty.hpp"
@@ -50,6 +53,20 @@ private:
   void driveWeld();
   void onWeldState(std_msgs::msg::String::SharedPtr m);
   void onPoses(tf2_msgs::msg::TFMessage::SharedPtr m);
+
+  // ---- C4.3 S4 S4-T16: GRASP prerequisites (gripper + grasp check) ----------
+  // The node owns the action/pose plumbing; the state machine owns the verdict
+  // consumption (noteGripperClosed / noteGraspCheck).  The check itself is in
+  // grasp_check.cpp (pure arithmetic).
+  using GripperAction = control_msgs::action::FollowJointTrajectory;
+  using GripperGoalHandle = rclcpp_action::ClientGoalHandle<GripperAction>;
+  void driveGripper();
+  void startGripper(double now_s);
+  void resetGripperState();
+  bool fingerPositionsAtTarget() const;
+  /// Returns true when a verdict was sent to the state machine.  False means
+  /// "pose not available yet"; the state machine's GRASP timeout is the bound.
+  bool computeGraspCheck(double now_s);
   /// P1-4: propagate a task ABORT to the controller and wait for its
   /// authoritative confirmation before anything is reported as safe.
   void beginAbortPropagation(const std::string & reason);
@@ -83,6 +100,16 @@ private:
   rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr weld_detach_pub_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr weld_state_sub_;
   rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr weld_pose_sub_;
+  // S4-T16: the grasp check must use the sample pose AT GRASP ENTRY (before the
+  // fingers move).  Closing the fingers can tilt a loosely supported sample; that
+  // is a physical grasp issue, not the "sample was raised before GRASP" case the
+  // check is for.
+  bool grasp_snapshot_ok_ = false;
+  double grasp_snapshot_at_s_ = -1.0;
+  double grasp_parent_pos_[3] = {0.0, 0.0, 0.0};
+  double grasp_child_pos_[3] = {0.0, 0.0, 0.0};
+  double grasp_parent_quat_[4] = {0.0, 0.0, 0.0, 1.0};
+  double grasp_child_quat_[4] = {0.0, 0.0, 0.0, 1.0};
   std::string weld_parent_frame_;
   std::string weld_child_frame_;
   bool have_parent_pose_ = false;
@@ -99,6 +126,28 @@ private:
   double child_quat_[4] = {0.0, 0.0, 0.0, 1.0};
   double pre_rel_q_[4] = {0.0, 0.0, 0.0, 1.0};
   bool have_pre_rel_q_ = false;
+  // S4-T16 gripper/grasp-check state (node side; the SM holds the verdicts).
+  rclcpp_action::Client<GripperAction>::SharedPtr gripper_client_;
+  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
+  bool require_grasp_check_ = false;
+  std::string gripper_action_;
+  std::vector<std::string> gripper_joint_names_;
+  std::vector<double> gripper_close_positions_;
+  double gripper_motion_s_ = 1.0;
+  double gripper_position_tol_ = 0.002;
+  double gripper_timeout_s_ = 2.5;
+  double grasp_pos_tol_m_ = 0.003;
+  double grasp_rot_tol_rad_ = 0.017453292519943295;
+  double grasp_snapshot_max_age_s_ = 5.0;
+  double wrist3_to_grasp_z_ = 0.2168;
+  bool gripper_started_ = false;
+  bool gripper_failed_ = false;
+  bool gripper_result_ready_ = false;
+  bool gripper_result_ok_ = false;
+  bool gripper_goals_sent_ = false;
+  double gripper_start_at_s_ = -1.0;
+  std::vector<double> gripper_positions_;
+  std::vector<bool> gripper_position_seen_;
   HoldRequester hold_req_;
   AbortRequester abort_req_;
   std::atomic<int> abort_reply_{0};   // 0 none / 1 accepted / 2 rejected

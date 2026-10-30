@@ -46,6 +46,8 @@ void AttachClient::reset()
   pending_snap_m_ = std::nan("");
   attempts_ = 0;
   sent_ = false;
+  armed_ = false;
+  armed_action_ = WeldAction::Idle;
   startup_verified_ = false;
   detach_required_ = false;
   action_ = WeldAction::Idle;
@@ -80,6 +82,7 @@ void AttachClient::beginStartupGuard(double now_s)
   attempts_ = 0;
   sent_ = false;
   armed_ = false;
+  armed_action_ = WeldAction::Idle;
   startup_verified_ = false;
   detach_required_ = false;
   state_ = WeldState::Unknown;   // a pre-guard sample cannot prove the release
@@ -105,15 +108,23 @@ void AttachClient::requestAttach(double now_s)
       "the previous attach exceeded the snap criterion and must be detached first");
     return;
   }
-  if (state_ != WeldState::Detached || !stateKnown(now_s)) {
+  // T2 fix (2026-10-29): /c43/weld_state is EVENT-DRIVEN -- the plugin publishes
+  // only when the weld changes (W6-0).  Ageing a "detached" sample out after
+  // 0.25 s therefore refused every attach that was not issued within 250 ms of
+  // the startup release.  What actually proves the state is current is
+  // startupVerified() (a confirmed release) plus the absence of any later
+  // transition; liveness is checked by transition_timeout_s while waiting for
+  // "attached".  Freshness is still required to CONFIRM a transition below.
+  if (state_ != WeldState::Detached) {
     fail("attach_refused_weld_state_unknown",
-      std::string("state=") + toString(state_) + (stateKnown(now_s) ? "" : " (stale)"));
+      std::string("state=") + toString(state_));
     return;
   }
   mode_ = Mode::Attaching;
   attempts_ = 0;      // counted when the request is armed, see tick()
   sent_ = false;
   armed_ = false;
+  armed_action_ = WeldAction::Idle;
   deadline_s_ = now_s + cfg_.transition_timeout_s;
   pending_snap_m_ = std::nan("");
   action_ = WeldAction::RequestAttach;
@@ -126,6 +137,7 @@ void AttachClient::requestDetach(double now_s)
   mode_ = Mode::Detaching;
   sent_ = false;
   armed_ = false;
+  armed_action_ = WeldAction::Idle;
   deadline_s_ = now_s + cfg_.transition_timeout_s;
   action_ = WeldAction::RequestDetach;
   outcome_ = "detach_pending";
@@ -141,6 +153,8 @@ void AttachClient::observe(WeldState s, double now_s)
 void AttachClient::fail(const std::string & code, const std::string & why)
 {
   mode_ = Mode::Idle;
+  armed_ = false;
+  armed_action_ = WeldAction::Idle;
   action_ = WeldAction::Failed;
   outcome_ = code;
   reason_ = why;
@@ -182,6 +196,7 @@ WeldAction AttachClient::tick(double now_s)
           (last_send_s_ < 0.0 || (now_s - last_send_s_) >= cfg_.startup_retry_s))
         {
           armed_ = true;
+          armed_action_ = WeldAction::RequestDetach;
           sent_ = false;   // the previous publish is stale; re-arm the same request
           attempts_ += 1;
           return action_ = WeldAction::RequestDetach;
@@ -216,6 +231,7 @@ WeldAction AttachClient::tick(double now_s)
           if (attempts_ < cfg_.max_attach_attempts) {
             sent_ = false;
             armed_ = false;
+            armed_action_ = WeldAction::Idle;
             deadline_s_ = now_s + cfg_.transition_timeout_s;
             return action_ = WeldAction::Wait;   // next tick re-issues the attach
           }
@@ -226,6 +242,7 @@ WeldAction AttachClient::tick(double now_s)
         }
         if (!armed_ && !sent_) {
           armed_ = true;
+          armed_action_ = WeldAction::RequestAttach;
           attempts_ += 1;
           return action_ = WeldAction::RequestAttach;
         }
@@ -251,6 +268,7 @@ WeldAction AttachClient::tick(double now_s)
         }
         if (!armed_ && !sent_) {
           armed_ = true;
+          armed_action_ = WeldAction::RequestDetach;
           attempts_ += 1;
           return action_ = WeldAction::RequestDetach;
         }
@@ -267,13 +285,17 @@ WeldAction AttachClient::tick(double now_s)
 WeldAction AttachClient::consumeSend(double now_s)
 {
   if (sent_ || !armed_) { return WeldAction::Wait; }
-  if (action_ != WeldAction::RequestAttach && action_ != WeldAction::RequestDetach) {
+  // Use the dedicated slot: action_ may already have been overwritten by the
+  // state machine's tickWeld() between arming and this call (T2 fix).
+  const WeldAction a = armed_action_;
+  if (a != WeldAction::RequestAttach && a != WeldAction::RequestDetach) {
     return WeldAction::Wait;
   }
   armed_ = false;
+  armed_action_ = WeldAction::Idle;
   sent_ = true;
   last_send_s_ = now_s;
-  return action_;
+  return a;
 }
 
 }  // namespace dual_arm_transport_executor

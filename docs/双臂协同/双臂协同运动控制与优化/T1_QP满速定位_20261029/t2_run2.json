@@ -1,0 +1,186 @@
+{
+ "phases": [
+  [
+   "approach",
+   3.0,
+   0.0,
+   0.0,
+   0.02,
+   0.0
+  ],
+  [
+   "grasp",
+   2.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   "lift",
+   3.0,
+   0.0,
+   0.0,
+   0.02,
+   0.0
+  ],
+  [
+   "transport",
+   3.0,
+   -0.02,
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   "lower",
+   3.0,
+   0.0,
+   0.0,
+   -0.02,
+   0.0
+  ]
+ ],
+ "rows": [
+  {
+   "t": 0.0,
+   "state": "RUNNING",
+   "phase": 0,
+   "phase_name": "approach",
+   "t_traj": 0.104,
+   "active_limit_count": 0,
+   "q_state": [
+    2.79229,
+    -1.71087,
+    1.29778,
+    -1.15568,
+    -1.57127,
+    -0.3493,
+    0.34821,
+    -1.43365,
+    -1.29531,
+    -1.98645,
+    1.57135,
+    -2.79337
+   ],
+   "e_obj_pos_m": 0.00029489957646791333,
+   "e_obj_rot_rad": 0.0020801050957935355,
+   "weld": null,
+   "sample_z": null,
+   "failure_code": ""
+  },
+  {
+   "t": 7.191,
+   "state": "RUNNING",
+   "phase": 1,
+   "phase_name": "grasp",
+   "t_traj": 3.016,
+   "active_limit_count": 0,
+   "q_state": [
+    2.79165,
+    -1.68215,
+    1.18536,
+    -1.07398,
+    -1.5708,
+    -0.34995,
+    0.34864,
+    -1.46332,
+    -1.18206,
+    -2.06729,
+    1.57079,
+    -2.79295
+   ],
+   "e_obj_pos_m": 4.6586775792380814e-05,
+   "e_obj_rot_rad": 2.1869262262847544e-05,
+   "weld": null,
+   "sample_z": null,
+   "failure_code": ""
+  },
+  {
+   "t": 12.234,
+   "state": "RUNNING",
+   "phase": 2,
+   "phase_name": "lift",
+   "t_traj": 5.096,
+   "active_limit_count": 0,
+   "q_state": [
+    2.79165,
+    -1.68148,
+    1.18306,
+    -1.07222,
+    -1.5708,
+    -0.34995,
+    0.34864,
+    -1.46399,
+    -1.17975,
+    -2.06857,
+    1.57079,
+    -2.79295
+   ],
+   "e_obj_pos_m": 0.0002516353819316309,
+   "e_obj_rot_rad": 0.00015090528775960616,
+   "weld": null,
+   "sample_z": null,
+   "failure_code": ""
+  },
+  {
+   "t": 18.044,
+   "state": "RUNNING",
+   "phase": 3,
+   "phase_name": "transport",
+   "t_traj": 8.008,
+   "active_limit_count": 0,
+   "q_state": [
+    2.79164,
+    -1.64124,
+    1.05242,
+    -0.98198,
+    -1.5708,
+    -0.34995,
+    0.34865,
+    -1.50426,
+    -1.04891,
+    -2.15923,
+    1.5708,
+    -2.79295
+   ],
+   "e_obj_pos_m": 5.418293986284186e-05,
+   "e_obj_rot_rad": 3.222639747946159e-07,
+   "weld": null,
+   "sample_z": null,
+   "failure_code": ""
+  },
+  {
+   "t": 21.814,
+   "state": "RUNNING",
+   "phase": 4,
+   "phase_name": "lower",
+   "t_traj": 11.024,
+   "active_limit_count": 0,
+   "q_state": [
+    2.81446,
+    -1.56681,
+    0.98147,
+    -0.98546,
+    -1.5708,
+    -0.32713,
+    0.37476,
+    -1.4322,
+    -1.11057,
+    -2.16961,
+    1.5708,
+    -2.76683
+   ],
+   "e_obj_pos_m": 0.0001799178897474814,
+   "e_obj_rot_rad": 7.238041326426713e-07,
+   "weld": null,
+   "sample_z": null,
+   "failure_code": ""
+  }
+ ],
+ "start_message": "queued (applied on the next control cycle)",
+ "executor_start": [
+  false,
+  "precheck_failed"
+ ]
+}

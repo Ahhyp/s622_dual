@@ -1,0 +1,106 @@
+
+=== 1. prerequisites ===
+6.18.0
+
+=== 2. python (the ROS 2 interface generator needs empy; conda yolov8 is what this repo used) ===
+using python: /usr/bin/python3
+
+=== 3. build (memory-safe: 2 parallel jobs; a single Eigen translation unit peaks at ~1.2 GB) ===
+== memory-safe build ==
+   jobs          : 4 (MAKEFLAGS=-j4, CMAKE_BUILD_PARALLEL_LEVEL=4)
+   python3       : /usr/bin/python3
+   MemAvailable  : 24054 MiB
+   estimated peak: ~4800 MiB (JOBS x ~1.2 GiB)
+
+Starting >>> fairino_planning_core
+Starting >>> s622_moveit_descriptions
+Starting >>> gz_launch
+Finished <<< s622_moveit_descriptions [0.08s]
+Finished <<< fairino_planning_core [0.12s]
+Starting >>> dual_arm_kinematics
+Finished <<< dual_arm_kinematics [0.11s]
+Starting >>> dual_arm_object_task
+Starting >>> dual_arm_collision
+Finished <<< dual_arm_object_task [0.08s]
+Starting >>> dual_arm_qp_core
+Finished <<< dual_arm_collision [0.11s]
+Finished <<< dual_arm_qp_core [0.13s]
+Starting >>> dual_arm_qp_controller
+Finished <<< gz_launch [0.58s]
+Finished <<< dual_arm_qp_controller [0.35s]
+Starting >>> dual_arm_transport_executor
+Finished <<< dual_arm_transport_executor [0.78s]
+
+Summary: 9 packages finished [1.82s]
+
+== done: 2026-10-29T04:30:31Z ==
+
+=== 4. invariants ===
+test_fail_readstate symbols in the production library: 0 (must be 0)
+libdual_arm_qp_core.so sha256: d1be692db12fe36d44e956238d096dc056ce2a0b73bfc0f483cee41bd275ca1f
+frozen S3 fixture sha256:       6a0b876260a24808c61c067989460fa860e7f022dc3b060d10111ed50711d07c
+D2-B baseline sha256:           5489dfdd348883bf672c3cc26942c560f36db3fbf4a8c3fdbb1155ec0b075f26
+
+=== 5. fast suites ===
+Starting >>> dual_arm_transport_executor
+Finished <<< dual_arm_transport_executor [3.11s]
+
+Summary: 1 package finished [3.41s]
+Summary: 172 tests, 0 errors, 0 failures, 0 skipped
+
+=== 6. ledger + D2-B gate ===
+==============================================================================
+C4.3 S4 — W4 acceptance ledger check (structure only; NOT an acceptance PASS)
+==============================================================================
+ledger        : /workspace/src/dual_arm_transport_executor/config/c43_s4_acceptance.yaml
+schema        : c43s4.acceptance_ledger.v1
+entries       : 22
+metrics       : 26
+
+[待标定] items (12) — these are NOT calibrated thresholds:
+  - S4-T2/update_cost_p99  (suggested, not a threshold: 6400)
+  - S4-T6/feedforward_error_ratio  (suggested, not a threshold: 0.1)
+  - S4-T7/terminal_object_error_pos
+  - S4-T7/peak_relative_pose_error
+  - S4-T8/injection_failure_code_and_state
+  - S4-T10/collision_trigger_cycle
+  - S4-T13/dry_run_artifact_completeness
+  - S4-T16/grasp_check_reject
+  - S4-T17/long_run_p99
+  - S4-T18/plugin_probe
+  - S4-T19/t_traj_increment
+  - S4-T20/off_table_false_reject
+
+non-PASS evidence states (16):
+  - S4-T2/update_cost_p99: HOLD
+  - S4-T2/overrun_cycles: HOLD
+  - S4-T2/malloc_in_update: MISSING_EVIDENCE
+  - S4-T4/error_descent_ratio: PARTIAL
+  - S4-T8/injection_failure_code_and_state: PARTIAL
+  - S4-T9/limit_margin_rad: UNVERIFIED
+  - S4-T10/collision_trigger_cycle: PARTIAL
+  - S4-T13/dry_run_artifact_completeness: MISSING_EVIDENCE
+  - S4-T14/hold_frozen_qcmd_delta: PARTIAL
+  - S4-T15/stale_state_trigger_cycles: PARTIAL
+  - S4-T16/grasp_check_reject: PARTIAL
+  - S4-T17/long_run_p99: HOLD
+  - S4-T17/long_run_max_interval: HOLD
+  - S4-T19/t_traj_increment: PARTIAL
+  - S4-T21/local_hold_latency: PARTIAL
+  - S4-T22/latch_recovery_permission: PARTIAL
+
+retained historical failures (1):
+  - W2-C3/legacy-1ulp: FAIL
+
+
+VERDICT: LEDGER_OK — structure/coverage only; this is NOT an S4.1 acceptance PASS
+ACCEPTANCE_PASS_CLAIMED: false
+GATE_STATUS_CHANGED: false
+C3 gate: D2B_APPROVED_CONTRACT v1 (approved 2026-10-27)
+  scope: same-build regression + cross-algorithm + physical invariants
+  the historical '<=1 ULP' criterion is NOT evaluated here and remains
+  LEGACY_CROSS_GENERATION_CONTRACT_FAIL_RETAINED (7656/7656 FAIL)
+
+C3_D2B: INPUT_ERROR
+  ERROR: baseline/provenance was produced by ff95750afe76b49b but the library under test is d1be692db12fe36d
+FAIL: D2-B gate failed

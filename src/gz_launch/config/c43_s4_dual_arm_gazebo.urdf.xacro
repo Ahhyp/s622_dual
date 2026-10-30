@@ -203,15 +203,19 @@
     <!-- ============ ros2_control x2 (左右各一份硬件接口) ============ -->
     <xacro:include filename="$(find gz_launch)/config/s622_gazebo_ros2_control.xacro" />
 
+    <!-- C4.3 S4 T1 fix (2026-10-29): spawn each arm at its own half of q_grasp12.
+         gz_ros2_control honours initial_value and ignores `ros_gz_sim create -J`,
+         so pointing both arms at s622_moveit_config's generic pose started the
+         transport ~2.2 m away from the frozen grasp relative target. -->
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"
-        initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
+        initial_positions_file="$(find gz_launch)/config/c43_s4_gazebo_initial_left.yaml"
         prefix="left_" arm_command_mode="$(arg arm_command_mode)"
         arm_position_gain="$(arg arm_position_gain)" />
 
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"
-        initial_positions_file="$(find s622_moveit_config)/config/initial_positions.yaml"
+        initial_positions_file="$(find gz_launch)/config/c43_s4_gazebo_initial_right.yaml"
         prefix="right_" arm_command_mode="$(arg arm_command_mode)"
         arm_position_gain="$(arg arm_position_gain)" />
 

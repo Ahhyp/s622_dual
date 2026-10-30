@@ -15,6 +15,10 @@
        package must NOT define a second copy of those interfaces.
        The pure C++ core library itself includes no ROS header. -->
   <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
+  <depend>control_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>trajectory_msgs</depend>
   <depend>std_msgs</depend>
   <depend>tf2_msgs</depend>
   <depend>std_srvs</depend>

@@ -26,6 +26,7 @@ add_library(${PROJECT_NAME}_core SHARED
   src/abort_requester.cpp
   src/hold_requester.cpp
   src/attach_client.cpp
+  src/grasp_check.cpp
   src/phase_driver.cpp
   src/attach_adapter.cpp
   src/collision_guard.cpp
@@ -53,8 +54,14 @@ if(C43_WITH_ROS_NODE)
   find_package(std_srvs QUIET)
   find_package(std_msgs QUIET)
   find_package(tf2_msgs QUIET)
+  find_package(rclcpp_action QUIET)
+  find_package(control_msgs QUIET)
+  find_package(sensor_msgs QUIET)
+  find_package(trajectory_msgs QUIET)
   find_package(dual_arm_qp_controller QUIET)
-  if(NOT rclcpp_FOUND OR NOT std_srvs_FOUND OR NOT std_msgs_FOUND OR NOT dual_arm_qp_controller_FOUND)
+  if(NOT rclcpp_FOUND OR NOT std_srvs_FOUND OR NOT std_msgs_FOUND OR NOT dual_arm_qp_controller_FOUND
+     OR NOT rclcpp_action_FOUND OR NOT control_msgs_FOUND OR NOT sensor_msgs_FOUND
+     OR NOT trajectory_msgs_FOUND)
     set(c43_node OFF)
     message(STATUS "dual_arm_transport_executor: ROS adapter node disabled (missing rclcpp/std_srvs/dual_arm_qp_controller)")
   endif()
@@ -79,7 +86,10 @@ if(c43_node)
     C43_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
   )
   target_link_libraries(c43_s4_executor PRIVATE
-    ${PROJECT_NAME}_core rclcpp::rclcpp ${std_srvs_TARGETS} ${std_msgs_TARGETS} ${tf2_msgs_TARGETS} dual_arm_qp_controller::dual_arm_qp_controller_lib
+    ${PROJECT_NAME}_core rclcpp::rclcpp rclcpp_action::rclcpp_action
+    ${std_srvs_TARGETS} ${std_msgs_TARGETS} ${tf2_msgs_TARGETS}
+    ${control_msgs_TARGETS} ${sensor_msgs_TARGETS} ${trajectory_msgs_TARGETS}
+    dual_arm_qp_controller::dual_arm_qp_controller_lib
   )
   install(TARGETS c43_s4_executor RUNTIME DESTINATION lib/${PROJECT_NAME})
 endif()
@@ -117,6 +127,10 @@ if(BUILD_TESTING)
   target_link_libraries(test_collision_guard ${PROJECT_NAME}_core)
   ament_add_gtest(test_attach_adapter test/test_attach_adapter.cpp)
   target_link_libraries(test_attach_adapter ${PROJECT_NAME}_core)
+  ament_add_gtest(test_grasp_check test/test_grasp_check.cpp)
+  target_link_libraries(test_grasp_check ${PROJECT_NAME}_core)
+  ament_add_gtest(test_grasp_gate test/test_grasp_gate.cpp)
+  target_link_libraries(test_grasp_gate ${PROJECT_NAME}_core)
   # W6: Gazebo weld client (startup release / attach snap criterion / detach).
   # C4.3 S4 W7: full-flow wiring (startup guard, GRASP attach, RELEASE detach).
   ament_add_gtest(test_full_flow test/test_full_flow.cpp)
