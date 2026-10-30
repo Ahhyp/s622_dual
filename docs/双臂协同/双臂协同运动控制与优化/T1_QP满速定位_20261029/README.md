@@ -172,6 +172,8 @@ advance RETREAT→COMPLETE  controller reported the trajectory reached its end
 | `attached_fault_detach_fail.log` / `attached_fault_run1.json` / `attached_start_refused.txt` | 带物 FAULT：detach 注入失败，不拆焊；reset 后 start 拒绝 |
 | `approach_saturation_diagnosis.txt` | APPROACH 误触发：单关节 lim=1，非 T1 多关节失控；min_joints=6 |
 | `release_ctest_190.log` | APPROACH + RELEASE + 带物 FAULT 后的 190 用例回归 |
+| `release_open_fail.log` / `open_fail_run4.json` / `executor_artifacts_release_open_fail/` | Gazebo 张手失败：detach 后 100 ms 报 `release_failed`，无张手/retreat/COMPLETE |
+| `final_ctest_190_after_open_inject.log` | 运行时失败注入参数加入后的 190 用例回归 |
 | `code_changes.diff` | 本轮产品/配置改动（不含迁移前的环境改动） |
 
 ## 6. 复现
@@ -260,8 +262,9 @@ z=0.2748，无 attach）、`executor_artifacts_fault_propagation/events.csv`。
 `release_full_sequence.log` / `release_run4.json`：detach 确认 → 100 ms → 张手 JTC 成功 →
 手指 ±0.0305 → retreat 相位 → `COMPLETE`，t=19.50，样品 z=0.2750 未被推动。release 相位
 从 2.0 s 延长到 3.5 s，保证张手确认在 retreat 之前；总时长 19.5 s。
-张手失败/超时由 `W7_ReleaseOpenFailureIsAFaultAndDoesNotRetreat` 覆盖（190 用例）；
-Gazebo 张手失败注入因 start gate 姿态漂移未跑成。
+张手失败由 `W7_ReleaseOpenFailureIsAFaultAndDoesNotRetreat` 和 Gazebo 运行时参数
+`release_inject_open_failure=true` 双重覆盖：detach 确认后 100 ms 报 `release_failed`，
+没有张手/retreat/COMPLETE；样品已 detach，停在支撑上（z=0.2750），控制器 ABORT。
 
 ## 12. 带物 FAULT（2026-10-30）
 
