@@ -21,6 +21,12 @@ controller_manager:
       type: joint_trajectory_controller/JointTrajectoryController
     right_hand_controller:
       type: joint_trajectory_controller/JointTrajectoryController
+    # C4.3 homing only: dual_home spawn -> q_grasp12, then switch to the QP.
+    # The QP and these JTCs claim the same arm joints; only one is active.
+    left_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+    right_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
 
 # ---- grippers (kept so the hands stay usable) ----
 left_hand_controller:
@@ -120,3 +126,19 @@ dual_arm_qp_controller:
     #     "missing" rather than silently assumed to be active.
     #   e4_deadline -- implemented stricter than the plan: a SINGLE measured
     #     period overrun latches HOLD (the plan allowed 5 consecutive).
+
+
+# ---- homing-only arm JTCs (inactive while the QP owns the arms) ----
+left_arm_controller:
+  ros__parameters:
+    joints: [left_j1, left_j2, left_j3, left_j4, left_j5, left_j6]
+    command_interfaces: [position]
+    state_interfaces: [position]
+    allow_partial_joints_goal: true
+
+right_arm_controller:
+  ros__parameters:
+    joints: [right_j1, right_j2, right_j3, right_j4, right_j5, right_j6]
+    command_interfaces: [position]
+    state_interfaces: [position]
+    allow_partial_joints_goal: true

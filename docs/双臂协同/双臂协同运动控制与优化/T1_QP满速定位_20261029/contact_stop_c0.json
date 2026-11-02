@@ -1,0 +1,28 @@
+{
+  "tag": "c0",
+  "target": 0.0249,
+  "contact_sensor_topic": "",
+  "contact": null,
+  "cancel_send_rel": 3.551441192626953,
+  "cancel_confirm_rel": 3.5537376403808594,
+  "stop": {
+    "wall_rel": 3.780167579650879,
+    "fingers": [
+      0.02950557609624112,
+      -0.029504367098932633
+    ]
+  },
+  "result_status": 5,
+  "error_code": 0,
+  "error_string": "",
+  "result_ready_rel": 3.6101605892181396,
+  "initial_sample": null,
+  "final_sample": null,
+  "fingers_final": [
+    0.029505997969452108,
+    -0.02950478901604812
+  ],
+  "contact_fingers": null,
+  "extra_close_f1": null,
+  "extra_close_f2": null
+}

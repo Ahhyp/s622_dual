@@ -51,6 +51,15 @@ target_link_libraries(${PROJECT_NAME}
 set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # S1 acceptance probe: reports loaded geometry, ACM behaviour, distance scopes.
+add_executable(c43_2c_sequence_check src/c43_2c_sequence_check.cpp)
+target_link_libraries(c43_2c_sequence_check ${PROJECT_NAME} geometric_shapes::geometric_shapes)
+
+add_executable(c43_geometry_probe src/c43_geometry_probe.cpp)
+target_link_libraries(c43_geometry_probe ${PROJECT_NAME} geometric_shapes::geometric_shapes fcl)
+
+add_executable(c43_path_check src/c43_path_check_main.cpp)
+target_link_libraries(c43_path_check ${PROJECT_NAME} geometric_shapes::geometric_shapes)
+
 add_executable(c42_scene_probe src/c42_scene_probe_main.cpp)
 target_link_libraries(c42_scene_probe ${PROJECT_NAME})
 
@@ -78,7 +87,7 @@ install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
 )
 
-install(TARGETS c42_scene_probe c42_baseline_probe c42_reachability c42_optimize_pose c42_handover_target
+install(TARGETS c43_geometry_probe c43_2c_sequence_check c43_path_check c42_scene_probe c42_baseline_probe c42_reachability c42_optimize_pose c42_handover_target
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

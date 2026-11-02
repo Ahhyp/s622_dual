@@ -333,7 +333,9 @@ bool TransportStateMachine::start(double now_s, const StartRequest & req, std::s
   // second run would inherit the first run's verdicts.  Also reset the weld
   // request latches: they are per-task, and a stale attach_requested would make
   // the second run skip its attach entirely (W7-C repeat-run bug).
-  gripper_ready_ = !cfg_.require_grasp_check;
+  // The close is mandatory even when the check is disabled; only the check
+  // verdict starts satisfied.
+  gripper_ready_ = false;
   grasp_checked_ = !cfg_.require_grasp_check;
   grasp_ok_ = !cfg_.require_grasp_check;
   weld_attached_ = false;
@@ -704,12 +706,16 @@ bool TransportStateMachine::tickWeld(double now_s)
 {
   // S4-T16: the node closes the fingers and checks the sample against the frozen
   // grasp chain; until both verdicts are in, GRASP must not request attach.
-  if (state_ == State::Grasp && cfg_.require_grasp_check && !weld_attached_) {
-    if (!gripper_ready_ || !grasp_checked_) {return true;}   // still waiting
-    if (!grasp_ok_) {
-      enterProtection(Protection::Fault, "grasp_check_failed", now_s,
-                      "grasp prerequisites rejected before attach");
-      return true;
+  if (state_ == State::Grasp && !weld_attached_) {
+    // Always wait for the fingers to close; the check is what is optional.
+    if (!gripper_ready_) {return true;}
+    if (cfg_.require_grasp_check) {
+      if (!grasp_checked_) {return true;}   // still waiting for the check
+      if (!grasp_ok_) {
+        enterProtection(Protection::Fault, "grasp_check_failed", now_s,
+                        "grasp prerequisites rejected before attach");
+        return true;
+      }
     }
   }
   if (weld_ == nullptr) {return false;}

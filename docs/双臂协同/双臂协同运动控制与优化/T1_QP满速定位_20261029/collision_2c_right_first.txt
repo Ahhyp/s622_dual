@@ -1,0 +1,30 @@
+mode=right_first
+states=1213
+arm_collision_states=21834
+world_collision_states=0
+min_arm_arm=0.0193585 at stage2 0.10 right_wrist3_link <-> left_wrist3_link
+q_min_arm=2.79504,-1.61057,0.964256,-0.924485,-1.5708,-0.346556,0.346556,-1.53103,-0.964256,-2.21711,1.5708,-2.79504,
+min_world=0.00540453 at stage2 9.10
+q_min_world=2.79504,-1.70298,1.26517,-1.13298,-1.5708,-0.346556,0.346556,-1.43861,-1.26517,-2.00861,1.5708,-2.79504,
+min_whole=0.0165624 at stage1 931/1000 left_wrist2_link <-> left_forearm_link
+first=stage1 0/1000 c42_floor <-> left_base_link depth=0.000000
+unique_self_pairs:
+c42_floor <-> left_base_link n=1213 max_depth=1.00279e-15 where=stage1 0/1000
+c42_floor <-> right_base_link n=1213 max_depth=9.2468e-16 where=stage1 0/1000
+left_base_link <-> left_shoulder_link n=1213 max_depth=0.00133302 where=stage1 915/1000
+left_finger1 <-> left_wrist3_link n=1213 max_depth=0.00920001 where=stage1 679/1000
+left_finger2 <-> left_wrist3_link n=1213 max_depth=0.00920015 where=stage1 602/1000
+left_forearm_link <-> left_upperarm_link n=1213 max_depth=0.00296299 where=stage1 868/1000
+left_forearm_link <-> left_wrist1_link n=1213 max_depth=0.00176721 where=stage1 898/1000
+left_shoulder_link <-> left_upperarm_link n=1213 max_depth=0.00180043 where=stage2 9.20
+left_wrist1_link <-> left_wrist2_link n=1213 max_depth=0.0019803 where=stage1 565/1000
+left_wrist2_link <-> left_wrist3_link n=1213 max_depth=0.00120522 where=stage1 0/1000
+right_base_link <-> right_shoulder_link n=1213 max_depth=0.000580561 where=stage1 0/1000
+right_finger1 <-> right_wrist3_link n=1213 max_depth=0.00920001 where=stage2 1.2
+right_finger2 <-> right_wrist3_link n=1213 max_depth=0.00920015 where=stage2 3.10
+right_forearm_link <-> right_upperarm_link n=1213 max_depth=0.00296219 where=stage2 9.20
+right_forearm_link <-> right_wrist1_link n=1213 max_depth=0.00176387 where=stage2 2.4
+right_shoulder_link <-> right_upperarm_link n=1213 max_depth=0.00196289 where=stage2 2.13
+right_wrist1_link <-> right_wrist2_link n=1213 max_depth=0.00125932 where=initial
+right_wrist2_link <-> right_wrist3_link n=1213 max_depth=0.00120522 where=initial
+unique_world_pairs:

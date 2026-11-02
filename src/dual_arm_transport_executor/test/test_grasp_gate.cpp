@@ -124,9 +124,13 @@ TEST(GraspGate, LegacyModeStillAdvancesWithoutVerdicts)
   std::string why;
   primeIdle(sm);
   ASSERT_TRUE(sm.start(0.01, req, &why)) << why;
-  EXPECT_TRUE(sm.gripperReady());
+  ASSERT_TRUE(sm.phaseDone(0.1, &why)) << why;   // APPROACH -> GRASP
+  // The check verdicts start satisfied, but the fingers still have to close.
+  EXPECT_FALSE(sm.gripperReady());
   EXPECT_TRUE(sm.graspCheckDone());
   EXPECT_TRUE(sm.graspOk());
+  sm.noteGripperClosed(0.2, true, "test: fingers closed");
+  EXPECT_TRUE(sm.gripperReady());
 }
 
 TEST(GraspGate, SingleJointVelocityCapDuringGraspDoesNotHold)

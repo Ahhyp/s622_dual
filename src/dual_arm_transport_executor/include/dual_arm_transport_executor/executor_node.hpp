@@ -61,6 +61,7 @@ private:
   using GripperAction = control_msgs::action::FollowJointTrajectory;
   using GripperGoalHandle = rclcpp_action::ClientGoalHandle<GripperAction>;
   void driveGripper();
+  bool detectGripperContact(double now_s);
   void driveReleaseGripper();
   void startGripper(double now_s);
   void startReleaseGripper(double now_s);
@@ -138,7 +139,10 @@ private:
   std::vector<double> gripper_close_positions_;
   std::vector<double> gripper_open_positions_;
   double gripper_motion_s_ = 1.0;
+  double gripper_close_motion_s_ = 3.0;
   double gripper_position_tol_ = 0.002;
+  double gripper_stable_window_s_ = 0.2;
+  double gripper_at_target_since_s_ = -1.0;
   double gripper_timeout_s_ = 2.5;
   double grasp_pos_tol_m_ = 0.003;
   double grasp_rot_tol_rad_ = 0.017453292519943295;
@@ -146,6 +150,17 @@ private:
   double wrist3_to_grasp_z_ = 0.2168;
   bool gripper_started_ = false;
   bool gripper_failed_ = false;
+  GripperGoalHandle::SharedPtr gripper_goal_handle_;
+  std::vector<double> gripper_start_positions_;
+  std::vector<double> gripper_last_positions_;
+  double gripper_last_check_s_ = -1.0;
+  double gripper_contact_stall_rad_ = 0.00005;
+  double gripper_contact_window_s_ = 0.15;
+  double gripper_contact_min_time_s_ = 0.4;
+  double gripper_contact_min_travel_rad_ = 0.001;
+  int gripper_stall_count_ = 0;
+  bool gripper_contact_detected_ = false;
+  bool gripper_contact_enabled_ = false;
   bool release_open_started_ = false;
   bool release_open_failed_ = false;
   bool release_open_result_ready_ = false;

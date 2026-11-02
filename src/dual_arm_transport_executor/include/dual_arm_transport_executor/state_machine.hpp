@@ -129,7 +129,7 @@ struct Config
   /// RETREAT is a 2 s controller phase, but the controller's phase clock lags
   /// sim time under load; 3 s reused from RELEASE produced a false
   /// release_failed.  A real stuck retreat still faults after this bound.
-  double retreat_timeout_s = 6.0;
+  double retreat_timeout_s = 12.0;
   /// Plan §4.6.1: after the weld is confirmed detached, hold this long before
   /// opening the fingers.  100 ms is a frozen ordering requirement, not a
   /// tolerance to tune.

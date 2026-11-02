@@ -32,6 +32,7 @@ install(
     scripts/demo_pathplanning_node.py
     scripts/move_to_calibration_pose.py
     scripts/auto_collect_eye_on_base.py
+    scripts/c43_homing.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

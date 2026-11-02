@@ -1,0 +1,21 @@
+Experiment 2.3 first robot-sample contact
+sim_time: 24.510 s
+collision1: c43_sample::base_link::collision
+collision2: s622_dual_arm::left_finger1::left_finger1_collision
+contact points z ~= 0.2999999 m (sample top; sample center 0.275)
+The first sustained sample deviation starts at sim 24.630 s (>1 mm),
+so the contact precedes the visible displacement by about 0.12 s.
+
+Configuration at sim 24.500 (0.01 s before contact):
+  left joints: 2.693716822, -1.702015389, 1.233564847, -1.102345917, -1.513854960, -0.333993098
+  right joints: 0.333993098, -1.439577531, -1.233564847, -1.925364003, 1.513854960, -2.693716822
+  left finger1/2: +0.030500 / -0.030500 (open)
+  right finger1/2: +0.030500 / -0.030500 (open)
+  left TCP: (0.048492, 0.019232, 0.310184)
+  right TCP: (-0.024267, -0.009179, 0.324172)
+  sample: (0.000000156, 0.000089545, 0.274999536)
+
+No attach/detach command was sent; QP remained inactive; the executor log confirms
+the startup weld was released ("weld: startup weld released and confirmed").
+weld_state was not observed during the recording ("?"), so the absence of weld
+during homing is supported by the command/log, not by a live weld-state sample.

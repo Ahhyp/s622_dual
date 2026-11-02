@@ -33,6 +33,12 @@ class N(Node):
         self.st = None
         self.weld = None
         self.sample_z = None
+        self.sample_x = None
+        self.sample_y = None
+        self.sample_vx = None
+        self.sample_vy = None
+        self.sample_vz = None
+        self._last_sample = None
         self.create_subscription(TransportStatus, "/dual_arm_qp_controller/transport_status", self.cb_st, 10)
         self.create_subscription(String, "/c43/weld_state", self.cb_weld, 10)
         self.create_subscription(TFMessage, "/c43/weld_pose", self.cb_pose, 10)
@@ -42,7 +48,21 @@ class N(Node):
     def cb_pose(self, m):
         for t in m.transforms:
             if t.child_frame_id == "c43_sample":
-                self.sample_z = t.transform.translation.z
+                x = t.transform.translation.x
+                y = t.transform.translation.y
+                z = t.transform.translation.z
+                now = self.get_clock().now().nanoseconds * 1e-9
+                if self._last_sample is not None:
+                    t0, x0, y0, z0 = self._last_sample
+                    dt = now - t0
+                    if dt > 1e-6:
+                        self.sample_vx = (x - x0) / dt
+                        self.sample_vy = (y - y0) / dt
+                        self.sample_vz = (z - z0) / dt
+                self._last_sample = (now, x, y, z)
+                self.sample_x = x
+                self.sample_y = y
+                self.sample_z = z
 
 def call(node, name):
     c = node.create_client(Trigger, name)
@@ -114,7 +134,13 @@ def main(out_path, phases):
             "active_limit_count": int(m.active_limit_count),
             "q_state": [round(x, 5) for x in m.q_state],
             "e_obj_pos_m": m.e_obj_pos_m, "e_obj_rot_rad": m.e_obj_rot_rad,
-            "weld": n.weld, "sample_z": None if n.sample_z is None else round(n.sample_z, 6),
+            "weld": n.weld,
+            "sample_x": None if n.sample_x is None else round(n.sample_x, 6),
+            "sample_y": None if n.sample_y is None else round(n.sample_y, 6),
+            "sample_z": None if n.sample_z is None else round(n.sample_z, 6),
+            "sample_vx": None if n.sample_vx is None else round(n.sample_vx, 6),
+            "sample_vy": None if n.sample_vy is None else round(n.sample_vy, 6),
+            "sample_vz": None if n.sample_vz is None else round(n.sample_vz, 6),
             "failure_code": m.failure_code,
         }
         key = (row["state"], row["phase"], row["active_limit_count"], row["weld"],

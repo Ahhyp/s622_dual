@@ -1,0 +1,57 @@
+{
+  "tag": "c2",
+  "target": 0.0249,
+  "contact_sensor_topic": "/world/c43_s4_world/model/c43_sample_contact/link/base_link/sensor/sample_contact/contact",
+  "contact": {
+    "sim_sec": 57,
+    "sim_nsec": 200000000,
+    "wall_rel": 10.341550827026367,
+    "collision1": "c43_sample_contact::base_link::collision",
+    "collision2": "s622_dual_arm::left_finger1::left_finger1_collision",
+    "sides": [
+      "left"
+    ],
+    "sample": [
+      5.505530172082594e-18,
+      1.7516981275795555e-17,
+      0.27499977343166093
+    ],
+    "fingers": [
+      0.025088999999999986,
+      -0.025088997737213577
+    ]
+  },
+  "cancel_send_rel": 10.34639286994934,
+  "cancel_confirm_rel": 10.347352743148804,
+  "stop": {
+    "wall_rel": 10.57019329071045,
+    "fingers": [
+      0.025081575696514428,
+      -0.025081573981222
+    ]
+  },
+  "result_status": 5,
+  "error_code": 0,
+  "error_string": "",
+  "result_ready_rel": 10.380190372467041,
+  "initial_sample": [
+    5.505530172082594e-18,
+    1.7516981275795555e-17,
+    0.27499977343166093
+  ],
+  "final_sample": [
+    -2.2478869492669393e-05,
+    4.975262167579013e-05,
+    0.2749952399956975
+  ],
+  "fingers_final": [
+    0.02508200272998301,
+    -0.02508199591449708
+  ],
+  "contact_fingers": [
+    0.02508200006922333,
+    -0.02508199787429965
+  ],
+  "extra_close_f1": 4.2437270890080536e-07,
+  "extra_close_f2": 4.238930776494232e-07
+}

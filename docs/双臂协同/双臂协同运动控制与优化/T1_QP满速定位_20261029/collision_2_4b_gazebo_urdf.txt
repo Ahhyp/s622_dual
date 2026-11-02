@@ -1,0 +1,11 @@
+C4.3 S4 experiment 2.4-B collision check
+urdf=/tmp/c43_gazebo.urdf
+srdf=/workspace/src/s622_moveit_config/config/s622_dual_arm.srdf
+states=891
+self_collisions=891
+arm_arm_collisions=2
+world_collisions=0
+min_world=0.00540449 at actual row 715
+min_arm_arm=0 at stage1 89/100 right_finger2 <-> left_finger1
+min_whole_robot=0 at stage1 89/100 right_finger2 <-> left_finger1
+first_collision=stage1 0/100 self=1 dual=0 world=0.074800

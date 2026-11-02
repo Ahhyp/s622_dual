@@ -1,0 +1,11 @@
+C4.3 S4 experiment 2.4-B collision check
+urdf=/workspace/src/dual_arm_kinematics/test/fixtures/s622_dual_arm.urdf
+srdf=/workspace/src/s622_moveit_config/config/s622_dual_arm.srdf
+states=891
+self_collisions=891
+arm_arm_collisions=518
+world_collisions=518
+min_world=-1 at stage2 7.19
+min_arm_arm=0.0174142 at actual row 125 right_wrist3_link <-> left_wrist3_link
+min_whole_robot=0.0131174 at stage1 62/100 right_wrist3_link <-> wrist_camera_link
+first_collision=stage1 0/100 self=1 dual=0 world=0.074800

@@ -129,6 +129,9 @@ void graspWithConfirmedAttach(Rig & r, double snap_m)
     r.tick(1);
   }
   ASSERT_EQ(r.sm.state(), State::Grasp);
+  // The close is mandatory even when the check is disabled; this test drives the
+  // state machine directly, so stand in for the node's JTC close verdict.
+  r.sm.noteGripperClosed(r.now, true, "test: fingers closed");
   // The client refuses to attach while the plugin still reports "attached"
   // (startup weld) -- we are detached here, so the attach may proceed.
   r.plugin_state = WeldState::Detached;
@@ -268,6 +271,7 @@ TEST(FullFlow, W7_ConfirmedAttachReleasesTheGraspBarrier)
   r.fake.status().phase_name = "grasp";
   r.tick(1);
   ASSERT_EQ(r.sm.state(), State::Grasp);
+  r.sm.noteGripperClosed(r.now, true, "test: fingers closed");
   r.fake.status().phase_index = 2;
   r.fake.status().phase_name = "lift";
   r.tick(1);
@@ -290,6 +294,7 @@ TEST(FullFlow, W7_UnmeasuredSnapFailsClosed)
   r.releaseStartupWeld();
   ASSERT_TRUE(r.start(nullptr));
   while (r.sm.state() != State::Grasp) {r.sm.phaseDone(r.now, nullptr); r.tick(1);}
+  r.sm.noteGripperClosed(r.now, true, "test: fingers closed");
   r.plugin_state = WeldState::Detached;
   r.tick(1);
   // No setMeasuredSnap(): the node has no pose evidence.

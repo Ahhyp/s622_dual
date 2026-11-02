@@ -69,12 +69,23 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   gripper_joint_names_ = declare_parameter<std::vector<std::string>>(
     "gripper_joint_names",
     std::vector<std::string>{"left_finger1_joint", "left_finger2_joint"});
+  // A: contact-limited close.  The target is deliberately beyond contact; the
+  // node cancels the goal when the fingers stop moving, so the pads touch the
+  // sample without the position servo pushing it off the support.
   gripper_close_positions_ = declare_parameter<std::vector<double>>(
-    "gripper_close_positions", std::vector<double>{0.0251, -0.0251});
+    "gripper_close_positions", std::vector<double>{0.0180, -0.0180});
+  gripper_close_motion_s_ = declare_parameter("gripper_close_motion_s", 3.0);
+  gripper_contact_stall_rad_ = declare_parameter("gripper_contact_stall_rad", 0.00005);
+  gripper_contact_window_s_ = declare_parameter("gripper_contact_window_s", 0.15);
+  gripper_contact_min_time_s_ = declare_parameter("gripper_contact_min_time_s", 0.4);
+  gripper_contact_min_travel_rad_ =
+    declare_parameter("gripper_contact_min_travel_rad", 0.001);
+  gripper_contact_enabled_ = declare_parameter("gripper_contact_enabled", false);
   gripper_open_positions_ = declare_parameter<std::vector<double>>(
     "gripper_open_positions", std::vector<double>{0.0305, -0.0305});
   gripper_motion_s_ = declare_parameter("gripper_motion_s", 1.0);
   gripper_position_tol_ = declare_parameter("gripper_position_tol", 0.002);
+  gripper_stable_window_s_ = declare_parameter("gripper_stable_window_s", 0.2);
   gripper_timeout_s_ = declare_parameter("gripper_timeout_s", 2.5);
   grasp_pos_tol_m_ = declare_parameter("grasp_pos_tol_m", 0.003);
   grasp_rot_tol_rad_ = declare_parameter("grasp_rot_tol_rad", 0.017453292519943295);
@@ -709,6 +720,12 @@ void TransportExecutorNode::resetGripperState()
   gripper_result_ready_ = false;
   gripper_result_ok_ = false;
   gripper_start_at_s_ = -1.0;
+  gripper_goal_handle_.reset();
+  gripper_start_positions_.clear();
+  gripper_last_positions_.clear();
+  gripper_last_check_s_ = -1.0;
+  gripper_stall_count_ = 0;
+  gripper_contact_detected_ = false;
   release_open_started_ = false;
   release_open_failed_ = false;
   release_open_result_ready_ = false;
@@ -727,7 +744,7 @@ void TransportExecutorNode::startGripper(double now_s)
   goal.trajectory.joint_names = gripper_joint_names_;
   trajectory_msgs::msg::JointTrajectoryPoint pt;
   pt.positions = gripper_close_positions_;
-  pt.time_from_start = rclcpp::Duration::from_seconds(gripper_motion_s_);
+  pt.time_from_start = rclcpp::Duration::from_seconds(gripper_close_motion_s_);
   goal.trajectory.points.push_back(pt);
   auto opts = rclcpp_action::Client<GripperAction>::SendGoalOptions();
   opts.goal_response_callback = [this](GripperGoalHandle::SharedPtr handle) {
@@ -736,6 +753,7 @@ void TransportExecutorNode::startGripper(double now_s)
         gripper_result_ok_ = false;
         return;
       }
+      gripper_goal_handle_ = handle;
       RCLCPP_INFO(get_logger(), "S4-T16: gripper goal accepted");
     };
   opts.result_callback = [this](const GripperGoalHandle::WrappedResult & result) {
@@ -747,6 +765,14 @@ void TransportExecutorNode::startGripper(double now_s)
   gripper_client_->async_send_goal(goal, opts);
   gripper_started_ = true;
   gripper_start_at_s_ = now_s;
+  gripper_at_target_since_s_ = -1.0;
+  gripper_last_check_s_ = now_s;
+  gripper_stall_count_ = 0;
+  gripper_contact_detected_ = false;
+  if (gripper_positions_.size() == gripper_close_positions_.size()) {
+    gripper_start_positions_ = gripper_positions_;
+    gripper_last_positions_ = gripper_positions_;
+  }
   RCLCPP_INFO(get_logger(), "S4-T16: closing left fingers via %s", gripper_action_.c_str());
 }
 
@@ -870,13 +896,48 @@ void TransportExecutorNode::driveReleaseGripper()
   }
 }
 
+bool TransportExecutorNode::detectGripperContact(double now_s)
+{
+  if (!gripper_started_ || gripper_contact_detected_) {return false;}
+  if (gripper_positions_.size() != gripper_close_positions_.size()) {return false;}
+  for (std::size_t i = 0; i < gripper_positions_.size(); ++i) {
+    if (!gripper_position_seen_[i]) {return false;}
+  }
+  if (gripper_start_positions_.empty()) {
+    gripper_start_positions_ = gripper_positions_;
+    gripper_last_positions_ = gripper_positions_;
+    gripper_last_check_s_ = now_s;
+    return false;
+  }
+  if (now_s - gripper_last_check_s_ < gripper_contact_window_s_) {return false;}
+  double movement = 0.0;
+  double travel = 0.0;
+  for (std::size_t i = 0; i < gripper_positions_.size(); ++i) {
+    movement = std::max(movement, std::fabs(gripper_positions_[i] - gripper_last_positions_[i]));
+    travel = std::max(travel, std::fabs(gripper_positions_[i] - gripper_start_positions_[i]));
+  }
+  gripper_last_positions_ = gripper_positions_;
+  gripper_last_check_s_ = now_s;
+  if (now_s - gripper_start_at_s_ < gripper_contact_min_time_s_) {return false;}
+  if (travel < gripper_contact_min_travel_rad_) {return false;}
+  if (movement < gripper_contact_stall_rad_) {
+    ++gripper_stall_count_;
+  } else {
+    gripper_stall_count_ = 0;
+  }
+  return gripper_stall_count_ >= 2;
+}
+
 void TransportExecutorNode::driveGripper()
 {
-  if (!require_grasp_check_) {return;}
+  // The close action is NOT optional: with the check disabled the executor used
+  // to return here, attach the weld, and carry the sample with the fingers still
+  // open (looked like "not grasping").  require_grasp_check gates the 3 mm/1 deg
+  // verification only; the fingers always close first.
   if (sm_->state() != State::Grasp) {return;}
   const double now = nowSeconds();
   if (gripper_failed_) {return;}
-  if (!grasp_snapshot_ok_) {
+  if (require_grasp_check_ && !grasp_snapshot_ok_) {
     if (!have_parent_pose_ || !have_child_pose_) {
       if (gripper_start_at_s_ < 0.0) {gripper_start_at_s_ = now;}
       if (now - gripper_start_at_s_ > gripper_timeout_s_) {
@@ -909,26 +970,56 @@ void TransportExecutorNode::driveGripper()
     }
   }
   if (!sm_->gripperReady()) {
+    if (gripper_contact_enabled_ && detectGripperContact(now)) {
+      gripper_contact_detected_ = true;
+      if (gripper_goal_handle_) {
+        gripper_client_->async_cancel_goal(gripper_goal_handle_);
+      }
+      const double f1 = gripper_positions_.size() > 0 ? gripper_positions_[0] : 0.0;
+      const double f2 = gripper_positions_.size() > 1 ? gripper_positions_[1] : 0.0;
+      RCLCPP_INFO(get_logger(),
+                  "S4-T16: finger contact detected at (%.6f, %.6f); close goal cancelled",
+                  f1, f2);
+      sm_->noteGripperClosed(now, true, "finger contact detected (stall-limited close)");
+      return;
+    }
     if (gripper_result_ready_ && !gripper_result_ok_) {
       gripper_failed_ = true;
       sm_->noteGripperClosed(now, false, "gripper JTC failed");
       return;
     }
     if (fingerPositionsAtTarget()) {
-      if (gripper_positions_.size() >= 2) {
-        RCLCPP_INFO(get_logger(), "S4-T16: fingers at close targets (%.6f, %.6f)",
-                    gripper_positions_[0], gripper_positions_[1]);
+      if (gripper_at_target_since_s_ < 0.0) {
+        gripper_at_target_since_s_ = now;
       }
-      sm_->noteGripperClosed(now, true, "finger positions reached the close targets");
+      // Motion completion is two-level: position within tolerance, the JTC
+      // action result is SUCCEEDED, and the position is stable for a short
+      // window.  Do not declare success just because a loose tolerance matched.
+      if (gripper_result_ready_ && gripper_result_ok_ &&
+        now - gripper_at_target_since_s_ >= gripper_stable_window_s_) {
+        if (gripper_positions_.size() >= 2) {
+          RCLCPP_INFO(get_logger(), "S4-T16: fingers at close targets (%.6f, %.6f)",
+                      gripper_positions_[0], gripper_positions_[1]);
+        }
+        sm_->noteGripperClosed(now, true,
+          "JTC SUCCEEDED + positions within tolerance + stable window");
+        return;
+      }
+      if (now - gripper_start_at_s_ > gripper_timeout_s_) {
+        gripper_failed_ = true;
+        sm_->noteGripperClosed(now, false,
+          "gripper positions reached tolerance but JTC result/stability missing");
+      }
       return;
     }
+    gripper_at_target_since_s_ = -1.0;
     if (gripper_start_at_s_ >= 0.0 && now - gripper_start_at_s_ > gripper_timeout_s_) {
       gripper_failed_ = true;
       sm_->noteGripperClosed(now, false, "gripper close timeout");
     }
     return;
   }
-  if (!sm_->graspCheckDone()) {
+  if (require_grasp_check_ && !sm_->graspCheckDone()) {
     if (!computeGraspCheck(now) &&
       gripper_start_at_s_ >= 0.0 && now - gripper_start_at_s_ > gripper_timeout_s_)
     {

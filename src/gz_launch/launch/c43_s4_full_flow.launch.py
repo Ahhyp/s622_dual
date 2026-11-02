@@ -28,6 +28,20 @@ from launch_param_builder import load_xacro
 import os
 from pathlib import Path
 
+# S4-T16 / experiment 2.5: close target must not be identical to the open target.
+_gripper_open_positions = (
+    [float(x) for x in os.environ["C43_GRIPPER_OPEN_POSITIONS"].split(",")]
+    if os.environ.get("C43_GRIPPER_OPEN_POSITIONS") else [0.0305, -0.0305])
+_gripper_close_positions = (
+    [float(x) for x in os.environ["C43_GRIPPER_CLOSE_POSITIONS"].split(",")]
+    if os.environ.get("C43_GRIPPER_CLOSE_POSITIONS") else [0.0251, -0.0251])
+if len(_gripper_open_positions) != len(_gripper_close_positions):
+    raise RuntimeError("gripper open/close position length mismatch")
+if all(abs(a - b) < 1e-9 for a, b in zip(_gripper_open_positions,
+                                         _gripper_close_positions)):
+    raise RuntimeError(
+        "gripper_close_positions equals gripper_open_positions; refusing a no-op GRASP close")
+
 
 def generate_launch_description():
     gz_share = get_package_share_directory("gz_launch")
@@ -47,7 +61,8 @@ def generate_launch_description():
         os.path.join(gz_share, "models") + ":" + os.environ.get("IGN_GAZEBO_RESOURCE_PATH", ""),
     )
 
-    world_file = os.path.join(gz_share, "worlds", f"{world_name}.sdf")
+    world_file = os.environ.get(
+        "C43_S4_WORLD_FILE", os.path.join(gz_share, "worlds", f"{world_name}.sdf"))
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory("ros_gz_sim"), "launch", "gz_sim.launch.py")
@@ -91,11 +106,7 @@ def generate_launch_description():
         period=5.0,
         actions=[Node(package="ros_gz_sim", executable="create",
                       arguments=["-string", urdf, "-x", "0.0", "-y", "0.0", "-z", "0.0",
-                                 "-R", "0", "-P", "0", "-Y", "0", "-name", "s622_dual_arm",
-                                 # Spawn at the controller's standing configuration (home_q):
-                                 # the QP refuses to start transport when the arms are not there,
-                                 # and it does not drive the arms to home by itself.
-                                 '-J', 'left_j1', '2.795036909814', '-J', 'left_j2', '-1.706950857914', '-J', 'left_j3', '1.279963524342', '-J', 'left_j4', '-1.143808993223', '-J', 'left_j5', '-1.570796326795', '-J', 'left_j6', '-0.346555743776', '-J', 'right_j1', '0.346555743776', '-J', 'right_j2', '-1.434641795676', '-J', 'right_j3', '-1.279963524342', '-J', 'right_j4', '-1.997783660367', '-J', 'right_j5', '1.570796326795', '-J', 'right_j6', '-2.795036909814'],
+                                 "-R", "0", "-P", "0", "-Y", "0", "-name", "s622_dual_arm"],
                       output="screen")],
     )
 
@@ -106,22 +117,28 @@ def generate_launch_description():
                     output="screen")
 
     spawn_controllers = TimerAction(
-        period=12.0,
+        period=10.0,
         actions=[
             spawner(["joint_state_broadcaster"]),
             spawner(["left_hand_controller", "right_hand_controller"]),
-            TimerAction(period=3.0, actions=[
-                # B-1: gz_ros2_control initialises the arms from
-                # s622_moveit_config/config/initial_positions.yaml (0.5/-1.05/1.05/
-                # -1.05/-0.8/0).  The controller compares the live joints against its
-                # `home_q` and refuses start_transport when they differ, so for this
-                # Gazebo profile the standing configuration *is* that spawn pose.
-                # S2's default home_q is untouched elsewhere.
+            TimerAction(period=2.0, actions=[
+                # The robot spawns at dual_home (arms up, gripper clear of the
+                # sample).  Homing moves to q_grasp12 with these JTCs; the QP is
+                # loaded inactive and only activated after the homing switch.
+                spawner(["left_arm_controller", "right_arm_controller"]),
                 spawner(["dual_arm_qp_controller"], extra=[
+                    "--inactive",
                     "--param-file",
                     os.path.join(gz_share, "config", "c43_s4_qp_home_override.yaml")]),
             ]),
         ],
+    )
+
+    homing = TimerAction(
+        period=18.0,
+        actions=[Node(
+            package="gz_launch", executable="c43_homing.py",
+            parameters=[{"use_sim_time": True}], output="screen")],
     )
 
     # gz <-> ros plumbing.  Attach/detach are ROS->GZ because the plugin is a
@@ -187,14 +204,17 @@ def generate_launch_description():
                     "require_grasp_check": os.environ.get("C43_REQUIRE_GRASP_CHECK", "1") == "1",
                     "gripper_action": "/left_hand_controller/follow_joint_trajectory",
                     "gripper_joint_names": ["left_finger1_joint", "left_finger2_joint"],
-                    "gripper_close_positions": [0.0251, -0.0251],
-                    "gripper_open_positions": (
-                        [float(x) for x in os.environ["C43_GRIPPER_OPEN_POSITIONS"].split(",")]
-                        if os.environ.get("C43_GRIPPER_OPEN_POSITIONS") else
-                        [0.0305, -0.0305]
-                    ),
+                    # Stall-limited close is implemented but not enabled: without a
+                    # contact/force sensor the sample moves with the pads, so stall
+                    # never means "just touched" (measured 2026-10-30: it lifted the
+                    # sample to z=0.286).  Keep the nominal close until a real contact
+                    # sensor is wired; weld still holds the sample after attach.
+                    "gripper_close_positions": _gripper_close_positions,
+                    "gripper_close_motion_s": 1.0,
+                    "gripper_open_positions": _gripper_open_positions,
                     "gripper_motion_s": 1.0,
-                    "gripper_position_tol": 0.002,
+                    "gripper_position_tol": 0.0005,
+                    "gripper_stable_window_s": 0.2,
                     "gripper_timeout_s": 2.5,
                     "grasp_pos_tol_m": 0.003,
                     "grasp_rot_tol_rad": 0.017453292519943295,
@@ -213,7 +233,11 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration("executor")),
     )
 
-    return LaunchDescription([
-        gui_arg, executor_arg, set_model_path, gazebo, bridges,
-        robot_state_publisher, spawn_robot, spawn_controllers, executor,
-    ])
+    # Experiment 2.1: keep the robot at dual_home (arm JTCs hold it) and test
+    # weld attach/detach without running homing to q_grasp12.
+    items = [gui_arg, executor_arg, set_model_path, gazebo, bridges,
+             robot_state_publisher, spawn_robot, spawn_controllers]
+    if os.environ.get("C43_DISABLE_HOMING", "0") != "1":
+        items.append(homing)
+    items.append(executor)
+    return LaunchDescription(items)
