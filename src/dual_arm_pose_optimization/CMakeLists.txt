@@ -60,6 +60,10 @@ target_link_libraries(c43_geometry_probe ${PROJECT_NAME} geometric_shapes::geome
 add_executable(c43_path_check src/c43_path_check_main.cpp)
 target_link_libraries(c43_path_check ${PROJECT_NAME} geometric_shapes::geometric_shapes)
 
+# 2.5-D3 offline X/Z offset scan of the left gripper against the sample.
+add_executable(c43_grasp_scan src/c43_grasp_scan_main.cpp)
+target_link_libraries(c43_grasp_scan ${PROJECT_NAME} geometric_shapes::geometric_shapes)
+
 add_executable(c42_scene_probe src/c42_scene_probe_main.cpp)
 target_link_libraries(c42_scene_probe ${PROJECT_NAME})
 
@@ -87,7 +91,7 @@ install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
 )
 
-install(TARGETS c43_geometry_probe c43_2c_sequence_check c43_path_check c42_scene_probe c42_baseline_probe c42_reachability c42_optimize_pose c42_handover_target
+install(TARGETS c43_geometry_probe c43_2c_sequence_check c43_path_check c43_grasp_scan c42_scene_probe c42_baseline_probe c42_reachability c42_optimize_pose c42_handover_target
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

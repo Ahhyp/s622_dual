@@ -1,0 +1,443 @@
+{
+  "tag": "c2_run1",
+  "target": 0.0249,
+  "contact_sensor_topic": "/world/c43_s4_world/model/c43_sample_contact/link/base_link/sensor/sample_contact/contact",
+  "first_contact": {
+    "sim_sec": 60,
+    "sim_nsec": 650000000,
+    "recv_mono": 9.368060528067872,
+    "raw_collision1": "c43_sample_contact::base_link::collision",
+    "raw_collision2": "s622_dual_arm::left_finger1::left_finger1_collision",
+    "normalized_collision1": "c43_sample_contact::base_link::collision",
+    "normalized_collision2": "s622_dual_arm::left_finger1::left_finger1_collision",
+    "direction": "sample_first",
+    "sample_name": "c43_sample_contact::base_link::collision",
+    "finger": "s622_dual_arm::left_finger1::left_finger1_collision",
+    "side": "left",
+    "points_world": [
+      [
+        0.039702158586754514,
+        -0.025000000000000022,
+        0.2895036264883664
+      ],
+      [
+        0.0394736127800877,
+        -0.025000000000000022,
+        0.28950362457414947
+      ],
+      [
+        0.039473630229157064,
+        -0.024998003122661445,
+        0.28950362457870343
+      ],
+      [
+        0.03947354231630114,
+        -0.02499802629168344,
+        0.29999988227171576
+      ],
+      [
+        0.039699419145204674,
+        -0.025000000000000015,
+        0.29999988227171576
+      ],
+      [
+        0.03947361263109738,
+        -0.025000000000000022,
+        0.28952145416768016
+      ],
+      [
+        0.03947352506968677,
+        -0.025000000000000015,
+        0.29999988227171576
+      ]
+    ],
+    "normals_world": [],
+    "sample_pose": [
+      5.505530172082594e-18,
+      1.7516981275795555e-17,
+      0.27499977343166093,
+      -2.796589517274852e-16,
+      1.1569809265466243e-16,
+      -1.5231932143402287e-17,
+      1.0
+    ],
+    "joints": {
+      "left_j1": 2.795036910000002,
+      "left_j2": -1.706950857992264,
+      "left_j3": 1.2799635240455718,
+      "left_j4": -1.1438089929550168,
+      "left_j5": -1.5707963269999874,
+      "left_j6": -0.3465557439999996,
+      "right_j1": 0.34655574399999967,
+      "right_j2": -1.4346417960077358,
+      "right_j3": -1.279963524045576,
+      "right_j4": -1.9977836600450065,
+      "right_j5": 1.5707963269999898,
+      "right_j6": -2.7950369099999968,
+      "left_finger1_joint": 0.025088999999999986,
+      "left_finger2_joint": -0.025088973676249893,
+      "right_finger1_joint": 0.03049999999999999,
+      "right_finger2_joint": -0.030497890830261033
+    }
+  },
+  "first_contact_classification": {
+    "sample_local": [
+      0.03970215858675451,
+      -0.025000000000000046,
+      0.01450385305670548
+    ],
+    "faces": [
+      "y-"
+    ],
+    "face_normals_sample": [
+      [
+        0.0,
+        -1,
+        0.0
+      ]
+    ],
+    "normal_sample": [
+      0.0,
+      -1,
+      0.0
+    ]
+  },
+  "fingers_first": {
+    "s622_dual_arm::left_finger1::left_finger1_collision": {
+      "sim_sec": 60,
+      "sim_nsec": 650000000,
+      "recv_mono": 9.368060528067872,
+      "raw_collision1": "c43_sample_contact::base_link::collision",
+      "raw_collision2": "s622_dual_arm::left_finger1::left_finger1_collision",
+      "normalized_collision1": "c43_sample_contact::base_link::collision",
+      "normalized_collision2": "s622_dual_arm::left_finger1::left_finger1_collision",
+      "direction": "sample_first",
+      "sample_name": "c43_sample_contact::base_link::collision",
+      "finger": "s622_dual_arm::left_finger1::left_finger1_collision",
+      "side": "left",
+      "points_world": [
+        [
+          0.039702158586754514,
+          -0.025000000000000022,
+          0.2895036264883664
+        ],
+        [
+          0.0394736127800877,
+          -0.025000000000000022,
+          0.28950362457414947
+        ],
+        [
+          0.039473630229157064,
+          -0.024998003122661445,
+          0.28950362457870343
+        ],
+        [
+          0.03947354231630114,
+          -0.02499802629168344,
+          0.29999988227171576
+        ],
+        [
+          0.039699419145204674,
+          -0.025000000000000015,
+          0.29999988227171576
+        ],
+        [
+          0.03947361263109738,
+          -0.025000000000000022,
+          0.28952145416768016
+        ],
+        [
+          0.03947352506968677,
+          -0.025000000000000015,
+          0.29999988227171576
+        ]
+      ],
+      "normals_world": [],
+      "sample_pose": [
+        5.505530172082594e-18,
+        1.7516981275795555e-17,
+        0.27499977343166093,
+        -2.796589517274852e-16,
+        1.1569809265466243e-16,
+        -1.5231932143402287e-17,
+        1.0
+      ],
+      "joints": {
+        "left_j1": 2.795036910000002,
+        "left_j2": -1.706950857992264,
+        "left_j3": 1.2799635240455718,
+        "left_j4": -1.1438089929550168,
+        "left_j5": -1.5707963269999874,
+        "left_j6": -0.3465557439999996,
+        "right_j1": 0.34655574399999967,
+        "right_j2": -1.4346417960077358,
+        "right_j3": -1.279963524045576,
+        "right_j4": -1.9977836600450065,
+        "right_j5": 1.5707963269999898,
+        "right_j6": -2.7950369099999968,
+        "left_finger1_joint": 0.025088999999999986,
+        "left_finger2_joint": -0.025088973676249893,
+        "right_finger1_joint": 0.03049999999999999,
+        "right_finger2_joint": -0.030497890830261033
+      }
+    },
+    "s622_dual_arm::left_finger2::left_finger2_collision": {
+      "sim_sec": 60,
+      "sim_nsec": 655000000,
+      "recv_mono": 9.373237492982298,
+      "raw_collision1": "c43_sample_contact::base_link::collision",
+      "raw_collision2": "s622_dual_arm::left_finger2::left_finger2_collision",
+      "normalized_collision1": "c43_sample_contact::base_link::collision",
+      "normalized_collision2": "s622_dual_arm::left_finger2::left_finger2_collision",
+      "direction": "sample_first",
+      "sample_name": "c43_sample_contact::base_link::collision",
+      "finger": "s622_dual_arm::left_finger2::left_finger2_collision",
+      "side": "left",
+      "points_world": [
+        [
+          0.059911162351815206,
+          0.025003487810608002,
+          0.2895039054867163
+        ],
+        [
+          0.05991112982335928,
+          0.024999765243222526,
+          0.2895039054782268
+        ],
+        [
+          0.059485109734396864,
+          0.025003487800327556,
+          0.28950390191825387
+        ],
+        [
+          0.05991116209948353,
+          0.02500349074544826,
+          0.28953717082931657
+        ],
+        [
+          0.059485109734397,
+          0.025003487800327556,
+          0.28950390191825387
+        ],
+        [
+          0.0593763955045612,
+          0.025004413807083792,
+          0.29999987915868875
+        ],
+        [
+          0.059911082734520726,
+          0.025004413819590336,
+          0.2999998791575779
+        ],
+        [
+          0.059911162351096815,
+          0.025003487810608002,
+          0.2895039054867163
+        ],
+        [
+          0.059911041912882275,
+          0.024999742074849562,
+          0.29999987956974344
+        ],
+        [
+          0.05991108273542229,
+          0.025004413819590336,
+          0.2999998791575779
+        ]
+      ],
+      "normals_world": [],
+      "sample_pose": [
+        5.505530172082594e-18,
+        1.7516981275795555e-17,
+        0.27499977343166093,
+        -2.796589517274852e-16,
+        1.1569809265466243e-16,
+        -1.5231932143402287e-17,
+        1.0
+      ],
+      "joints": {
+        "left_j1": 2.795036910000347,
+        "left_j2": -1.7069508579922594,
+        "left_j3": 1.2799635240456941,
+        "left_j4": -1.1438089929543485,
+        "left_j5": -1.5707963269943102,
+        "left_j6": -0.34655574401361877,
+        "right_j1": 0.34655574399999967,
+        "right_j2": -1.4346417960077358,
+        "right_j3": -1.279963524045576,
+        "right_j4": -1.9977836600450065,
+        "right_j5": 1.5707963269999898,
+        "right_j6": -2.7950369099999968,
+        "left_finger1_joint": 0.025082000069234476,
+        "left_finger2_joint": -0.025081974704493942,
+        "right_finger1_joint": 0.03049999999999999,
+        "right_finger2_joint": -0.030497794420306
+      }
+    }
+  },
+  "left_finger1_ever_contacted": true,
+  "left_finger2_ever_contacted": true,
+  "both_left_fingers_ever_contacted": true,
+  "same_message": false,
+  "same_message_count": 0,
+  "both_left_fingers": true,
+  "sustained_both_after_stop": false,
+  "contact_pair_count": 264,
+  "finger_contact_counts": {
+    "s622_dual_arm::left_finger1::left_finger1_collision": 256,
+    "s622_dual_arm::left_finger2::left_finger2_collision": 8
+  },
+  "contact_message_blocks": 264,
+  "cancel_send_mono": 9.36944247991778,
+  "cancel_confirm_mono": 9.370029011042789,
+  "action_result": {
+    "status": 5,
+    "error_code": 0,
+    "error_string": "",
+    "mono": 9.397407705895603
+  },
+  "stop": {
+    "mono": 9.563301652902737,
+    "fingers": {
+      "left_finger1_joint": 0.02508844633539989,
+      "left_finger2_joint": -0.025088420087508362
+    },
+    "spans": [
+      6.446266165412856e-06,
+      6.445383014419548e-06
+    ],
+    "sim": 60.845,
+    "clock_age_s": 0.0035933421459048986
+  },
+  "post_stop_end_mono": 10.564504764042795,
+  "post_stop_contacts_after_0.2s": 178,
+  "post_stop_contact_fingers": [
+    "s622_dual_arm::left_finger1::left_finger1_collision"
+  ],
+  "post_stop_contact_times": [
+    10.602983854943886,
+    10.60761772096157,
+    10.613015820970759,
+    10.617628056090325,
+    10.622828230028972,
+    10.627617256948724,
+    10.632950570899993,
+    10.637637159088627,
+    10.642966012936085,
+    10.647731743054464
+  ],
+  "initial_sample": [
+    5.505530172082594e-18,
+    1.7516981275795555e-17,
+    0.27499977343166093,
+    -2.796589517274852e-16,
+    1.1569809265466243e-16,
+    -1.5231932143402287e-17,
+    1.0
+  ],
+  "final_sample": [
+    -8.492566704366508e-06,
+    9.406766568365467e-06,
+    0.274992476723396,
+    0.00014829920943910713,
+    -3.185069873041506e-08,
+    -0.0001698005388075681,
+    0.9999999745875612
+  ],
+  "max_sample_displacement_m": 0.00011451321378907324,
+  "max_sample_displacement_row": {
+    "mono": 9.422624753089622,
+    "sim": 60.705,
+    "left_j1": 2.7950369100001975,
+    "left_j2": -1.706950857992123,
+    "left_j3": 1.2799635240462388,
+    "left_j4": -1.1438089929538469,
+    "left_j5": -1.5707963269977678,
+    "left_j6": -0.34655574401395806,
+    "right_j1": 0.34655574399999967,
+    "right_j2": -1.4346417960077358,
+    "right_j3": -1.279963524045576,
+    "right_j4": -1.9977836600450065,
+    "right_j5": 1.5707963269999898,
+    "right_j6": -2.7950369099999968,
+    "left_finger1_joint": 0.025085409672922245,
+    "left_finger2_joint": -0.025085383841089378,
+    "right_finger1_joint": 0.03049999999999999,
+    "right_finger2_joint": -0.030497280054344746,
+    "sample": [
+      -8.52430907987633e-06,
+      -7.195682527506378e-05,
+      0.2749111008452357,
+      0.001775559158186399,
+      -3.9360190760964764e-07,
+      -0.0001698175506692774,
+      0.999998409274495
+    ]
+  },
+  "events": [
+    {
+      "event": "first_contact",
+      "sim": 60.65,
+      "sim_is_approx": false,
+      "clock_age_s": null,
+      "mono": 9.368060528067872,
+      "detail": "s622_dual_arm::left_finger1::left_finger1_collision"
+    },
+    {
+      "event": "finger_first",
+      "sim": 60.65,
+      "sim_is_approx": false,
+      "clock_age_s": null,
+      "mono": 9.368060528067872,
+      "detail": "s622_dual_arm::left_finger1::left_finger1_collision"
+    },
+    {
+      "event": "finger_first",
+      "sim": 60.655,
+      "sim_is_approx": false,
+      "clock_age_s": null,
+      "mono": 9.373237492982298,
+      "detail": "s622_dual_arm::left_finger2::left_finger2_collision"
+    },
+    {
+      "event": "cancel_send",
+      "sim": 60.655,
+      "sim_is_approx": true,
+      "clock_age_s": 1.488509587943554e-05,
+      "mono": 9.36944247991778,
+      "detail": ""
+    },
+    {
+      "event": "cancel_confirm",
+      "sim": 60.655,
+      "sim_is_approx": true,
+      "clock_age_s": 1.488509587943554e-05,
+      "mono": 9.370029011042789,
+      "detail": ""
+    },
+    {
+      "event": "action_result",
+      "sim": 60.68,
+      "sim_is_approx": true,
+      "clock_age_s": 0.002148520899936557,
+      "mono": 9.397407705895603,
+      "detail": "status=5 error=0 "
+    },
+    {
+      "event": "stop_confirmed",
+      "sim": 60.845,
+      "sim_is_approx": true,
+      "clock_age_s": 0.0035933421459048986,
+      "mono": 9.563301652902737,
+      "detail": ""
+    },
+    {
+      "event": "post_stop_end",
+      "sim": 61.85,
+      "sim_is_approx": true,
+      "clock_age_s": 1.5260186046361923e-05,
+      "mono": 10.564504764042795,
+      "detail": ""
+    }
+  ]
+}

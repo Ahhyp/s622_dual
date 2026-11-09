@@ -1,0 +1,9 @@
+event,mono,sim,sim_is_approx,clock_age_s,detail
+first_contact,9.37234039301984,58.52,False,,s622_dual_arm::left_finger1::left_finger1_collision
+finger_first,9.37234039301984,58.52,False,,s622_dual_arm::left_finger1::left_finger1_collision
+finger_first,9.378020643955097,58.525,False,,s622_dual_arm::left_finger2::left_finger2_collision
+cancel_send,9.373885737964883,58.525,True,1.4537014067173004e-05,
+cancel_confirm,9.374512301990762,58.525,True,1.4537014067173004e-05,
+action_result,9.403387929080054,58.55,True,0.00433253007940948,status=5 error=0 
+stop_confirmed,9.566949120955542,58.715,True,0.002894743112847209,
+post_stop_end,10.568879022961482,59.715,True,0.0048566460609436035,

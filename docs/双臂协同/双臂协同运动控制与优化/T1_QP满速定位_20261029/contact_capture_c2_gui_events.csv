@@ -1,0 +1,9 @@
+event,sim,mono,detail
+first_contact,184.88,9.4553700289689,s622_dual_arm::left_finger1::left_finger1_collision
+finger_first,184.88,9.4553700289689,s622_dual_arm::left_finger1::left_finger1_collision
+finger_first,184.885,9.462371847825125,s622_dual_arm::left_finger2::left_finger2_collision
+cancel_send,186.12,9.461709209019318,
+cancel_confirm,186.12,9.463266851846129,
+action_result,186.12,9.501674589933828,status=5 error=0 
+stop_confirmed,186.12,9.649336128029972,
+post_stop_end,186.12,10.65116154984571,

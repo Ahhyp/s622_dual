@@ -1,0 +1,170 @@
+{
+  "tag": "c2_run3",
+  "target": 0.0249,
+  "facts": {
+    "left_finger1_ever_contacted": true,
+    "left_finger2_ever_contacted": true,
+    "both_ever_contacted": true,
+    "same_message_count": 0,
+    "same_message": false,
+    "sustained_both_after_stop": false,
+    "post_stop_fingers": [
+      "s622_dual_arm::left_finger1::left_finger1_collision"
+    ]
+  },
+  "finger_windows": {
+    "s622_dual_arm::left_finger1::left_finger1_collision": {
+      "n": 257,
+      "first_sim": 58.52,
+      "last_sim": 59.995,
+      "duration_s": 1.4749999999999943,
+      "faces": [
+        "y-"
+      ],
+      "first_local_mm": [
+        39.7,
+        -25.0,
+        14.5
+      ]
+    },
+    "s622_dual_arm::left_finger2::left_finger2_collision": {
+      "n": 8,
+      "first_sim": 58.525,
+      "last_sim": 58.56,
+      "duration_s": 0.035000000000003695,
+      "faces": [
+        "x+",
+        "y+"
+      ],
+      "first_local_mm": [
+        59.91,
+        25.0,
+        14.5
+      ]
+    }
+  },
+  "motion": {
+    "detach_sim": 58.56,
+    "sample_start_z_mm": 274.9998,
+    "signed_mm_vs_start": {
+      "at_first_contact": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "at_finger2_first": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "at_finger2_last": [
+        -0.0085,
+        0.019,
+        0.0023
+      ],
+      "at_end": [
+        -0.0085,
+        0.009,
+        -0.0077
+      ]
+    },
+    "step_around_detach_mm": [
+      -0.0085,
+      0.019,
+      0.0023
+    ],
+    "rotation_deg_at_detach": 0.0201,
+    "rotation_axis": [
+      -0.2518,
+      0.0002,
+      -0.9678
+    ],
+    "rotation_deg_max": 0.2003
+  },
+  "gap_model": {
+    "assumption": "pads parallel to sample faces; g_inner = 2000*q - 0.18 mm",
+    "q_at_first_contact": 0.025082,
+    "inner_gap_mm": 49.984,
+    "pad1_y_mm": -25.0,
+    "pad2_y_mm": 24.984,
+    "samples": [
+      {
+        "sim": 58.515,
+        "dy_mm": 0.0,
+        "dz_mm": 0.0,
+        "gap_finger2_mm": -0.016,
+        "gap_finger1_mm": 0.0
+      },
+      {
+        "sim": 58.525,
+        "dy_mm": 0.0,
+        "dz_mm": 0.0,
+        "gap_finger2_mm": -0.016,
+        "gap_finger1_mm": 0.0
+      },
+      {
+        "sim": 58.535,
+        "dy_mm": 0.0,
+        "dz_mm": 0.0,
+        "gap_finger2_mm": -0.016,
+        "gap_finger1_mm": 0.0
+      },
+      {
+        "sim": 58.545,
+        "dy_mm": 0.019,
+        "dz_mm": 0.0023,
+        "gap_finger2_mm": -0.035,
+        "gap_finger1_mm": 0.019
+      },
+      {
+        "sim": 58.555,
+        "dy_mm": 0.019,
+        "dz_mm": 0.0023,
+        "gap_finger2_mm": -0.035,
+        "gap_finger1_mm": 0.019
+      },
+      {
+        "sim": 58.565,
+        "dy_mm": 0.019,
+        "dz_mm": 0.0023,
+        "gap_finger2_mm": -0.035,
+        "gap_finger1_mm": 0.019
+      },
+      {
+        "sim": 58.575,
+        "dy_mm": 0.019,
+        "dz_mm": 0.0023,
+        "gap_finger2_mm": -0.035,
+        "gap_finger1_mm": 0.019
+      },
+      {
+        "sim": 58.585,
+        "dy_mm": -0.0702,
+        "dz_mm": -0.0869,
+        "gap_finger2_mm": 0.0542,
+        "gap_finger1_mm": -0.0702
+      },
+      {
+        "sim": 58.595,
+        "dy_mm": -0.0702,
+        "dz_mm": -0.0869,
+        "gap_finger2_mm": 0.0542,
+        "gap_finger1_mm": -0.0702
+      },
+      {
+        "sim": 58.605,
+        "dy_mm": -0.0667,
+        "dz_mm": -0.0835,
+        "gap_finger2_mm": 0.0507,
+        "gap_finger1_mm": -0.0667
+      },
+      {
+        "sim": 58.615,
+        "dy_mm": -0.0667,
+        "dz_mm": -0.0835,
+        "gap_finger2_mm": 0.0507,
+        "gap_finger1_mm": -0.0667
+      }
+    ]
+  }
+}
