@@ -132,6 +132,13 @@ private:
   bool have_pre_rel_q_ = false;
   // S4-T16 gripper/grasp-check state (node side; the SM holds the verdicts).
   rclcpp_action::Client<GripperAction>::SharedPtr gripper_client_;
+  // 2.5-D3 (opt-in, default OFF): also close the RIGHT hand at GRASP so the
+  // sample is held by both grippers.  Default behaviour is unchanged.
+  rclcpp_action::Client<GripperAction>::SharedPtr right_gripper_client_;
+  bool close_right_gripper_ = false;
+  std::string right_gripper_action_;
+  std::vector<std::string> right_gripper_joint_names_;
+  std::vector<double> right_gripper_close_positions_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
   bool require_grasp_check_ = false;
   std::string gripper_action_;

@@ -88,7 +88,9 @@ def generate_launch_description():
             "include_wrist_camera": "false",
             "finger_stop_gap": "0.0",
             "gripper_stop_block": "false",
-            "gripper_force_plugins": "false",
+            # 2.5-D4f: opt-in direct finger force (ApplyJointForce system).
+            "gripper_force_plugins":
+                "true" if os.environ.get("C43_GRIPPER_FORCE_PLUGINS", "0") == "1" else "false",
             "arm_command_mode": "position",
             "arm_position_gain": os.environ.get("QP_ARM_POSITION_GAIN", "20.0"),
             "controllers_yaml": controllers_yaml,
@@ -209,6 +211,16 @@ def generate_launch_description():
                     # never means "just touched" (measured 2026-10-30: it lifted the
                     # sample to z=0.286).  Keep the nominal close until a real contact
                     # sensor is wired; weld still holds the sample after attach.
+                    # 2.5-D3 (opt-in): hold the sample with BOTH grippers.  Off by
+                    # default so every earlier W7 evidence run keeps its exact
+                    # behaviour (left hand only).
+                    "close_right_gripper":
+                        os.environ.get("C43_CLOSE_RIGHT_GRIPPER", "0") == "1",
+                    "right_gripper_action":
+                        "/right_hand_controller/follow_joint_trajectory",
+                    "right_gripper_joint_names":
+                        ["right_finger1_joint", "right_finger2_joint"],
+                    "right_gripper_close_positions": [0.0251, -0.0251],
                     "gripper_close_positions": _gripper_close_positions,
                     "gripper_close_motion_s": 1.0,
                     "gripper_open_positions": _gripper_open_positions,

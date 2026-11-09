@@ -1,0 +1,53 @@
+<?xml version="1.0" ?>
+<!-- 2.5-D4h: isolated verification of the ApplyJointForce semantics.
+     One prismatic joint, no ros2_control, no contacts.  Expectation:
+       force > 0  -> body moves along +x
+       force < 0  -> body moves along -x
+       force = 0  -> no further acceleration (joint damping brings it to rest)
+-->
+<sdf version="1.6">
+  <world name="force_probe">
+    <gravity>0 0 0</gravity>
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="ignition-gazebo-physics-system"
+            name="ignition::gazebo::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system"
+            name="ignition::gazebo::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system"
+            name="ignition::gazebo::systems::SceneBroadcaster"/>
+
+    <model name="slider">
+      <link name="base">
+        <inertial><mass>100.0</mass>
+          <inertia><ixx>1</ixx><iyy>1</iyy><izz>1</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+      </link>
+      <link name="body">
+        <inertial><mass>0.01</mass>
+          <inertia><ixx>1e-6</ixx><iyy>1e-6</iyy><izz>1e-6</izz><ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <visual name="v"><geometry><box><size>0.02 0.02 0.02</size></box></geometry></visual>
+      </link>
+      <joint name="slider_joint" type="prismatic">
+        <parent>base</parent>
+        <child>body</child>
+        <axis>
+          <xyz>1 0 0</xyz>
+          <limit><lower>-0.05</lower><upper>0.05</upper><effort>100</effort><velocity>1</velocity></limit>
+        </axis>
+      </joint>
+
+      <!-- attached to the model, not the world -->
+      <plugin filename="ignition-gazebo-joint-state-publisher-system"
+              name="ignition::gazebo::systems::JointStatePublisher"/>
+      <plugin filename="ignition-gazebo-apply-joint-force-system"
+              name="ignition::gazebo::systems::ApplyJointForce">
+        <joint_name>slider_joint</joint_name>
+      </plugin>
+    </model>
+
+  </world>
+</sdf>

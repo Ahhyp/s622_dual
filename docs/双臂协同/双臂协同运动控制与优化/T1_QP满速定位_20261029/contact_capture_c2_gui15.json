@@ -1,0 +1,428 @@
+{
+  "tag": "c2_gui15",
+  "target": 0.0249,
+  "contact_sensor_topic": "/world/c43_s4_world/model/c43_sample_contact/link/base_link/sensor/sample_contact/contact",
+  "first_contact": {
+    "sim_sec": 98,
+    "sim_nsec": 300000000,
+    "recv_mono": 10.041228601941839,
+    "raw_collision1": "c43_sample_contact::base_link::collision",
+    "raw_collision2": "s622_dual_arm::left_finger1::left_finger1_collision",
+    "normalized_collision1": "c43_sample_contact::base_link::collision",
+    "normalized_collision2": "s622_dual_arm::left_finger1::left_finger1_collision",
+    "direction": "sample_first",
+    "sample_name": "c43_sample_contact::base_link::collision",
+    "finger": "s622_dual_arm::left_finger1::left_finger1_collision",
+    "side": "left",
+    "points_world": [
+      [
+        0.03970215864816344,
+        -0.025000000000536614,
+        0.2895036264883669
+      ],
+      [
+        0.03947361278008302,
+        -0.02500000000053662,
+        0.28950362457414947
+      ],
+      [
+        0.039473630229157064,
+        -0.024998003122661445,
+        0.28950362457870343
+      ],
+      [
+        0.039473542316323065,
+        -0.02499802629167766,
+        0.2999998796540021
+      ],
+      [
+        0.0396994192236936,
+        -0.025000000000679024,
+        0.2999998792782248
+      ],
+      [
+        0.039473612631092656,
+        -0.025000000000536864,
+        0.28952145417247344
+      ],
+      [
+        0.03947352506970272,
+        -0.025000000000679035,
+        0.29999987965403074
+      ]
+    ],
+    "normals_world": [],
+    "sample_pose": [
+      0.01500007599417033,
+      6.160918009869629e-18,
+      0.27499982314088167,
+      -3.70554041280594e-17,
+      1.5162266214245368e-06,
+      -2.768713536117229e-18,
+      0.9999999999988505
+    ],
+    "joints": {
+      "left_j1": 2.795036910000002,
+      "left_j2": -1.706950857992264,
+      "left_j3": 1.2799635240455718,
+      "left_j4": -1.1438089929550168,
+      "left_j5": -1.5707963269999874,
+      "left_j6": -0.3465557439999996,
+      "right_j1": 0.34655574399999967,
+      "right_j2": -1.4346417960077358,
+      "right_j3": -1.279963524045576,
+      "right_j4": -1.9977836600450065,
+      "right_j5": 1.5707963269999898,
+      "right_j6": -2.7950369099999968,
+      "left_finger1_joint": 0.025088999999999986,
+      "left_finger2_joint": -0.025088991797399155,
+      "right_finger1_joint": 0.03049999999999999,
+      "right_finger2_joint": -0.030496835673118512
+    }
+  },
+  "first_contact_classification": {
+    "sample_local": [
+      0.024702038671774038,
+      -0.02500000000053662,
+      0.014503878255329205
+    ],
+    "faces": [
+      "y-"
+    ],
+    "face_normals_sample": [
+      [
+        0.0,
+        -1,
+        0.0
+      ]
+    ],
+    "normal_sample": [
+      0.0,
+      -1,
+      0.0
+    ]
+  },
+  "fingers_first": {
+    "s622_dual_arm::left_finger1::left_finger1_collision": {
+      "sim_sec": 98,
+      "sim_nsec": 300000000,
+      "recv_mono": 10.041228601941839,
+      "raw_collision1": "c43_sample_contact::base_link::collision",
+      "raw_collision2": "s622_dual_arm::left_finger1::left_finger1_collision",
+      "normalized_collision1": "c43_sample_contact::base_link::collision",
+      "normalized_collision2": "s622_dual_arm::left_finger1::left_finger1_collision",
+      "direction": "sample_first",
+      "sample_name": "c43_sample_contact::base_link::collision",
+      "finger": "s622_dual_arm::left_finger1::left_finger1_collision",
+      "side": "left",
+      "points_world": [
+        [
+          0.03970215864816344,
+          -0.025000000000536614,
+          0.2895036264883669
+        ],
+        [
+          0.03947361278008302,
+          -0.02500000000053662,
+          0.28950362457414947
+        ],
+        [
+          0.039473630229157064,
+          -0.024998003122661445,
+          0.28950362457870343
+        ],
+        [
+          0.039473542316323065,
+          -0.02499802629167766,
+          0.2999998796540021
+        ],
+        [
+          0.0396994192236936,
+          -0.025000000000679024,
+          0.2999998792782248
+        ],
+        [
+          0.039473612631092656,
+          -0.025000000000536864,
+          0.28952145417247344
+        ],
+        [
+          0.03947352506970272,
+          -0.025000000000679035,
+          0.29999987965403074
+        ]
+      ],
+      "normals_world": [],
+      "sample_pose": [
+        0.01500007599417033,
+        6.160918009869629e-18,
+        0.27499982314088167,
+        -3.70554041280594e-17,
+        1.5162266214245368e-06,
+        -2.768713536117229e-18,
+        0.9999999999988505
+      ],
+      "joints": {
+        "left_j1": 2.795036910000002,
+        "left_j2": -1.706950857992264,
+        "left_j3": 1.2799635240455718,
+        "left_j4": -1.1438089929550168,
+        "left_j5": -1.5707963269999874,
+        "left_j6": -0.3465557439999996,
+        "right_j1": 0.34655574399999967,
+        "right_j2": -1.4346417960077358,
+        "right_j3": -1.279963524045576,
+        "right_j4": -1.9977836600450065,
+        "right_j5": 1.5707963269999898,
+        "right_j6": -2.7950369099999968,
+        "left_finger1_joint": 0.025088999999999986,
+        "left_finger2_joint": -0.025088991797399155,
+        "right_finger1_joint": 0.03049999999999999,
+        "right_finger2_joint": -0.030496835673118512
+      }
+    },
+    "s622_dual_arm::left_finger2::left_finger2_collision": {
+      "sim_sec": 98,
+      "sim_nsec": 305000000,
+      "recv_mono": 10.051208849996328,
+      "raw_collision1": "c43_sample_contact::base_link::collision",
+      "raw_collision2": "s622_dual_arm::left_finger2::left_finger2_collision",
+      "normalized_collision1": "c43_sample_contact::base_link::collision",
+      "normalized_collision2": "s622_dual_arm::left_finger2::left_finger2_collision",
+      "direction": "sample_first",
+      "sample_name": "c43_sample_contact::base_link::collision",
+      "finger": "s622_dual_arm::left_finger2::left_finger2_collision",
+      "side": "left",
+      "points_world": [
+        [
+          0.05991116235173919,
+          0.025003487802415222,
+          0.28950390548671673
+        ],
+        [
+          0.059911129978762384,
+          0.024999783028112187,
+          0.2895039054782678
+        ],
+        [
+          0.05948714575561624,
+          0.025003487795852458,
+          0.2895039019353073
+        ],
+        [
+          0.059911162100620106,
+          0.02500349072397682,
+          0.2895370118347261
+        ],
+        [
+          0.05991104206860686,
+          0.024999759859824066,
+          0.2999998412036306
+        ],
+        [
+          0.059378404643025476,
+          0.025004414037595422,
+          0.2999998416978113
+        ],
+        [
+          0.059911082737711466,
+          0.02500441404536643,
+          0.29999984079284
+        ]
+      ],
+      "normals_world": [],
+      "sample_pose": [
+        0.015000042680458951,
+        2.2072931226555995e-06,
+        0.27500212338429764,
+        -4.412388809526268e-05,
+        8.49453896508441e-07,
+        7.3317605046143316e-09,
+        0.9999999990261804
+      ],
+      "joints": {
+        "left_j1": 2.795036910000002,
+        "left_j2": -1.706950857992264,
+        "left_j3": 1.2799635240455718,
+        "left_j4": -1.1438089929550168,
+        "left_j5": -1.5707963269999874,
+        "left_j6": -0.3465557439999996,
+        "right_j1": 0.34655574399999967,
+        "right_j2": -1.4346417960077358,
+        "right_j3": -1.279963524045576,
+        "right_j4": -1.9977836600450065,
+        "right_j5": 1.5707963269999898,
+        "right_j6": -2.7950369099999968,
+        "left_finger1_joint": 0.025088999999999986,
+        "left_finger2_joint": -0.025088991797399155,
+        "right_finger1_joint": 0.03049999999999999,
+        "right_finger2_joint": -0.030496835673118512
+      }
+    }
+  },
+  "left_finger1_ever_contacted": true,
+  "left_finger2_ever_contacted": true,
+  "both_left_fingers_ever_contacted": true,
+  "same_message": false,
+  "same_message_count": 0,
+  "both_left_fingers": true,
+  "sustained_both_after_stop": false,
+  "contact_pair_count": 251,
+  "finger_contact_counts": {
+    "s622_dual_arm::left_finger1::left_finger1_collision": 246,
+    "s622_dual_arm::left_finger2::left_finger2_collision": 5
+  },
+  "contact_message_blocks": 251,
+  "cancel_send_mono": 10.044847089098766,
+  "cancel_confirm_mono": 10.04918719199486,
+  "action_result": {
+    "status": 5,
+    "error_code": 0,
+    "error_string": "",
+    "mono": 10.076712822075933
+  },
+  "stop": {
+    "mono": 10.237195281079039,
+    "fingers": {
+      "left_finger1_joint": 0.025088445794996635,
+      "left_finger2_joint": -0.025088438154568408
+    },
+    "spans": [
+      6.445738965545761e-06,
+      6.446012642959825e-06
+    ],
+    "sim": 98.495,
+    "clock_age_s": 0.00355874584056437
+  },
+  "post_stop_end_mono": 11.237252729944885,
+  "post_stop_contacts_after_0.2s": 166,
+  "post_stop_contact_fingers": [
+    "s622_dual_arm::left_finger1::left_finger1_collision"
+  ],
+  "post_stop_contact_times": [
+    11.219734966987744,
+    11.227246374124661,
+    11.231881912099198,
+    11.236955501139164,
+    11.240690815029666,
+    11.245156615972519,
+    11.249855572124943,
+    11.258387675974518,
+    11.26226142514497,
+    11.266182797029614
+  ],
+  "initial_sample": [
+    0.01500007599417033,
+    6.160918009869629e-18,
+    0.27499982314088167,
+    -3.70554041280594e-17,
+    1.5162266214245368e-06,
+    -2.768713536117229e-18,
+    0.9999999999988505
+  ],
+  "final_sample": [
+    0.014991837353930285,
+    1.1309200209729124e-05,
+    0.27499935238196244,
+    2.50786368563738e-05,
+    -6.272219874510208e-06,
+    -0.00016170813464273486,
+    0.9999999865911005
+  ],
+  "max_sample_displacement_m": 1.653381507533447e-05,
+  "max_sample_displacement_row": {
+    "mono": 10.067947746952996,
+    "sim": 98.325,
+    "left_j1": 2.7950375535857535,
+    "left_j2": -1.7069504354742446,
+    "left_j3": 1.2799648126209797,
+    "left_j4": -1.143807774460429,
+    "left_j5": -1.57078876917463,
+    "left_j6": -0.3465560963222859,
+    "right_j1": 0.3465557445140106,
+    "right_j2": -1.4346417967568263,
+    "right_j3": -1.2799635245034584,
+    "right_j4": -1.9977836600670869,
+    "right_j5": 1.5707963270255438,
+    "right_j6": -2.7950369100012464,
+    "left_finger1_joint": 0.025083635446985546,
+    "left_finger2_joint": -0.025083632686070462,
+    "right_finger1_joint": 0.03049999999999999,
+    "right_finger2_joint": -0.03049885544957253,
+    "sample": [
+      0.014991546411299163,
+      1.3975820060621823e-05,
+      0.27500212307797267,
+      -4.416470168846136e-05,
+      8.779035534969904e-07,
+      -0.00016997091915970603,
+      0.9999999845792978
+    ]
+  },
+  "events": [
+    {
+      "event": "first_contact",
+      "sim": 98.3,
+      "sim_is_approx": false,
+      "clock_age_s": null,
+      "mono": 10.041228601941839,
+      "detail": "s622_dual_arm::left_finger1::left_finger1_collision"
+    },
+    {
+      "event": "finger_first",
+      "sim": 98.3,
+      "sim_is_approx": false,
+      "clock_age_s": null,
+      "mono": 10.041228601941839,
+      "detail": "s622_dual_arm::left_finger1::left_finger1_collision"
+    },
+    {
+      "event": "finger_first",
+      "sim": 98.305,
+      "sim_is_approx": false,
+      "clock_age_s": null,
+      "mono": 10.051208849996328,
+      "detail": "s622_dual_arm::left_finger2::left_finger2_collision"
+    },
+    {
+      "event": "cancel_send",
+      "sim": 98.3,
+      "sim_is_approx": true,
+      "clock_age_s": 0.00783442403189838,
+      "mono": 10.044847089098766,
+      "detail": ""
+    },
+    {
+      "event": "cancel_confirm",
+      "sim": 98.3,
+      "sim_is_approx": true,
+      "clock_age_s": 0.00783442403189838,
+      "mono": 10.04918719199486,
+      "detail": ""
+    },
+    {
+      "event": "action_result",
+      "sim": 98.335,
+      "sim_is_approx": true,
+      "clock_age_s": 0.0010325689800083637,
+      "mono": 10.076712822075933,
+      "detail": "status=5 error=0 "
+    },
+    {
+      "event": "stop_confirmed",
+      "sim": 98.495,
+      "sim_is_approx": true,
+      "clock_age_s": 0.00355874584056437,
+      "mono": 10.237195281079039,
+      "detail": ""
+    },
+    {
+      "event": "post_stop_end",
+      "sim": 99.495,
+      "sim_is_approx": true,
+      "clock_age_s": 0.002825952135026455,
+      "mono": 11.237252729944885,
+      "detail": ""
+    }
+  ]
+}

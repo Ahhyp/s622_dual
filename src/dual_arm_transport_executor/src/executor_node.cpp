@@ -74,6 +74,16 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   // sample without the position servo pushing it off the support.
   gripper_close_positions_ = declare_parameter<std::vector<double>>(
     "gripper_close_positions", std::vector<double>{0.0180, -0.0180});
+  // 2.5-D3 (opt-in): hold the sample with BOTH grippers.  Off by default; when
+  // off the node behaves exactly as before (left hand only).
+  close_right_gripper_ = declare_parameter("close_right_gripper", false);
+  right_gripper_action_ = declare_parameter<std::string>(
+    "right_gripper_action", "/right_hand_controller/follow_joint_trajectory");
+  right_gripper_joint_names_ = declare_parameter<std::vector<std::string>>(
+    "right_gripper_joint_names",
+    std::vector<std::string>{"right_finger1_joint", "right_finger2_joint"});
+  right_gripper_close_positions_ = declare_parameter<std::vector<double>>(
+    "right_gripper_close_positions", std::vector<double>{0.0251, -0.0251});
   gripper_close_motion_s_ = declare_parameter("gripper_close_motion_s", 3.0);
   gripper_contact_stall_rad_ = declare_parameter("gripper_contact_stall_rad", 0.00005);
   gripper_contact_window_s_ = declare_parameter("gripper_contact_window_s", 0.15);
@@ -247,6 +257,12 @@ TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options
   // S4-T16: the JTC action closes the LEFT fingers; /joint_states is the
   // feedback that says the pads actually reached the close positions.
   gripper_client_ = rclcpp_action::create_client<GripperAction>(this, gripper_action_);
+  if (close_right_gripper_) {
+    right_gripper_client_ =
+      rclcpp_action::create_client<GripperAction>(this, right_gripper_action_);
+    RCLCPP_INFO(get_logger(), "2.5-D3: right-hand close ENABLED via %s",
+                right_gripper_action_.c_str());
+  }
   joint_state_sub_ = create_subscription<sensor_msgs::msg::JointState>(
     "/joint_states", qos,
     [this](sensor_msgs::msg::JointState::SharedPtr m) {
@@ -774,6 +790,27 @@ void TransportExecutorNode::startGripper(double now_s)
     gripper_last_positions_ = gripper_positions_;
   }
   RCLCPP_INFO(get_logger(), "S4-T16: closing left fingers via %s", gripper_action_.c_str());
+  // 2.5-D3 (opt-in): close the right hand in the same GRASP phase so the sample
+  // is held by both grippers.  Right-hand success is logged but does NOT gate
+  // the left-hand grasp check (that check is unchanged).
+  if (close_right_gripper_ && right_gripper_client_ &&
+    right_gripper_client_->action_server_is_ready())
+  {
+    GripperAction::Goal rgoal;
+    rgoal.trajectory.joint_names = right_gripper_joint_names_;
+    trajectory_msgs::msg::JointTrajectoryPoint rpt;
+    rpt.positions = right_gripper_close_positions_;
+    rpt.time_from_start = rclcpp::Duration::from_seconds(gripper_close_motion_s_);
+    rgoal.trajectory.points.push_back(rpt);
+    auto ropts = rclcpp_action::Client<GripperAction>::SendGoalOptions();
+    ropts.result_callback = [this](const GripperGoalHandle::WrappedResult & result) {
+        RCLCPP_INFO(get_logger(), "2.5-D3: right gripper close finished: %s",
+          result.code == rclcpp_action::ResultCode::SUCCEEDED ? "SUCCEEDED" : "FAILED");
+      };
+    right_gripper_client_->async_send_goal(rgoal, ropts);
+    RCLCPP_INFO(get_logger(), "2.5-D3: closing right fingers via %s",
+                right_gripper_action_.c_str());
+  }
 }
 
 bool TransportExecutorNode::fingerPositionsAtTarget() const
@@ -850,6 +887,19 @@ void TransportExecutorNode::startReleaseGripper(double now_s)
                   release_open_result_ok_ ? "SUCCEEDED" : "FAILED");
     };
   gripper_client_->async_send_goal(goal, opts);
+  if (close_right_gripper_ && right_gripper_client_ &&
+    right_gripper_client_->action_server_is_ready())
+  {
+    GripperAction::Goal rgoal;
+    rgoal.trajectory.joint_names = right_gripper_joint_names_;
+    trajectory_msgs::msg::JointTrajectoryPoint rpt;
+    rpt.positions = std::vector<double>{0.0305, -0.0305};
+    rpt.time_from_start = rclcpp::Duration::from_seconds(gripper_motion_s_);
+    rgoal.trajectory.points.push_back(rpt);
+    right_gripper_client_->async_send_goal(rgoal);
+    RCLCPP_INFO(get_logger(), "2.5-D3: opening right fingers via %s",
+                right_gripper_action_.c_str());
+  }
   release_open_started_ = true;
   release_open_start_at_s_ = now_s;
   RCLCPP_INFO(get_logger(), "S4-T16: opening left fingers via %s", gripper_action_.c_str());
