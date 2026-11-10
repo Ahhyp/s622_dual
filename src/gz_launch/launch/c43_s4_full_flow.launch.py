@@ -104,11 +104,20 @@ def generate_launch_description():
         output="screen",
     )
 
+    # 2.5-D4j: the URDF->SDF converter drops joint-mounted sensors, so a
+    # pre-converted, sensor-injected SDF can be spawned instead (opt-in).
+    _robot_sdf = os.environ.get("C43_ROBOT_SDF", "")
+    if _robot_sdf:
+        _spawn_args = ["-file", _robot_sdf]
+    else:
+        _spawn_args = ["-string", urdf]
+    _spawn_args += ["-x", "0.0", "-y", "0.0", "-z", "0.0",
+                    "-R", "0", "-P", "0", "-Y", "0", "-name", "s622_dual_arm"]
+
     spawn_robot = TimerAction(
         period=5.0,
         actions=[Node(package="ros_gz_sim", executable="create",
-                      arguments=["-string", urdf, "-x", "0.0", "-y", "0.0", "-z", "0.0",
-                                 "-R", "0", "-P", "0", "-Y", "0", "-name", "s622_dual_arm"],
+                      arguments=_spawn_args,
                       output="screen")],
     )
 
