@@ -251,6 +251,9 @@ CycleOutcome TransportTask::step(const dual_arm::Q12& q, dual_arm_qp::DualArmQp&
         return out;
     }
     solve_fail_streak_ = 0;
+    if(commit_guard_ && !commit_guard_(out.dq,commit_guard_context_)){
+        abort("object_table_clearance");out.dq.setZero();out.failure_code=failure_code_;return out;
+    }
     out.committed = true;
     advance(true);
     out.t_traj = t_traj_;
@@ -258,6 +261,9 @@ CycleOutcome TransportTask::step(const dual_arm::Q12& q, dual_arm_qp::DualArmQp&
 }
 
 void TransportTask::hold(const char* code, HoldOrigin origin) {
+    // A later per-cycle safety observation must not demote a terminal latch.
+    // The command remains frozen; only explicit start/reset may clear it.
+    if (state_ == TransportState::Abort || state_ == TransportState::Fault) return;
     state_ = TransportState::Hold;
     failure_code_ = (code != nullptr) ? code : "hold";
     hold_origin_ = origin;

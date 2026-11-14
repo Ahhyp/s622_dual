@@ -20,6 +20,7 @@
 #include "dual_arm_qp_controller/frozen_baseline.hpp"
 #include "dual_arm_qp_controller/msg/transport_status.hpp"
 #include "dual_arm_transport_executor/grasp_check.hpp"
+#include "dual_arm_transport_executor/contact_executor_adapter.hpp"
 #include "trajectory_msgs/msg/joint_trajectory_point.hpp"
 #include "std_msgs/msg/empty.hpp"
 #include "std_srvs/srv/trigger.hpp"
@@ -30,6 +31,11 @@ namespace dual_arm_transport_executor
 TransportExecutorNode::TransportExecutorNode(const rclcpp::NodeOptions & options)
 : rclcpp::Node("c43_s4_transport_executor", options)
 {
+  const auto profile=declare_parameter<std::string>("plant_profile","ideal_weld");
+  if (profile=="physical_contact") {
+    contact_adapter_=std::make_shared<ContactExecutorAdapter>(*this);return;
+  }
+  if (profile!="ideal_weld") throw std::invalid_argument("unknown plant_profile: "+profile);
   Config cfg;
   cfg.dt = declare_parameter("dt", cfg.dt);
   cfg.status_stale_timeout_s = declare_parameter("status_stale_timeout_s", cfg.status_stale_timeout_s);
@@ -499,7 +505,7 @@ void TransportExecutorNode::driveAbortPropagation()
   obs.status_age_s = status_.received ? (obs.now_s - status_.stamp_s) : 1.0e9;
   obs.state = status_.state;
 
-  const AbortStep step = abort_req_.onObservation(obs);
+  const AbortStep step = abort_req_.onObservation(obs, false);
   if (step.action == AbortAction::Resend || abort_req_.needSend()) {
     if (!abort_cli_->service_is_ready()) {return;}
     auto req = std::make_shared<dual_arm_qp_controller::srv::AbortTransport::Request>();

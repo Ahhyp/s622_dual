@@ -26,6 +26,27 @@ SENSOR_TMPL = """
 """
 
 
+LINK_WRENCH_PLUGIN = """
+      <plugin filename="ignition-gazebo-apply-link-wrench-system"
+              name="ignition::gazebo::systems::ApplyLinkWrench">
+        <link_name>{link}</link_name>
+      </plugin>
+"""
+
+
+def add_link_wrench(root, link):
+    """ApplyLinkWrench lets a known external wrench be pushed onto a link, which
+    is what an external pad load has to look like for a joint sensor."""
+    for model in root.iter("model"):
+        if model.get("name") != "s622_dual_arm":
+            continue
+        if any(p.get("name", "").endswith("ApplyLinkWrench") for p in model.iter("plugin")):
+            return True
+        model.append(ET.fromstring(LINK_WRENCH_PLUGIN.format(link=link)))
+        return True
+    return False
+
+
 def main():
     src, dst = sys.argv[1], sys.argv[2]
     joint_name = sys.argv[3] if len(sys.argv) > 3 else "left_finger1_joint"

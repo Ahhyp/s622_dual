@@ -1,0 +1,8 @@
+{
+  "schema": "c43_contact_qp_diagnostic/v1",
+  "seat_overtravel_m": 0.0002,
+  "seat_trajectory_duration_s": 2.0,
+  "seat_contact_hold_seq": 1,
+  "scope": "bounded seating path and existing HOLD/ACK; not formal executor integration",
+  "trajectory_clock": "controller t_traj; measure against Gazebo sim time separately"
+}

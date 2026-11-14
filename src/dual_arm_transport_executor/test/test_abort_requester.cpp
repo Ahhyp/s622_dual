@@ -91,6 +91,24 @@ TEST(AbortRequester, CompleteBeforeTheAbortLandsIsAlreadySafeButNotOurs)
   EXPECT_EQ(r.outcome(), "already_complete");
 }
 
+TEST(AbortRequester, ProductionCompleteStillCommittingCannotConfirmStop)
+{
+  AbortRequester r(cfg());r.begin(0.0,"release_failed");
+  EXPECT_NE(r.onObservation(obs(.01,"COMPLETE"),false).action,AbortAction::Confirmed);
+  EXPECT_FALSE(r.confirmed());EXPECT_TRUE(r.needSend());
+  send(r,.02);r.onServiceReply(true,"queued");
+  EXPECT_NE(r.onObservation(obs(.03,"COMPLETE"),false).action,AbortAction::Confirmed);
+  EXPECT_EQ(r.onObservation(obs(.04,"ABORT"),false).action,AbortAction::Confirmed);
+  EXPECT_EQ(r.outcome(),"confirmed_by_controller");
+}
+
+TEST(AbortRequester, ProductionCompleteWithoutActualAbortMustEscalate)
+{
+  AbortRequester r(cfg());r.begin(0.0,"release_failed");send(r,0.0);
+  EXPECT_EQ(r.onObservation(obs(.60,"COMPLETE"),false).action,AbortAction::Escalate);
+  EXPECT_FALSE(r.confirmed());EXPECT_EQ(r.outcome(),"abort_not_confirmed");
+}
+
 // 4. A second abort while the first is in flight is the same intent: it must not
 //    restart the deadline or the attempt budget, and must not clear confirmation.
 TEST(AbortRequester, RepeatedAbortKeepsTheSameRequest)

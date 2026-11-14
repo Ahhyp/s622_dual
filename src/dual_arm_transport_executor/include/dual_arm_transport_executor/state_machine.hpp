@@ -117,6 +117,9 @@ struct Event
 
 struct Config
 {
+  // Explicit physical-contact profile. Default retains the ideal/mock contract.
+  bool physical_contact = false;
+  double contact_stale_timeout_s = 0.1;
   double dt = 0.008;
   // Plan E2: status older than three control periods is stale.
   double status_stale_timeout_s = 0.024;
@@ -168,10 +171,32 @@ struct StartRequest
   double duration_s = 0.0;
 };
 
+// Measured plant evidence, independent of QP status. ROS stamps/command IDs are
+// validated by the adapter; the core also checks freshness and phase binding.
+struct ContactObservation
+{
+  double stamp_s = -1.0;
+  double contact_stamp_s = -1.0;
+  std::string command_phase;
+  bool ready = false;
+  bool step_done = false;
+  bool all_four = false;
+  bool source_support = false;
+  bool destination_support = false;
+  bool robot_clear = false;
+  bool in_target = false;
+  bool fingers_open = false;
+  bool arms_jtc_active = false;
+  bool qp_active = false;
+  bool hands_jtc_active = false;
+};
+
 class TransportStateMachine
 {
 public:
   explicit TransportStateMachine(Config cfg = Config());
+  void noteContactObservation(const ContactObservation & o) { contact_ = o; }
+  void expectSupportHoldAck(std::uint32_t seq) { support_hold_seq_ = seq; }
 
   // ---- commands (non-realtime side) ----
   bool start(double now_s, const StartRequest & req, std::string * why);
@@ -184,6 +209,8 @@ public:
   bool escalateFault(const std::string & code, double now_s,
                      const char * detail, std::string * why);
   bool resume(double now_s, std::string * why);
+  /// Explicit physical resume completion after a fresh controller RUNNING ack.
+  bool resumeAfterControllerAck(double now_s, const ControllerStatus & status, std::string * why);
   bool reset(double now_s, std::string * why);
   void onHeartbeat(double now_s);
 
@@ -269,6 +296,10 @@ public:
   const Config & config() const { return cfg_; }
 
 private:
+  bool contactFresh(double now_s) const;
+  ContactObservation contact_;
+  std::uint32_t support_hold_seq_ = 0;
+  bool support_stop_confirmed_ = false;
   // C4.3 S4 W7: drives the attach client for GRASP / RELEASE.  Returns true when
   // it has taken over this tick (state is still latched or still waiting).
   bool tickWeld(double now_s);

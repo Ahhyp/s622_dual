@@ -367,3 +367,9 @@ PyPI 的 Linux 版 torch 自带 CUDA 运行库（会拉 `nvidia-*`/`cuda-toolkit
 - 顺带删掉旧的 `ros_humble_build` 容器（释放约 5 GB）
 - `10_container.sh` 的 GPU 探测补了一手：宿主 `nvidia-smi` 不可用（agent 沙箱）时改用
   `docker run --rm --gpus all nvidia-smi -L` 判断，避免误判成 software 模式重建
+
+## C43补充：VirtualGL GPU GUI（2026-11-13）
+
+C43已找到当前桌面可正常显示的NVIDIA路径：原容器运行物理服务器，独立GPU容器运行VirtualGL EGL + X11 proxy。直接NVIDIA GLX仍由用户确认黑屏；单凭nvidia-smi/glxinfo成功不足以判定显示正常。另发现原s622_yep GPU访问失效，而相同镜像新容器正常，未为修复该问题重启原容器或Docker。
+
+宿主机入口：`python3 src/gz_launch/scripts/run_c43_executor_gpu_gui.py`。新GUI镜像固定VirtualGL3.1.5并显式指定NVIDIA EGL厂商文件；默认GUI30FPS，原2ms物理及8msQP配置保留。详见[C43 GPU恢复与RTF记录](双臂协同/双臂协同运动控制与优化/C43_GPU_GUI_恢复与RTF验证_20261113.md)。

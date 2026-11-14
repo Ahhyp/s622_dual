@@ -26,6 +26,7 @@
 
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>controller_interface</depend>
   <depend>hardware_interface</depend>
@@ -43,6 +44,7 @@
   <exec_depend>controller_manager</exec_depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>fcl</test_depend>
 
   <member_of_group>rosidl_interface_packages</member_of_group>
 

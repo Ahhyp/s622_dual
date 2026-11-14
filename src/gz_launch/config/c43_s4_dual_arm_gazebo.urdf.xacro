@@ -51,6 +51,8 @@
     <xacro:arg name="arm_command_mode" default="velocity" />
     <!-- gz position-servo gain [1/s] (only used when arm_command_mode=position) -->
     <xacro:arg name="arm_position_gain" default="1.0" />
+    <!-- 2.5-D4k: names a force/torque sensor on the LEFT hardware component only. -->
+    <xacro:arg name="ft_sensor_name_left" default="" />
     <!-- [C2.9a] controllers yaml loaded by the gz_ros2_control plugin -->
     <xacro:arg name="controllers_yaml"
         default="$(find s622_moveit_config)/config/dual_arm_controllers.yaml" />
@@ -211,7 +213,8 @@
         name="GazeboSimSystem"
         initial_positions_file="$(find gz_launch)/config/c43_s4_gazebo_initial_left.yaml"
         prefix="left_" arm_command_mode="$(arg arm_command_mode)"
-        arm_position_gain="$(arg arm_position_gain)" />
+        arm_position_gain="$(arg arm_position_gain)"
+        ft_sensor_name="$(arg ft_sensor_name_left)" />
 
     <xacro:s622_moveit_descriptions_ros2_control
         name="GazeboSimSystem"

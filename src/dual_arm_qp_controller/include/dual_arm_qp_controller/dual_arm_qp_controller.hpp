@@ -24,7 +24,9 @@
 // that state transition.
 #pragma once
 
+#include <array>
 #include <atomic>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -39,6 +41,7 @@
 #include <rclcpp_lifecycle/state.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
+#include "dual_arm_qp_controller/finite_geometry_guard.hpp"
 #include "dual_arm_collision/dual_arm_collision.hpp"
 #include "dual_arm_kinematics/dual_arm_kinematics.hpp"
 #include "dual_arm_object_task/trajectory.hpp"
@@ -149,6 +152,22 @@ private:
     int solve_fail_streak_ = 0;
   /// Plan §4.7.1 E4: consecutive period-overrun count; see update().
   int deadline_fault_streak_ = 0;
+    static_assert(std::atomic<double>::is_always_lock_free, "native pose atomics must be lock free");
+    static_assert(std::atomic<std::uint64_t>::is_always_lock_free, "native pose sequence must be lock free");
+    std::array<std::atomic<double>,9> finite_native_{};
+    std::atomic<std::uint64_t> finite_native_seq_{0};
+    std::array<double,9> finite_native_cache_{};
+    bool finite_native_have_=false,finite_native_fresh_=false;
+    double finite_native_age_=0;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr finite_native_sub_;
+    void latchFiniteBrake();
+    bool finite_brake_latched_=false;
+    bool finiteCommandSafe(const dual_arm::Q12& increment);
+    FiniteGeometryGuard finite_guard_;
+    FiniteGeometryGuard::Result finite_result_;
+    bool finite_checked_=false;
+    int finite_source_=-1;
+    double finite_check_us_=0;
     bool hold_active_ = false;
     StreamHealthMonitor health_;
     PeriodMonitor period_monitor_;

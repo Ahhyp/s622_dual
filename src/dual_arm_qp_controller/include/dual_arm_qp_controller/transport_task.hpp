@@ -175,6 +175,9 @@ public:
     /// One cycle.  Mutates state (t_traj, streaks, HOLD/FAULT latches) but
     /// never allocates.
     CycleOutcome step(const dual_arm::Q12& q, dual_arm_qp::DualArmQp& qp);
+    using CommitGuard = bool (*)(const dual_arm::Q12&, void*);
+    // Optional allocation-free execution guard, BEFORE commit / clock advance.
+    void setCommitGuard(CommitGuard guard,void* context){commit_guard_=guard;commit_guard_context_=context;}
 
     /// §4.2.1: advance the trajectory clock iff this cycle was committed.
     void advance(bool committed);
@@ -264,6 +267,8 @@ private:
     TransportState state_ = TransportState::Idle;
     const char* failure_code_ = "";
     HoldOrigin hold_origin_ = HoldOrigin::None;
+    CommitGuard commit_guard_=nullptr;
+    void* commit_guard_context_=nullptr;
     int solve_fail_streak_ = 0;
     int resume_fail_count_ = 0;
 

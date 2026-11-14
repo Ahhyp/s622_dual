@@ -83,6 +83,10 @@ public:
 
     /// Feed one observation and get the next action.
     AbortStep onObservation(const AbortObservation & obs);
+    /// Production C43 COMPLETE still solves/commits final-pose corrections.
+    /// Pass false for that controller: only an actual ABORT confirms stopping.
+    /// The one-argument overload retains the legacy stopped-COMPLETE bench API.
+    AbortStep onObservation(const AbortObservation & obs, bool complete_is_stopped);
 
     /// True when the caller should call the service now (before markSent()).
     bool needSend() const { return started_ && !confirmed_ && !escalated_ && !awaiting_reply_ && resend_pending_; }

@@ -217,4 +217,43 @@ TEST_F(TransportLatches, C_ResumeIsHoldOnlyAndTwoFailuresAbort) {
     EXPECT_FALSE(task2.active());
 }
 
+TEST_F(TransportLatches, LaterHoldCannotDemoteAbortOrFault) {
+    TransportTask task(*kin_, cfg_);
+    const Iso3 start=task.builder().leftEstimate(q_home_);
+    ASSERT_TRUE(task.start(specTowards(start,.02),q_home_,nullptr));
+    task.abort("aborted_by_request");
+    task.hold("joint_state_out_of_bounds");
+    EXPECT_EQ(task.state(),TransportState::Abort);
+    EXPECT_STREQ(task.failureCode(),"aborted_by_request");
+    task.hold("executor_lost");
+    EXPECT_EQ(task.state(),TransportState::Abort);
+    task.fault("unit_fault");
+    task.hold("collision");
+    EXPECT_EQ(task.state(),TransportState::Fault);
+    EXPECT_STREQ(task.failureCode(),"unit_fault");
+}
+
+TEST_F(TransportLatches, RejectedCandidateDoesNotCommitOrAdvanceClock){
+    TransportTask task(*kin_,cfg_);const auto start=task.builder().leftEstimate(q_home_);
+    ASSERT_TRUE(task.start(specTowards(start,.02),q_home_,nullptr));
+    int calls=0;task.setCommitGuard([](const Q12&,void*context){++*static_cast<int*>(context);return false;},&calls);
+    dual_arm_qp::DualArmQpParams params;params.w_obj=1;params.w_slack_obj=1000;
+    dual_arm_qp::DualArmQp qp(*kin_,params);
+    const auto out=task.step(q_home_,qp);
+    ASSERT_TRUE(out.converged);EXPECT_EQ(calls,1);EXPECT_FALSE(out.committed);EXPECT_EQ(out.dq.norm(),0);
+    EXPECT_EQ(task.tTraj(),0);EXPECT_EQ(task.state(),TransportState::Abort);EXPECT_STREQ(task.failureCode(),"object_table_clearance");
+}
+TEST_F(TransportLatches, AcceptingCandidateKeepsDefaultNumericalResult){
+    TransportTask task(*kin_,cfg_),reference(*kin_,cfg_);const auto start=task.builder().leftEstimate(q_home_);
+    ASSERT_TRUE(task.start(specTowards(start,.02),q_home_,nullptr));
+ASSERT_TRUE(reference.start(specTowards(start,.02),q_home_,nullptr));
+    int calls=0;task.setCommitGuard([](const Q12&,void*context){++*static_cast<int*>(context);return true;},&calls);
+    dual_arm_qp::DualArmQpParams params;params.w_obj=1;params.w_slack_obj=1000;
+    dual_arm_qp::DualArmQp qp(*kin_,params),other(*kin_,params);
+    const auto out=task.step(q_home_,qp),expected=reference.step(q_home_,other);
+    ASSERT_TRUE(out.committed);
+ASSERT_TRUE(expected.committed);EXPECT_EQ(calls,1);
+    EXPECT_LE((out.dq-expected.dq).norm(),1e-12);EXPECT_EQ(task.tTraj(),reference.tTraj());
+}
+
 }  // namespace

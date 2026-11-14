@@ -50,3 +50,14 @@ int32  phase_count
 string phase_name
 float64 phase_elapsed_s
 float64 phase_duration_s
+
+# Opt-in bounded analytical object/environment check (no FCL in update).
+bool finite_geometry_guard_enabled
+bool finite_geometry_checked
+bool finite_geometry_violation
+string finite_geometry_obstacle
+int32 finite_geometry_source
+float64 finite_geometry_margin_m
+float64 finite_geometry_check_us
+bool finite_geometry_native_fresh
+float64 finite_geometry_native_age_s

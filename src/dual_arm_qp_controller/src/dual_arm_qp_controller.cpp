@@ -5,6 +5,8 @@
 #include "dual_arm_qp_controller/frozen_baseline.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <cstring>
 #include <cmath>
 #include <utility>
 
@@ -119,6 +121,8 @@ CallbackReturn DualArmQpController::on_init() {
     declareIfNeeded<double>("test_sweep_amp_m", 0.0);
     declareIfNeeded<double>("test_sweep_period_s", 4.0);
     declareIfNeeded<double>("period_fault_factor", 2.0);
+    declareIfNeeded<std::string>("finite_geometry_scene", "");
+    declareIfNeeded<double>("finite_geometry_stop_reserve_m",0.0);
     declareIfNeeded<double>("collision_d_stop", 0.0);
     declareIfNeeded<double>("collision_link_radius", 0.06);
 
@@ -204,6 +208,30 @@ CallbackReturn DualArmQpController::on_configure(
     test_sweep_amp_m_ = get_node()->get_parameter("test_sweep_amp_m").as_double();
     test_sweep_period_s_ = get_node()->get_parameter("test_sweep_period_s").as_double();
     period_fault_factor_ = get_node()->get_parameter("period_fault_factor").as_double();
+    finite_guard_.clear();
+    const auto finite_scene=get_node()->get_parameter("finite_geometry_scene").as_string();
+    if(!finite_scene.empty())finite_guard_.load(finite_scene);
+    const double stopping_reserve=get_node()->get_parameter("finite_geometry_stop_reserve_m").as_double();
+    if(finite_scene.empty()&&stopping_reserve!=0)throw std::runtime_error("stopping reserve requires finite scene");
+    finite_guard_.setStoppingReserve(stopping_reserve);
+    finite_native_seq_.store(0);finite_native_have_=false;finite_native_fresh_=false;finite_native_age_=0;finite_brake_latched_=false;
+    for(auto&value:finite_native_)value.store(0);
+    finite_native_sub_.reset();
+    if(finite_guard_.enabled())finite_native_sub_=get_node()->create_subscription<geometry_msgs::msg::PoseStamped>(
+        "~/native_object_pose",rclcpp::QoS(1),[this](geometry_msgs::msg::PoseStamped::SharedPtr m){
+            const auto&p=m->pose.position;const auto&q=m->pose.orientation;
+            Eigen::Quaterniond quaternion(q.w,q.x,q.y,q.z);
+            const double stamp=static_cast<double>(m->header.stamp.sec)+1e-9*m->header.stamp.nanosec;
+            if(m->header.stamp.sec<0||m->header.stamp.nanosec>=1000000000u||m->header.frame_id!="world"||!std::isfinite(p.x)||!std::isfinite(p.y)||!std::isfinite(p.z)||
+               !quaternion.coeffs().allFinite()||std::abs(quaternion.norm()-1)>.001||stamp<0)return;
+            quaternion.normalize();const std::array<double,9>data{{p.x,p.y,p.z,quaternion.x(),quaternion.y(),quaternion.z(),quaternion.w(),stamp,get_node()->now().seconds()}};
+            // Default mutually-exclusive callback group supplies a single writer.
+            // Seq-cst atomic payload avoids a C++ data race; the RT reader never waits.
+            auto seq=finite_native_seq_.load();finite_native_seq_.store(seq+1);
+            for(size_t i=0;i<data.size();++i)finite_native_[i].store(data[i]);
+            finite_native_seq_.store(seq+2);
+        });
+    finite_checked_=false;finite_source_=-1;finite_check_us_=0;finite_result_={};
     collision_d_stop_ = get_node()->get_parameter("collision_d_stop").as_double();
     collision_link_radius_ = get_node()->get_parameter("collision_link_radius").as_double();
 
@@ -326,6 +354,9 @@ CallbackReturn DualArmQpController::on_configure(
     tcfg.home_q = home_q_;
     tcfg.start_pose_tolerance_rad = start_pose_tolerance_rad_;
     transport_ = std::make_unique<TransportTask>(*kinematics_, tcfg);
+    if(finite_guard_.enabled())transport_->setCommitGuard([](const dual_arm::Q12& dq,void* context){
+        return static_cast<DualArmQpController*>(context)->finiteCommandSafe(dq);
+    },this);
 
     // S4 W1 review (A): publish what is actually protected, not what the plan
     // intended.  A controller that says "protected" while E2/E8 are absent is
@@ -368,6 +399,7 @@ void DualArmQpController::createInterfaces() {
     auto status_topic = get_node()->create_publisher<dual_arm_qp_controller::msg::TransportStatus>(
         "~/transport_status", rclcpp::QoS(10));
     status_pub_ = std::make_unique<StatusPublisher>(status_topic);
+    status_pub_->msg_.finite_geometry_obstacle.reserve(256);
 
     start_srv_ = get_node()->create_service<dual_arm_qp_controller::srv::StartTransport>(
         "~/start_transport",
@@ -680,6 +712,7 @@ void DualArmQpController::applyPendingStart() {
         transport_->fault("trajectory_invalid");
         return;
     }
+    finite_brake_latched_=false;
     // Enable the object task only now: in IDLE it must stay off, otherwise the
     // legacy symmetric-midpoint object frame becomes active (R24).
     dual_arm_qp::DualArmQpParams params = qp_->params();
@@ -768,9 +801,10 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
         if (!transport_->resume(q_state_)) {
             RCLCPP_WARN(get_node()->get_logger(), "resume refused: %s",
                         transport_->failureCode());
-        }
+        } else {finite_brake_latched_=false;}
     } else if (cmd == 3) {
         transport_->abort("aborted_by_request");
+        latchFiniteBrake();
     }
     applyPendingStart();
 
@@ -945,6 +979,33 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
             timing_.setOutcome(2, 14);  // 14 = E1 joint state out of bounds
             return return_type::OK;
         }
+        if(finite_guard_.enabled() && transport_->state()!=TransportState::Abort && transport_->state()!=TransportState::Fault){
+            const auto began=std::chrono::steady_clock::now();
+            const auto native_seq=finite_native_seq_.load();
+            if(native_seq && !(native_seq&1)){
+                std::array<double,9>data;for(size_t i=0;i<data.size();++i)data[i]=finite_native_[i].load();
+                if(native_seq==finite_native_seq_.load()){finite_native_cache_=data;finite_native_have_=true;}
+            }
+            finite_native_age_=time.seconds()-finite_native_cache_[7];
+            finite_native_fresh_=finite_native_have_&&FiniteGeometryGuard::freshNative(finite_native_cache_[7],finite_native_cache_[8],time.seconds());
+            if(!finite_native_fresh_){transport_->hold("stale_state");hold_active_=true;last_committed_=false;last_dq_.setZero();finite_checked_=false;
+                latchFiniteBrake();writeCommand(q_cmd_);markTimingPhase(4);publishStatus();markTimingPhase(5);timing_.setOutcome(2,26);return return_type::OK;}
+            const auto sample=transport_->sample(q_state_);
+            dual_arm::Iso3 native=dual_arm::Iso3::Identity();native.translation()<<finite_native_cache_[0],finite_native_cache_[1],finite_native_cache_[2];
+            native.linear()=Eigen::Quaterniond(finite_native_cache_[6],finite_native_cache_[3],finite_native_cache_[4],finite_native_cache_[5]).toRotationMatrix();
+            const std::array<dual_arm::Iso3,4>poses{{transport_->builder().leftEstimate(q_state_),transport_->builder().rightEstimate(q_state_),sample.T_d,native}};
+            finite_result_={};finite_source_=-1;finite_checked_=true;
+            const char* phase_name=transport_->phaseName(transport_->phaseIndexAt(transport_->tTraj()));
+            int phase=-1;const char* names[5]={"lift","settle","transport","lower","settle_post"};
+            for(int i=0;i<5;++i)if(std::strcmp(phase_name,names[i])==0)phase=i;
+            bool safe=true;
+            for(size_t i=0;i<poses.size();++i){auto result=finite_guard_.check(poses[i],phase);safe=safe&&result.ok;
+                if(result.margin<finite_result_.margin){finite_result_=result;finite_source_=static_cast<int>(i);}}
+            finite_result_.ok=safe;
+            finite_check_us_=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-began).count();
+            if(!safe){transport_->abort("object_table_clearance");hold_active_=true;last_committed_=false;last_dq_.setZero();
+                latchFiniteBrake();writeCommand(q_cmd_);markTimingPhase(4);publishStatus();markTimingPhase(5);timing_.setOutcome(2,25);return return_type::OK;}
+        }
         const CycleOutcome out = transport_->step(q_state_, *qp_);
         markTimingPhase(3);  // P4: TransportTask::step()
         last_committed_ = out.committed;
@@ -954,6 +1015,10 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
             q_cmd_ += out.dq;
             clampToLimits(&q_cmd_);
         }
+        if(finite_guard_.enabled() && transport_->state()==TransportState::Abort && std::strcmp(out.failure_code,"object_table_clearance")==0)latchFiniteBrake();
+        // A finite-geometry emergency stop latches MEASURED positions once;
+        // otherwise a frozen ahead-of-state target would keep driving forward.
+        // No trajectory increment commits; subsequent stop commands stay frozen.
         // Never send an increment that did not commit: HOLD/ABORT/FAULT freeze.
         writeCommand(q_cmd_);
         markTimingPhase(4);  // P5: clampToLimits() + writeCommand()
@@ -1020,6 +1085,32 @@ return_type DualArmQpController::update(const rclcpp::Time& time,
     markTimingPhase(5);       // P6: publishStatus()
     timing_.setOutcome(0, 0);  // branch 0 = IDLE relative-pose hold
     return return_type::OK;
+}
+
+void DualArmQpController::latchFiniteBrake(){
+    if(!finite_guard_.enabled()||finite_brake_latched_)return;
+    q_cmd_=q_state_;clampToLimits(&q_cmd_);finite_brake_latched_=true;
+}
+
+bool DualArmQpController::finiteCommandSafe(const dual_arm::Q12& increment){
+    const auto began=std::chrono::steady_clock::now();
+    auto candidate=q_cmd_+increment;dual_arm::Q12 command=candidate;clampToLimits(&command);
+    const auto left=transport_->builder().leftEstimate(command);
+    const auto right=transport_->builder().rightEstimate(command);
+    dual_arm::Iso3 native=dual_arm::Iso3::Identity();native.translation()<<finite_native_cache_[0],finite_native_cache_[1],finite_native_cache_[2];
+    native.linear()=Eigen::Quaterniond(finite_native_cache_[6],finite_native_cache_[3],finite_native_cache_[4],finite_native_cache_[5]).toRotationMatrix();
+    // Predict the end of the candidate position command using the currently
+    // observed native-to-left-anchor offset, instead of assuming zero slip.
+    const auto predicted=native*transport_->builder().leftEstimate(q_state_).inverse()*left;
+    const std::array<dual_arm::Iso3,3>poses{{left,right,predicted}};
+    const char* phase_name=transport_->phaseName(transport_->phaseIndexAt(transport_->tTraj()));
+    int phase=-1;const char*names[5]={"lift","settle","transport","lower","settle_post"};
+    for(int i=0;i<5;++i)if(std::strcmp(phase_name,names[i])==0)phase=i;
+    bool safe=true;
+    for(size_t i=0;i<poses.size();++i){auto result=finite_guard_.check(poses[i],phase);safe=safe&&result.ok;
+        if(result.margin<finite_result_.margin){finite_result_=result;finite_source_=4+static_cast<int>(i);}}
+    finite_result_.ok=safe;finite_check_us_+=std::chrono::duration<double,std::micro>(std::chrono::steady_clock::now()-began).count();
+    return safe;
 }
 
 void DualArmQpController::publishStatus() {
@@ -1117,6 +1208,12 @@ void DualArmQpController::publishStatus() {
     // Read ONCE from the packed atomic; seq and result can never mismatch.
     m.hold_request_seq = static_cast<std::uint32_t>(ack_now >> 32);
     m.hold_request_result = static_cast<std::uint8_t>(ack_now & 0xFFu);
+    m.finite_geometry_guard_enabled=finite_guard_.enabled();m.finite_geometry_checked=finite_checked_;
+    m.finite_geometry_violation=finite_checked_&&!finite_result_.ok;
+    m.finite_geometry_obstacle=finite_checked_?finite_guard_.name(finite_result_.obstacle):"";
+    m.finite_geometry_native_fresh=finite_native_fresh_;m.finite_geometry_native_age_s=finite_native_age_;
+    m.finite_geometry_source=finite_source_;m.finite_geometry_margin_m=std::isfinite(finite_result_.margin)?finite_result_.margin:0.0;
+    m.finite_geometry_check_us=finite_check_us_;
     m.hold_origin = transport_ != nullptr ? holdOriginName(transport_->holdOrigin()) : "";
 
     // ---- W3-R2 (approved D5-1): task-phase observation ----------------------

@@ -1,0 +1,23 @@
+builtin_interfaces/Time stamp
+builtin_interfaces/Time contact_stamp
+uint64 evidence_seq
+uint64 task_id
+uint64 command_id
+string command_phase
+bool ready
+bool step_done
+bool ok
+string detail
+bool all_four
+bool source_support
+bool destination_support
+bool robot_clear
+bool fingers_open
+bool arms_jtc_active
+bool qp_active
+bool hands_jtc_active
+float64[3] sample_position
+float64[4] sample_orientation
+# Opt-in non-RT physical safety witness; executor validates known abort codes.
+string safety_failure_code
+string safety_detail

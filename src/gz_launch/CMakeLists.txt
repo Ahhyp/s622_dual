@@ -10,6 +10,11 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(xacro REQUIRED)
 find_package(robot_state_publisher REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(C43_IGN REQUIRED IMPORTED_TARGET ignition-transport11 ignition-msgs8)
+add_executable(c43_dual_force scripts/c43_dual_force.cpp)
+target_link_libraries(c43_dual_force PkgConfig::C43_IGN)
+install(TARGETS c43_dual_force RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -33,6 +38,7 @@ install(
     scripts/move_to_calibration_pose.py
     scripts/auto_collect_eye_on_base.py
     scripts/c43_homing.py
+    scripts/c43_run_contact_transport.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

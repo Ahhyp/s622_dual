@@ -31,6 +31,7 @@
 
 namespace dual_arm_transport_executor
 {
+class ContactExecutorAdapter;
 
 class TransportExecutorNode : public rclcpp::Node
 {
@@ -38,6 +39,7 @@ public:
   explicit TransportExecutorNode(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 
 private:
+  std::shared_ptr<ContactExecutorAdapter> contact_adapter_;
   double nowSeconds();
   void onStatus(dual_arm_qp_controller::msg::TransportStatus::SharedPtr m);
   void onTimer();

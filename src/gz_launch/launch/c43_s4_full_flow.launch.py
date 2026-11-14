@@ -94,6 +94,8 @@ def generate_launch_description():
             "arm_command_mode": "position",
             "arm_position_gain": os.environ.get("QP_ARM_POSITION_GAIN", "20.0"),
             "controllers_yaml": controllers_yaml,
+            # 2.5-D4k: bind the injected gz force/torque sensor to ros2_control.
+            "ft_sensor_name_left": os.environ.get("C43_FT_SENSOR", ""),
         },
     ).replace("package://s622_moveit_descriptions", desc_share)
 

@@ -1,6 +1,7 @@
 #include "dual_arm_transport_executor/state_machine.hpp"
 
 #include <cstddef>
+#include <cmath>
 #include <cstring>
 #include <utility>
 
@@ -182,6 +183,15 @@ TransportStateMachine::TransportStateMachine(Config cfg)
   record(0.0, "init", "NONE", toString(state_), "", "constructed");
 }
 
+bool TransportStateMachine::contactFresh(double now_s) const
+{
+  return std::isfinite(contact_.stamp_s) && std::isfinite(contact_.contact_stamp_s) &&
+    contact_.stamp_s >= 0.0 && contact_.contact_stamp_s >= 0.0 &&
+    now_s - contact_.stamp_s >= -0.01 && now_s - contact_.contact_stamp_s >= -0.01 &&
+    now_s - contact_.stamp_s <= cfg_.contact_stale_timeout_s &&
+    now_s - contact_.contact_stamp_s <= cfg_.contact_stale_timeout_s;
+}
+
 void TransportStateMachine::record(double now_s, const std::string & kind,
                                    const std::string & from, const std::string & to,
                                    const std::string & code, const std::string & detail)
@@ -318,7 +328,14 @@ bool TransportStateMachine::start(double now_s, const StartRequest & req, std::s
            "start() refused: the sample is still welded or the weld state is unknown");
     return false;
   }
-  const PrecheckResult pc = checkStart(cfg_, last_status_, has_status_, now_s);
+  PrecheckResult pc;
+  if (cfg_.physical_contact) {
+    pc.ok = weld_ == nullptr && contactFresh(now_s) && contact_.ready &&
+      contact_.source_support && contact_.robot_clear && contact_.arms_jtc_active &&
+      !contact_.qp_active && !contact_.hands_jtc_active;
+    pc.code = "precheck_failed";
+    pc.detail = "physical profile requires fresh source support, clear robot, exclusive arm JTCs and no weld";
+  } else {pc = checkStart(cfg_, last_status_, has_status_, now_s);}
   if (!pc.ok) {
     if (why) {*why = pc.code;}
     enterProtection(Protection::Fault, "precheck_failed", now_s, pc.detail);
@@ -351,6 +368,8 @@ bool TransportStateMachine::start(double now_s, const StartRequest & req, std::s
   has_frozen_ = false;
   has_last_guard_q_ = false;  // a new task has no previous observation to sweep
   no_status_since_ = -1.0;
+  support_hold_seq_ = 0;
+  support_stop_confirmed_ = false;
   record(now_s, "start", toString(from), toString(state_), "",
          "trajectory duration " + std::to_string(req.duration_s) + " s");
   return true;
@@ -467,13 +486,22 @@ bool TransportStateMachine::resume(double now_s, std::string * why)
 
   std::string reason;
   const ControllerStatus & st = last_status_;
-  if (!has_status_) {
+  if (cfg_.physical_contact && (!contactFresh(now_s) || !contact_.all_four ||
+      !contact_.qp_active || contact_.arms_jtc_active || contact_.hands_jtc_active)) {
+    reason = "physical_resume_evidence_invalid";
+  } else if (cfg_.physical_contact && (!std::isfinite(now_s-st.stamp_s)||now_s<st.stamp_s||
+      !std::isfinite(st.e_obj_pos_m)||!std::isfinite(st.e_obj_rot_rad)||!std::isfinite(st.min_limit_margin_rad))) {
+    reason = "physical_resume_nonfinite_or_future";
+  } else if (!has_status_) {
     reason = "no_status";
   } else if (!st.parse_ok) {
     reason = "status_unparseable";
   } else if (now_s - st.stamp_s > cfg_.status_stale_timeout_s) {
     reason = "stale_state";
-  } else if (!st.failure_code.empty() && st.failure_code != "ok") {
+  } else if (!st.failure_code.empty() && st.failure_code != "ok" &&
+    !(cfg_.physical_contact && st.state=="HOLD" && st.failure_code=="hold_by_executor" &&
+      st.hold_origin=="executor" && expected_hold_seq_!=0 &&
+      st.hold_request_seq==expected_hold_seq_ && st.hold_request_result==1)) {
     reason = "controller_failure_active:" + st.failure_code;
   } else if (st.e_obj_pos_m > cfg_.resume_pos_tol_m) {
     reason = "object_pos_error";
@@ -513,6 +541,20 @@ bool TransportStateMachine::resume(double now_s, std::string * why)
   return true;
 }
 
+bool TransportStateMachine::resumeAfterControllerAck(double now_s,
+  const ControllerStatus & status, std::string * why)
+{
+  if (!cfg_.physical_contact || state_!=State::Hold || !status.received ||
+    !status.parse_ok || status.state!="RUNNING" || expected_hold_seq_==0 ||
+    status.hold_request_seq!=expected_hold_seq_ || status.hold_request_result!=1 ||
+    status.hold_origin!="executor") {
+    if(why)*why="physical_resume_controller_ack_missing";
+    return false;
+  }
+  last_status_=status;has_status_=true;
+  return resume(now_s,why);
+}
+
 bool TransportStateMachine::reset(double now_s, std::string * why)
 {
   limit_streak_ = 0;
@@ -543,6 +585,30 @@ bool TransportStateMachine::reset(double now_s, std::string * why)
 
 bool TransportStateMachine::phaseDone(double now_s, std::string * why)
 {
+  if (cfg_.physical_contact) {
+    bool ok = contactFresh(now_s) && contact_.step_done &&
+      contact_.command_phase == toString(state_) && !contact_.hands_jtc_active;
+    switch (state_) {
+      case State::Approach: ok = ok && contact_.robot_clear && contact_.source_support &&
+        contact_.arms_jtc_active && !contact_.qp_active; break;
+      case State::Grasp: ok = ok && contact_.all_four && gripper_ready_ && grasp_ok_ &&
+        contact_.qp_active && !contact_.arms_jtc_active; break;
+      case State::Release: ok = ok && support_stop_confirmed_ && contact_.destination_support &&
+        contact_.fingers_open && contact_.arms_jtc_active && !contact_.qp_active; break;
+      case State::Retreat: ok = ok && support_stop_confirmed_ && contact_.destination_support &&
+        contact_.robot_clear && contact_.in_target && contact_.arms_jtc_active && !contact_.qp_active; break;
+      default: ok = false; break;
+    }
+    if (!ok) {
+      if (why) *why = "physical_step_evidence_missing";
+      record(now_s,"reject",toString(state_),toString(state_),"physical_step_evidence_missing",
+        "step requires fresh phase-bound physical evidence; controller completion alone is insufficient");
+      return false;
+    }
+    advance(now_s,"verified physical plant step completion");
+    if (why) why->clear();
+    return true;
+  }
   // C4.3 S4 W7: GRASP may not be declared done while the weld is unconfirmed, no
   // matter which side asks (controller phase or explicit step completion).  The
   // gripper feedback and the attach are both prerequisites, never shortcuts.
@@ -840,6 +906,36 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
   }
 
   // ---- active ----
+  if (cfg_.physical_contact) {
+    if (!contactFresh(now_s)) {
+      enterProtection(Protection::Hold,"stale_state",now_s,"physical contact evidence stale"); return;
+    }
+    if (contact_.hands_jtc_active) {
+      enterProtection(Protection::Fault,"precheck_failed",now_s,"hand JTC conflicts with native drive"); return;
+    }
+    if (state_ == State::Approach || state_ == State::Grasp ||
+      state_ == State::Release || state_ == State::Retreat) {checkTimeout(now_s); return;}
+    if (!contact_.qp_active || contact_.arms_jtc_active || !contact_.all_four) {
+      enterProtection(Protection::Fault,"grasp_check_failed",now_s,
+        "motion requires four-finger contact and exclusive QP ownership"); return;
+    }
+    if (state_ == State::Lower && support_hold_seq_ != 0 && st_in &&
+      st_in->received && st_in->parse_ok && st_in->transport_active &&
+      now_s >= st_in->stamp_s && now_s - st_in->stamp_s <= cfg_.status_stale_timeout_s &&
+      st_in->state == "HOLD" && st_in->hold_origin == "executor" &&
+      st_in->hold_request_seq == support_hold_seq_ && st_in->hold_request_result == 1 &&
+      contact_.destination_support && contact_.in_target)
+    {
+      support_stop_confirmed_ = true;
+      record(now_s,"contact","LOWER","LOWER","support_hold_confirmed",
+        "fresh destination support and exact executor-origin HOLD ACK");
+      advance(now_s,"supported stop confirmed before RELEASE"); return;
+    }
+    if (state_ == State::Lower && st_in && st_in->state == "COMPLETE") {
+      enterProtection(Protection::Fault,"release_failed",now_s,
+        "bounded lowering ended without supported stop confirmation"); return;
+    }
+  }
   if (st_in == nullptr || !st_in->received) {
     if (no_status_since_ < 0.0) {no_status_since_ = now_s;}
     if (now_s - no_status_since_ > cfg_.status_stale_timeout_s) {
@@ -950,7 +1046,7 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
             // detach must be confirmed first), so a controller phase change may
             // NOT walk the state machine straight through them.  Without this the
             // "lift" phase skips GRASP entirely and the sample is never grasped.
-            if (state_ == State::Grasp && weld_ != nullptr && !weld_attached_) {
+            if (state_ == State::Grasp && ((weld_ != nullptr && !weld_attached_) || cfg_.physical_contact)) {
               record(now_s, "phase", "GRASP", "GRASP", "grasp_barrier",
                      "holding GRASP: the attach is not confirmed yet");
               break;
@@ -989,7 +1085,7 @@ void TransportStateMachine::tick(double now_s, const ControllerStatus * st_in)
   // controller trajectory, so their completion is a real signal, not simulated.
   // With a phase driver attached the phase index owns the transitions; the
   // end-of-trajectory rule stays as the fallback for the un-phase-driven case.
-  if (!phase_driven &&
+  if (!cfg_.physical_contact && !phase_driven &&
     (state_ == State::Lift || state_ == State::Transport || state_ == State::Lower)) {
     if (st_in->transport_active && st_in->duration > 0.0 &&
         st_in->t_traj >= st_in->duration - 1e-12)

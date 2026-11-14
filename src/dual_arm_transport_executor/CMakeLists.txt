@@ -70,11 +70,17 @@ else()
 endif()
 
 if(c43_node)
+  find_package(rosidl_default_generators REQUIRED)
+  find_package(builtin_interfaces REQUIRED)
+  rosidl_generate_interfaces(${PROJECT_NAME}
+    "msg/ContactCommand.msg" "msg/ContactEvidence.msg"
+    DEPENDENCIES builtin_interfaces)
+  rosidl_get_typesupport_target(contact_typesupport ${PROJECT_NAME} "rosidl_typesupport_cpp")
   # The controller package exports its library target; the generated message
   # headers come with ament_export_include_directories(include).  Linking the
   # exported target is the portable way for a downstream package to get the
   # typesupport symbols without re-generating the interfaces.
-  add_executable(c43_s4_executor src/executor_node.cpp src/main.cpp)
+  add_executable(c43_s4_executor src/executor_node.cpp src/contact_executor_adapter.cpp src/main.cpp)
   execute_process(COMMAND git rev-parse HEAD
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_VARIABLE C43_GIT_HEAD OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
@@ -90,8 +96,10 @@ if(c43_node)
     ${std_srvs_TARGETS} ${std_msgs_TARGETS} ${tf2_msgs_TARGETS}
     ${control_msgs_TARGETS} ${sensor_msgs_TARGETS} ${trajectory_msgs_TARGETS}
     dual_arm_qp_controller::dual_arm_qp_controller_lib
+    ${contact_typesupport}
   )
   install(TARGETS c43_s4_executor RUNTIME DESTINATION lib/${PROJECT_NAME})
+  ament_export_dependencies(rosidl_default_runtime builtin_interfaces)
 endif()
 
 install(TARGETS ${PROJECT_NAME}_core
@@ -108,6 +116,8 @@ if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_state_machine test/test_state_machine.cpp)
   target_link_libraries(test_state_machine ${PROJECT_NAME}_core)
+  ament_add_gtest(test_contact_profile test/test_contact_profile.cpp)
+  target_link_libraries(test_contact_profile ${PROJECT_NAME}_core)
   ament_add_gtest(test_fault_injection test/test_fault_injection.cpp)
   target_link_libraries(test_fault_injection ${PROJECT_NAME}_core)
   ament_add_gtest(test_artifacts test/test_artifacts.cpp)

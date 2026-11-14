@@ -90,6 +90,11 @@ void AbortRequester::markSent(double now_s)
 
 AbortStep AbortRequester::onObservation(const AbortObservation & obs)
 {
+  return onObservation(obs, true);
+}
+
+AbortStep AbortRequester::onObservation(const AbortObservation & obs, bool complete_is_stopped)
+{
   AbortStep step;
   if (!started_ || confirmed_ || escalated_) {
     step.action = confirmed_ ? AbortAction::Confirmed
@@ -112,7 +117,7 @@ AbortStep AbortRequester::onObservation(const AbortObservation & obs)
       step.reason = outcome_;
       return step;
     }
-    if (obs.state == "COMPLETE") {
+    if (obs.state == "COMPLETE" && complete_is_stopped) {
       // The trajectory ended before the abort landed.  Motion is stopped and
       // that is the fact we needed; reporting it as a failure would be wrong,
       // reporting it as "our abort worked" would be a lie -- hence its own tag.

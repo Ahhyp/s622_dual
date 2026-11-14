@@ -14,6 +14,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(controller_interface REQUIRED)
 find_package(hardware_interface REQUIRED)
@@ -75,6 +76,7 @@ target_link_libraries(dual_arm_qp_controller_lib
     pluginlib::pluginlib
     rclcpp::rclcpp
     rclcpp_lifecycle::rclcpp_lifecycle
+    ${geometry_msgs_TARGETS}
     ${std_srvs_TARGETS}
     realtime_tools::realtime_tools
     Eigen3::Eigen
@@ -106,6 +108,12 @@ install(DIRECTORY scripts DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(fcl REQUIRED)
+  ament_add_gtest(test_finite_geometry_guard test/test_finite_geometry_guard.cpp)
+  target_include_directories(test_finite_geometry_guard PRIVATE include)
+  target_link_libraries(test_finite_geometry_guard Eigen3::Eigen fcl)
+  target_compile_definitions(test_finite_geometry_guard PRIVATE EIGEN_RUNTIME_NO_MALLOC)
+
   ament_add_gtest(test_stream_health test/test_stream_health.cpp)
   target_link_libraries(test_stream_health dual_arm_qp_controller_lib)
   ament_add_gtest(test_period_monitor test/test_period_monitor.cpp)
@@ -194,7 +202,7 @@ endif()
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_export_dependencies(
   controller_interface hardware_interface pluginlib rclcpp rclcpp_lifecycle
-  std_srvs realtime_tools Eigen3 rosidl_default_runtime
+  geometry_msgs std_srvs realtime_tools Eigen3 rosidl_default_runtime
   dual_arm_kinematics dual_arm_qp_core dual_arm_collision dual_arm_object_task)
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})

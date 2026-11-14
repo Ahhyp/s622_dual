@@ -1,0 +1,37 @@
+{
+  "baseline_date": "2026-11-11",
+  "packaged_date": "2026-11-12",
+  "inputs": {
+    "robot.urdf": {
+      "source": "log/c43_position_ab_20261111/w50_fixed_contact_r1/robot.urdf",
+      "source_sha256": "8bdc5344c2f034b7a87623d18fc284e18d47aa71db4e4fbe97ae4695e20a82da",
+      "packaged_sha256": "df2fc8a418840e46bd90766eecaed0ba9a2faa8855a3058a8335591d60a71ff5"
+    },
+    "world.sdf": {
+      "source": "log/c43_position_ab_20261111/w50_fixed_contact_r1/world.sdf",
+      "source_sha256": "1a0db9407a37fcc9c036705227c677df3b87be244e08e5e880c42c39e3ac087b",
+      "packaged_sha256": "1a0db9407a37fcc9c036705227c677df3b87be244e08e5e880c42c39e3ac087b"
+    },
+    "approach.json": {
+      "source": "log/c43_candidates_20261111/dual_split25_tilt15_path.json",
+      "source_sha256": "9d78b32ad8488dae269d1027591f09ff462baa319d12f1b5ca3a383bd7892b4c",
+      "packaged_sha256": "9d78b32ad8488dae269d1027591f09ff462baa319d12f1b5ca3a383bd7892b4c"
+    },
+    "transport.json": {
+      "source": "log/c43_dual_transport_20261111/dual_transport_path.json",
+      "source_sha256": "4ae8fe1190980e57e1689078c93e058e0b57f9f0e472e46fe3dbce6f9992e1ec",
+      "packaged_sha256": "4ae8fe1190980e57e1689078c93e058e0b57f9f0e472e46fe3dbce6f9992e1ec"
+    },
+    "controllers.yaml": {
+      "source": "src/dual_arm_qp_controller/config/dual_arm_qp_gazebo_controllers.yaml",
+      "source_sha256": "d298f418678f4200e5c1b7944600441590112d6111de9b3f80cf8f185c2f7fea",
+      "packaged_sha256": "d298f418678f4200e5c1b7944600441590112d6111de9b3f80cf8f185c2f7fea"
+    }
+  },
+  "git_commit_at_packaging": "d90ac4d562724c4e0493c49dd184db387db29608",
+  "worktree_dirty_at_packaging": true,
+  "added_resource_sha256": {
+    "task.json": "a164fb2f867f1749958868b9be58f77882756d0d3d6b048f60922cfc0d425586",
+    "qp_task.json": "f304bce909291cff8d34c9921f25bd9b672866f33d37fddcac13af38f2ed4281"
+  }
+}

@@ -12,6 +12,28 @@
   <depend>rclcpp</depend>
   <depend>xacro</depend>
   <depend>robot_state_publisher</depend>
+  <depend>ignition-transport11</depend>
+  <depend>ignition-msgs8</depend>
+  <build_depend>pkg-config</build_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>control_msgs</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>controller_manager_msgs</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>tf2_msgs</exec_depend>
+  <exec_depend>trajectory_msgs</exec_depend>
+  <exec_depend>rosgraph_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>s622_moveit_descriptions</exec_depend>
+  <exec_depend>gz_ros2_control</exec_depend>
+  <exec_depend>dual_arm_qp_controller</exec_depend>
+  <exec_depend>dual_arm_transport_executor</exec_depend>
+  <exec_depend>dual_arm_pose_optimization</exec_depend>
+  <exec_depend>s622_moveit_config</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

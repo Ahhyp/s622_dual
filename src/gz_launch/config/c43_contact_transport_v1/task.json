@@ -1,0 +1,63 @@
+{
+  "schema": "c43_contact_transport/v1",
+  "profile": "contact_force5_jtc_reference_v1",
+  "scope": "Gazebo physical-contact diagnostic, not formal W7 acceptance",
+  "object": {
+    "size_xyz_m": [
+      0.12,
+      0.05,
+      0.05
+    ],
+    "mass_kg": 0.35,
+    "initial_xyz_m": [
+      0,
+      0,
+      0.275
+    ]
+  },
+  "support": {
+    "radius_m": 0.04,
+    "height_m": 0.25,
+    "destination_xyz_m": [
+      0,
+      0.12,
+      0
+    ]
+  },
+  "clamp_per_finger_N": 5.0,
+  "wait_clock": "simulation",
+  "clock_stall_watchdog_wall_s": 10.0,
+  "close_timeout_sim_s": 30.0,
+  "opening_stop_m": 0.048,
+  "opening_stop_duration_sim_s": 0.03,
+  "carry_discrepancy_stop_m": 0.015,
+  "before_release_tolerance_m": 0.015,
+  "final_destination_tolerance_m": 0.01,
+  "waits_sim_s": {
+    "startup": 1.0,
+    "open": 2.0,
+    "preclose": 2.0,
+    "ramp_step": 1.0,
+    "settle": 3.0,
+    "hold_lift": 5.0,
+    "place_settle": 3.0,
+    "release": 2.0,
+    "final": 5.0
+  },
+  "durations_sim_s": {
+    "pregrasp": 8.0,
+    "descent": 6.0,
+    "lift": 6.0,
+    "transfer": 8.0,
+    "place": 6.0,
+    "retract": 6.0,
+    "return_over_source": 6.0,
+    "return_pre": 6.0,
+    "home_left": 8.0,
+    "home_right": 8.0
+  },
+  "sync_lead_sim_s": 0.5,
+  "contact_profile": "unchanged baseline; joint-reference friction tags retained; no new calibrated mu claim",
+  "collision_profile": "original STL; discrete FCL; approved candidate flags retained; not continuous collision proof",
+  "controller_mode": "two synchronized arm JTCs; four native finger joint forces; hand JTCs inactive"
+}

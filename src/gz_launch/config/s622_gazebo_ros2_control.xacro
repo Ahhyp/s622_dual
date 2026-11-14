@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
     <!-- 增加 prefix 参数, 默认为空以保持 M1.7 兼容 -->
     <xacro:macro name="s622_moveit_descriptions_ros2_control"
-        params="name initial_positions_file prefix:='' arm_command_mode:='velocity' arm_position_gain:=1.0">
+        params="name initial_positions_file prefix:='' arm_command_mode:='velocity' arm_position_gain:=1.0 ft_sensor_name:=''">
 
         <!-- [C2.9a] arm command interface selectable: velocity (JTC profile) or
              position (QP profile).  gz_ros2_control implements the position
@@ -97,6 +97,18 @@
                 <state_interface name="velocity" />
             </joint>
 
+            <!-- 2.5-D4k: bind the gz force_torque sensor to ros2_control so the
+                 readings are exported (name must match the SDF sensor). -->
+            <xacro:if value="${ft_sensor_name != ''}">
+                <sensor name="${ft_sensor_name}">
+                    <state_interface name="force.x"/>
+                    <state_interface name="force.y"/>
+                    <state_interface name="force.z"/>
+                    <state_interface name="torque.x"/>
+                    <state_interface name="torque.y"/>
+                    <state_interface name="torque.z"/>
+                </sensor>
+            </xacro:if>
         </ros2_control>
     </xacro:macro>
 </robot>
