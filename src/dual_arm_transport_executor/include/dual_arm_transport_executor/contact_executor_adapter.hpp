@@ -63,6 +63,7 @@ private:
   double operator_hold_since_=0,operator_hold_confirmed_since_=0,resume_since_=0;
   std::array<double,3> sample_position_{},held_sample_position_{};
   std::array<double,4> sample_orientation_{},held_sample_orientation_{};
+  double transport_duration_s_=8.0;
   double seat_overtravel_=0.0002;
   rclcpp::Publisher<msg::ContactCommand>::SharedPtr command_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr state_pub_;

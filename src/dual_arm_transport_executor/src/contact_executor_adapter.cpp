@@ -16,10 +16,12 @@ ContactExecutorAdapter::ContactExecutorAdapter(rclcpp::Node & n):n_(n) {
   hold_resume_enabled_=n_.declare_parameter("enable_physical_hold_resume",false);
   auto_start_=n_.declare_parameter("auto_start",false);
   inject_retreat_abort_=n_.declare_parameter("inject_retreat_abort",false);
+  transport_duration_s_=n_.declare_parameter("transport_duration_s",8.0);
+  if(!std::isfinite(transport_duration_s_)||transport_duration_s_<4||transport_duration_s_>16)throw std::invalid_argument("invalid experimental transport duration");
   seat_overtravel_=n_.declare_parameter("seat_overtravel_m",.0002);
   if (!(seat_overtravel_>0 && seat_overtravel_<=.0005)) throw std::invalid_argument("invalid seating bound");
   sm_=std::make_unique<TransportStateMachine>(cfg_);
-  phases_.configure({{"lift",6},{"settle",5},{"transport",8},{"lower",6},{"settle_post",2}});
+  phases_.configure({{"lift",6},{"settle",5},{"transport",transport_duration_s_},{"lower",6},{"settle_post",2}});
   sm_->attachPhaseDriver(&phases_);
   run_id_=n_.declare_parameter<std::string>("run_id","contact_transport");
   const auto dir=n_.declare_parameter<std::string>("artifacts_dir","/tmp/c43_contact_executor");
@@ -52,7 +54,7 @@ ContactExecutorAdapter::ContactExecutorAdapter(rclcpp::Node & n):n_(n) {
 
 bool ContactExecutorAdapter::start(std::string * why) {
   if(task_id_!=0){if(why)*why="one task per physical experiment; restart for another run";return false;}
-  if(!sm_->start(now(),{27},why))return false;
+  if(!sm_->start(now(),{19+transport_duration_s_},why))return false;
   task_id_=static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
   command_id_=0;consumed_command_=0;finished_=false;qp_start_sent_=false;stop_sent_=false;
   command("APPROACH");return true;
@@ -117,7 +119,7 @@ void ContactExecutorAdapter::status(const dual_arm_qp_controller::msg::Transport
 void ContactExecutorAdapter::requestStart() {
   if(!start_cli_->service_is_ready())return;
   qp_start_sent_=true;auto r=std::make_shared<dual_arm_qp_controller::srv::StartTransport::Request>();
-  r->phase_name={"lift","settle","transport","lower","settle_post"};r->phase_duration={6.,5.,8.,6.,2.};
+  r->phase_name={"lift","settle","transport","lower","settle_post"};r->phase_duration={6.,5.,transport_duration_s_,6.,2.};
   r->phase_dx={0,0,0,0,0};r->phase_dy={0,0,.12,0,0};r->phase_dz={.06,0,0,-.06,-seat_overtravel_};r->dt=.008;r->time_scaling="smoothstep";
   start_cli_->async_send_request(r,[this](rclcpp::Client<dual_arm_qp_controller::srv::StartTransport>::SharedFuture f){auto r=f.get();if(!r->accepted)sm_->escalateFault("trajectory_invalid",now(),r->message.c_str(),nullptr);});
 }

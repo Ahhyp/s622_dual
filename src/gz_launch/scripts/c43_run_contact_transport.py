@@ -19,6 +19,8 @@ def main():
     parser.add_argument('--start-delay',type=float,default=0.)
     parser.add_argument('--prepare-only',action='store_true')
     parser.add_argument('--backend',choices=('jtc','qp-smoke','qp-carry','qp-executor'),default='jtc')
+    parser.add_argument('--calibration-mass-kg',type=float,help='Explicit isolated stopping-calibration mass variant (0.25..0.60 kg)')
+    parser.add_argument('--calibration-speed-scale',type=float,default=1.,help='Scale only QP transport speed for isolated stopping calibration (0.75..1.5)')
     parser.add_argument('--finite-stop-reserve-mm',type=float,default=0,help='Additional experimental stopping reserve (0..50 mm), calibration not approved')
     parser.add_argument('--enable-finite-guard',action='store_true',help='Enable bounded analytical object/environment check in QP update')
     parser.add_argument('--scene-precheck',action='store_true',help='Reject launch if full-scene discrete reference-path preflight fails')
@@ -38,6 +40,9 @@ def main():
     if args.keep_open and not (args.gui or args.external_gui):parser.error('--keep-open requires --gui or --external-gui')
     if args.start_delay<0:parser.error('--start-delay must be nonnegative')
     if not 0<=args.ros_domain_id<=232:parser.error('--ros-domain-id must be between 0 and 232')
+    if args.calibration_mass_kg is not None and (not math.isfinite(args.calibration_mass_kg) or not .25<=args.calibration_mass_kg<=.60):parser.error('calibration mass must be 0.25..0.60 kg')
+    if not math.isfinite(args.calibration_speed_scale) or not .75<=args.calibration_speed_scale<=1.5:parser.error('calibration speed scale must be 0.75..1.5')
+    if (args.calibration_mass_kg is not None or args.calibration_speed_scale!=1.) and args.inject_executor!='finite-clearance':parser.error('mass/speed calibration variants require isolated finite-clearance mode')
     if not math.isfinite(args.finite_stop_reserve_mm) or not 0<=args.finite_stop_reserve_mm<=50:parser.error('finite stopping reserve must be 0..50 mm')
     if args.finite_stop_reserve_mm and not args.enable_finite_guard:parser.error('stopping reserve requires --enable-finite-guard')
     if args.enable_finite_guard and args.backend!='qp-executor':parser.error('--enable-finite-guard requires qp-executor')
@@ -55,6 +60,8 @@ def main():
         C43_EXTERNAL_GUI=str(int(args.external_gui)),
         C43_GUI_KEEP_OPEN=str(int(args.keep_open)),C43_GUI_START_DELAY_S=str(args.start_delay),
         C43_LAB_PREPARE_ONLY=str(int(args.prepare_only)),C43_ARM_BACKEND=args.backend)
+    if args.calibration_mass_kg is not None:env['C43_CALIBRATION_MASS_KG']=str(args.calibration_mass_kg)
+    if args.calibration_speed_scale!=1.:env['C43_CALIBRATION_SPEED_SCALE']=str(args.calibration_speed_scale)
     if args.finite_stop_reserve_mm:env['C43_FINITE_STOP_RESERVE_M']=str(args.finite_stop_reserve_mm/1000.)
     if args.enable_finite_guard:env['C43_ENABLE_FINITE_GUARD']='1'
     if args.scene_precheck:env['C43_SCENE_PREFLIGHT']='1'

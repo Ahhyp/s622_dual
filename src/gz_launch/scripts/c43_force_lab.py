@@ -91,6 +91,7 @@ def main():
                 plant_profile='physical_contact',use_sim_time=True,auto_start=True,
                 enable_physical_hold_resume=os.environ.get('C43_ENABLE_HOLD_RESUME')=='1' or os.environ.get('C43_EXECUTOR_INJECT')=='hold-resume',
                 inject_retreat_abort=os.environ.get('C43_EXECUTOR_INJECT')=='retreat-abort',
+                transport_duration_s=8./float(os.environ.get('C43_CALIBRATION_SPEED_SCALE','1')),
                 artifacts_dir=str(out/'executor'),run_id=out.name,
                 seat_overtravel_m=json.loads((PROFILE/'qp_task.json').read_text())['seat_overtravel_m'])}}
             (out/'executor.yaml').write_text(yaml.safe_dump(executor_config,sort_keys=False))
@@ -175,6 +176,16 @@ def main():
                 p=m.find('pose');v=[float(x) for x in p.text.split()];v[0]+=dx;p.text=' '.join(map(str,v))
     for m in list(w.findall('model')):
         if m.get('name')=='c43_sample' and mode=='calibration':w.remove(m)
+    if os.environ.get('C43_CALIBRATION_MASS_KG') or os.environ.get('C43_CALIBRATION_SPEED_SCALE'):
+        if mode!='dual_transport' or os.environ.get('C43_EXECUTOR_INJECT')!='finite-clearance':raise ValueError('calibration overrides require isolated finite-clearance mode')
+        sample=next(m for m in w.findall('model') if m.get('name')=='c43_sample')
+        inertial=sample.find('link/inertial');old_mass=float(inertial.findtext('mass'))
+        mass=float(os.environ.get('C43_CALIBRATION_MASS_KG',old_mass));speed=float(os.environ.get('C43_CALIBRATION_SPEED_SCALE','1'))
+        if not math.isfinite(mass) or not .25<=mass<=.60 or not math.isfinite(speed) or not .75<=speed<=1.5:raise ValueError('calibration variant out of bounds')
+        ratio=mass/old_mass;inertial.find('mass').text=str(mass)
+        for component in inertial.find('inertia'):component.text=str(float(component.text)*ratio)
+        task['object']['mass_kg']=mass;(out/'task.json').write_text(json.dumps(task,indent=2)+'\n')
+        (out/'calibration_variant.json').write_text(json.dumps(dict(reference_mass_kg=old_mass,mass_kg=mass,inertia_scale=ratio,transport_speed_scale=speed,transport_duration_s=8./speed,geometry_modified=False,scope='isolated stopping calibration; no threshold approval'),indent=2)+'\n')
     E.SubElement(w,'plugin',filename='ignition-gazebo6-forcetorque-system',name='ignition::gazebo::systems::ForceTorque')
     E.SubElement(w,'plugin',filename='ignition-gazebo-apply-link-wrench-system',name='ignition::gazebo::systems::ApplyLinkWrench')
     if mode=='dual_transport' and os.environ.get('C43_EXECUTOR_INJECT')!='destination-absent':
@@ -202,7 +213,7 @@ def main():
         E.ElementTree(sdf).write(out/'robot.sdf',encoding='utf-8')
     assert len(root.findall('ros2_control'))==(2 if dual else 1)
     assert 'DetachableJoint' not in E.tostring(sdf,encoding='unicode')
-    env=os.environ.copy();env.update(C43_AB_OUT=str(out),C43_AB_WIDTH='.05',C43_AB_MASS='.35',
+    env=os.environ.copy();env.update(C43_AB_OUT=str(out),C43_AB_WIDTH='.05',C43_AB_MASS=str(task['object']['mass_kg'] if task else .35),
         C43_AB_SINGLE='0' if dual else '1',C43_AB_MODE=mode,C43_LAB_MODE=mode,
         C43_AB_TARGET=sys.argv[3] if len(sys.argv)>3 else '.0249',ROS_DOMAIN_ID=os.environ.get('C43_ROS_DOMAIN_ID','146'),IGN_PARTITION='c43-force-'+out.name)
     if task:
