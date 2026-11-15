@@ -1,0 +1,30 @@
+{
+  "scope": "offline QP, ideal joints, one TCP point and moving sphere; no Gazebo or payload",
+  "ctest_suites_passed": 2,
+  "test_cases_passed": 5,
+  "passed": true,
+  "dt_s": 0.008,
+  "steps": 500,
+  "sphere_radius_m": 0.05,
+  "obstacle_speed_m_s": 0.01,
+  "clearance_m": 0.08,
+  "cbf_off_min_distance_m": 0.06,
+  "cbf_on_min_distance_m": 0.080002792,
+  "cbf_on_joint_motion_norm_rad": 0.062053317,
+  "relative_log_translation_max_m": 6.85981723e-05,
+  "relative_log_rotation_max_rad": 1.59440941e-05,
+  "row_positive_residual_max": 4.06575815e-20,
+  "solver_failures_off": 0,
+  "solver_failures_on": 0,
+  "production_controller_connected": false,
+  "sha256": {
+    "src/dual_arm_collision/include/dual_arm_collision/moving_obstacle_cbf.hpp": "804118ac094726e5f731918fa75d8138f12562daaa64e902062c2dfcb6263c86",
+    "src/dual_arm_qp_core/test/test_moving_obstacle_cbf.cpp": "5cc30f8502e447dec2988844aa5f4a65426c74ae8dae8275325be0008a43bb1c",
+    "src/dual_arm_qp_core/CMakeLists.txt": "c325ca1b2fd2edc767fa01e8d93bfc5a6e6a24123b735de06ade2aedf014a803",
+    "src/dual_arm_qp_core/src/dual_arm_qp.cpp": "c9f182ab006e5cd816d06127156036d9a9e118b8495a5c108948b4d7cdbc0fb9",
+    "log/c3_dynamic_20261115/cbf_tests.log": "5eb0c90231c4297a9388d8cd703d6396b263ef4455fc1dee1dcf770615819b4a",
+    "log/c3_dynamic_20261115/c27_regression.log": "9c72619f1473e038a516426f68f5c7d4f6051462c0a1a1a43e4e0cb761fbc19d",
+    "log/c3_dynamic_20261115/build.log": "6a081b977ba0aa4b513be51d1b3645c5f4a2df2a74af1e9bcb67ab7e69135bb4",
+    "build/dual_arm_qp_core/test_moving_obstacle_cbf": "7bc61d70e2468038272bc4f79f2fef951ee94a37096d80feec2f811f154b3ecb"
+  }
+}

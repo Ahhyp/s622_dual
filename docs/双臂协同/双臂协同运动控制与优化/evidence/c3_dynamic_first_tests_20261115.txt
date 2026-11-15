@@ -1,0 +1,78 @@
+Internal ctest changing into directory: /workspace/build/dual_arm_qp_core
+UpdateCTestConfiguration  from :/workspace/build/dual_arm_qp_core/CTestConfiguration.ini
+Parse Config file:/workspace/build/dual_arm_qp_core/CTestConfiguration.ini
+ Add coverage exclude regular expressions.
+UpdateCTestConfiguration  from :/workspace/build/dual_arm_qp_core/CTestConfiguration.ini
+Parse Config file:/workspace/build/dual_arm_qp_core/CTestConfiguration.ini
+Test project /workspace/build/dual_arm_qp_core
+Constructing a list of tests
+Done constructing a list of tests
+Updating test list for fixtures
+Added 0 tests to meet fixture requirements
+Checking test dependency graph...
+Checking test dependency graph end
+test 7
+    Start 7: test_cbf_c27
+
+7: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_cbf_c27.gtest.xml" "--package-name" "dual_arm_qp_core" "--output-file" "/workspace/build/dual_arm_qp_core/ament_cmake_gtest/test_cbf_c27.txt" "--command" "/workspace/build/dual_arm_qp_core/test_cbf_c27" "--gtest_output=xml:/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_cbf_c27.gtest.xml"
+7: Test timeout computed to be: 60
+7: -- run_test.py: invoking following command in '/workspace/build/dual_arm_qp_core':
+7:  - /workspace/build/dual_arm_qp_core/test_cbf_c27 --gtest_output=xml:/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_cbf_c27.gtest.xml
+7: Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+7: [==========] Running 1 test from 1 test suite.
+7: [----------] Global test environment set-up.
+7: [----------] 1 test from C27Cbf
+7: [ RUN      ] C27Cbf.CbfKeepsMinimumArmDistance
+7: [C2.7b] start distance = 0.5800 m, d_safe = 0.100 m
+7: [C2.7b] CBF OFF: minDist=-0.0156 finalDist=0.0964 belowSafe=462/500 relErr=0.0000
+7: [C2.7b] CBF ON : minDist=0.1169 finalDist=0.1179 belowSafe=0/500 relErr=0.0000
+7: [       OK ] C27Cbf.CbfKeepsMinimumArmDistance (146 ms)
+7: [----------] 1 test from C27Cbf (146 ms total)
+7:
+7: [----------] Global test environment tear-down
+7: [==========] 1 test from 1 test suite ran. (146 ms total)
+7: [  PASSED  ] 1 test.
+7: -- run_test.py: return code 0
+7: -- run_test.py: inject classname prefix into gtest result file '/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_cbf_c27.gtest.xml'
+7: -- run_test.py: verify result file '/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_cbf_c27.gtest.xml'
+1/2 Test #7: test_cbf_c27 .....................   Passed    0.21 sec
+test 8
+    Start 8: test_moving_obstacle_cbf
+
+8: Test command: /usr/bin/python3 "-u" "/opt/ros/humble/share/ament_cmake_test/cmake/run_test.py" "/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_moving_obstacle_cbf.gtest.xml" "--package-name" "dual_arm_qp_core" "--output-file" "/workspace/build/dual_arm_qp_core/ament_cmake_gtest/test_moving_obstacle_cbf.txt" "--command" "/workspace/build/dual_arm_qp_core/test_moving_obstacle_cbf" "--gtest_output=xml:/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_moving_obstacle_cbf.gtest.xml"
+8: Test timeout computed to be: 60
+8: -- run_test.py: invoking following command in '/workspace/build/dual_arm_qp_core':
+8:  - /workspace/build/dual_arm_qp_core/test_moving_obstacle_cbf --gtest_output=xml:/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_moving_obstacle_cbf.gtest.xml
+8: Running main() from /opt/ros/humble/src/gtest_vendor/src/gtest_main.cc
+8: [==========] Running 4 tests from 1 test suite.
+8: [----------] Global test environment set-up.
+8: [----------] 4 tests from MovingObstacleCbf
+8: [ RUN      ] MovingObstacleCbf.VelocitySignAndStaticReduction
+8: [       OK ] MovingObstacleCbf.VelocitySignAndStaticReduction (0 ms)
+8: [ RUN      ] MovingObstacleCbf.RejectsInvalidInputs
+8: [       OK ] MovingObstacleCbf.RejectsInvalidInputs (0 ms)
+8: [ RUN      ] MovingObstacleCbf.InfeasibleConstraintIsNotReportedAsSuccess
+8: [       OK ] MovingObstacleCbf.InfeasibleConstraintIsNotReportedAsSuccess (6 ms)
+8: [ RUN      ] MovingObstacleCbf.MovingSphereChangesCoordinatedQpMotion
+8: Moving sphere / ideal joints: OFF min=0.060000000 motion=0.000000000 failures=0; ON min=0.080002792 motion=0.062053317 relative_position_m=6.85981723e-05 relative_angle_rad=1.59440941e-05 row_residual=4.06575815e-20 failures=0
+8: [       OK ] MovingObstacleCbf.MovingSphereChangesCoordinatedQpMotion (104 ms)
+8: [----------] 4 tests from MovingObstacleCbf (110 ms total)
+8:
+8: [----------] Global test environment tear-down
+8: [==========] 4 tests from 1 test suite ran. (110 ms total)
+8: [  PASSED  ] 4 tests.
+8: -- run_test.py: return code 0
+8: -- run_test.py: inject classname prefix into gtest result file '/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_moving_obstacle_cbf.gtest.xml'
+8: -- run_test.py: verify result file '/workspace/build/dual_arm_qp_core/test_results/dual_arm_qp_core/test_moving_obstacle_cbf.gtest.xml'
+2/2 Test #8: test_moving_obstacle_cbf .........   Passed    0.18 sec
+
+The following tests passed:
+	test_cbf_c27
+	test_moving_obstacle_cbf
+
+100% tests passed, 0 tests failed out of 2
+
+Label Time Summary:
+gtest    =   0.39 sec*proc (2 tests)
+
+Total Test time (real) =   0.39 sec

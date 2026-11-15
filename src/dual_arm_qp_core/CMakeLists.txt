@@ -73,6 +73,8 @@ if(BUILD_TESTING)
   if(dual_arm_collision_FOUND)
     ament_add_gtest(test_cbf_c27 test/test_cbf_c27.cpp)
     target_link_libraries(test_cbf_c27 ${PROJECT_NAME} dual_arm_collision::dual_arm_collision)
+    ament_add_gtest(test_moving_obstacle_cbf test/test_moving_obstacle_cbf.cpp)
+    target_link_libraries(test_moving_obstacle_cbf ${PROJECT_NAME} dual_arm_collision::dual_arm_collision)
   endif()
 
   ament_add_gtest(test_perf_report_c28 test/test_perf_report_c28.cpp TIMEOUT 300)
