@@ -16,6 +16,8 @@ find_package(srdfdom REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(dual_arm_kinematics REQUIRED)
 find_package(dual_arm_collision REQUIRED)
+find_package(dual_arm_qp_core REQUIRED)
+find_package(dual_arm_object_task REQUIRED)
 # Public header ik_layer.hpp includes fairino_planning_core headers directly.
 find_package(fairino_planning_core REQUIRED)
 
@@ -59,6 +61,9 @@ target_link_libraries(c43_geometry_probe ${PROJECT_NAME} geometric_shapes::geome
 
 add_executable(c43_scene_path_check src/c43_scene_path_check.cpp)
 target_link_libraries(c43_scene_path_check ${PROJECT_NAME} geometric_shapes::geometric_shapes fcl)
+add_executable(c3_obstacle_probe src/c3_obstacle_probe.cpp)
+target_link_libraries(c3_obstacle_probe ${PROJECT_NAME} geometric_shapes::geometric_shapes fcl dual_arm_qp_core::dual_arm_qp_core dual_arm_object_task::dual_arm_object_task)
+install(TARGETS c3_obstacle_probe RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 add_executable(c43_candidate_probe src/c43_candidate_probe.cpp)
 target_link_libraries(c43_candidate_probe ${PROJECT_NAME} geometric_shapes::geometric_shapes)

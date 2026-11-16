@@ -28,6 +28,8 @@
   <depend>ament_index_cpp</depend>
   <depend>dual_arm_kinematics</depend>
   <depend>dual_arm_collision</depend>
+  <depend>dual_arm_qp_core</depend>
+  <depend>dual_arm_object_task</depend>
   <!-- ik_layer.hpp is a PUBLIC header of this package and includes
        fairino_planning_core/ik/fairino_ik.h and .../ik_selector.h directly, so
        the dependency is declared here instead of being inherited transitively
